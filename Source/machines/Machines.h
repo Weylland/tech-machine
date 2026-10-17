@@ -4,6 +4,8 @@
 #include "../core/Music.h"
 #include "../core/Track.h"
 #include "../dsp/DrumVoices.h"
+#include "../dsp/AcousticVoices.h"
+#include "../dsp/KeysVoices.h"
 #include "../dsp/SynthVoices.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>

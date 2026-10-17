@@ -69,7 +69,7 @@ public:
 
         g.setColour (colours::text);
         g.setFont (paint::display (19.0f));
-        g.drawText (utf8 (info.name), (int) b.getX() + 22, (int) b.getY() + 10, (int) b.getWidth() - 120, 24, juce::Justification::centredLeft);
+        g.drawText (utf8 (info.name), (int) b.getX() + 22, (int) b.getY() + 10, (int) b.getWidth() - 34, 24, juce::Justification::centredLeft);
         g.setColour (colour);
         g.setFont (paint::font (13.0f));
         g.drawText (utf8 (info.genre).toUpperCase() + "  ·  " + juce::String (info.bpm) + " BPM",
@@ -87,7 +87,7 @@ private:
 } // namespace
 
 //==============================================================================
-class TechMachineEditor::ExportJob : public juce::ThreadWithProgressWindow
+class MainView::ExportJob : public juce::ThreadWithProgressWindow
 {
 public:
     ExportJob (std::unique_ptr<juce::XmlElement> project, const juce::File& target, int loopCount, std::function<void (bool)> done)
@@ -175,7 +175,7 @@ void LcdDisplay::paint (juce::Graphics& g)
     auto left = glass.reduced (12.0f, 8.0f).removeFromLeft (glass.getWidth() * 0.4f);
     g.setColour (amber.withAlpha (0.7f));
     g.setFont (paint::condensed (11.0f));
-    g.drawText (processor.isHosted() ? "TEMPO DAW (SYNC)" : "TEMPO", left.removeFromTop (13.0f), juce::Justification::centredLeft);
+    g.drawText (processor.isHosted() ? utf8 ("TEMPO DAW (SYNC)") : utf8 ("TEMPO"), left.removeFromTop (13.0f), juce::Justification::centredLeft);
     auto digits = left.removeFromTop (left.getHeight() - 14.0f);
     paint::sevenSegment (g, juce::String (juce::roundToInt (bpm)).paddedLeft (' ', 3), digits.withWidth (digits.getHeight() * 1.9f), amber);
     g.setColour (amber.withAlpha (0.7f));
@@ -189,7 +189,7 @@ void LcdDisplay::paint (juce::Graphics& g)
 
     g.setColour (amber.withAlpha (0.85f));
     g.setFont (paint::condensed (13.0f));
-    g.drawFittedText ("GENRE  " + utf8 (styles()[(size_t) processor.genre()].name).toUpperCase(),
+    g.drawFittedText (utf8 ("GENRE  ") + utf8 (styles()[(size_t) processor.genre()].name).toUpperCase(),
                       right.removeFromTop (17.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.7f);
     g.drawFittedText (juce::String (keyNames[processor.currentKey()]) + "  " + utf8 (scales()[(size_t) processor.currentScale()].name).toUpperCase(),
                       right.removeFromTop (17.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.7f);
@@ -197,7 +197,7 @@ void LcdDisplay::paint (juce::Graphics& g)
     const int step = processor.currentStep.load();
     const int bars = processor.numSteps() / pageSteps;
     auto bottom = right.removeFromTop (18.0f);
-    g.drawText (step >= 0 ? "MESURE " + juce::String (step / pageSteps + 1) + "/" + juce::String (bars) : juce::String ("STOP"),
+    g.drawText (step >= 0 ? utf8 ("MESURE ") + juce::String (step / pageSteps + 1) + "/" + juce::String (bars) : juce::String ("STOP"),
                 bottom.removeFromLeft (90.0f), juce::Justification::centredLeft);
     for (int beat = 0; beat < 4; ++beat)
     {
@@ -271,7 +271,7 @@ void StartScreen::paint (juce::Graphics& g)
     g.drawText ("MACHINE", x + 100, y, 220, 46, juce::Justification::centredLeft);
     g.setColour (colours::dim);
     g.setFont (paint::font (15.0f, false));
-    g.drawText (utf8 ("Groovebox techno · choisis comment commencer"), x, y + 46, 380, 20, juce::Justification::centredLeft);
+    g.drawText (utf8 ("Groovebox · techno, house, hip-hop, trap… · choisis comment commencer"), x, y + 46, 640, 20, juce::Justification::centredLeft);
 
     g.setColour (colours::dim);
     g.setFont (paint::condensed (13.0f));
@@ -310,15 +310,17 @@ void StartScreen::resized()
     }
 
     const int gridX = x + 390, gridY = panel.getY() + 130;
-    const int cardW = (panel.getRight() - 40 - gridX - 14) / 2;
-    const int cardH = juce::jmin (100, (panel.getBottom() - 60 - gridY) / 5);
+    constexpr int columns = 3;
+    const int rows = (exampleCards.size() + columns - 1) / columns;
+    const int cardW = (panel.getRight() - 40 - gridX - 10 * (columns - 1)) / columns;
+    const int cardH = juce::jmin (100, (panel.getBottom() - 60 - gridY) / juce::jmax (1, rows) - 8);
     for (int i = 0; i < exampleCards.size(); ++i)
-        exampleCards[i]->setBounds (gridX + (i % 2) * (cardW + 14), gridY + (i / 2) * (cardH + 8), cardW, cardH);
+        exampleCards[i]->setBounds (gridX + (i % columns) * (cardW + 10), gridY + (i / columns) * (cardH + 8), cardW, cardH);
 }
 
 //==============================================================================
-TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
-    : AudioProcessorEditor (p), processor (p), lcd (p), startScreen (p)
+MainView::MainView (TechMachineProcessor& p)
+    : processor (p), lcd (p), startScreen (p)
 {
     setLookAndFeel (&theme);
     auto& state = processor.apvts;
@@ -371,7 +373,7 @@ TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
 
     styleButton (guideButton, juce::Colour (0xff2f4fa8));
     guideButton.onClick = [this] { showInfo (help ("guide"), guideButton); };
-    guideButton.setTooltip (utf8 ("Bien démarrer : le mode d'emploi en 7 étapes"));
+    guideButton.setTooltip (utf8 ("Bien démarrer : le mode d'emploi en 8 étapes"));
 
     styleButton (projectButton, juce::Colour (0xff3a3b40));
     projectButton.onClick = [this] { showProjectMenu(); };
@@ -391,7 +393,7 @@ TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
         barButtons[b].setClickingTogglesState (false);
         styleButton (barButtons[b], juce::Colour (0xff3a3b40));
         barButtons[b].onClick = [this, b] { processor.setBars (b + 1); };
-        barButtons[b].setTooltip (juce::String (b + 1) + (b == 0 ? " mesure" : " mesures"));
+        barButtons[b].setTooltip (juce::String (b + 1) + utf8 (b == 0 ? " mesure" : " mesures"));
 
         pageButtons[b].setClickingTogglesState (false);
         styleButton (pageButtons[b], juce::Colour (0xff3a3b40));
@@ -425,7 +427,7 @@ TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
     rack.setScrollBarsShown (true, false);
     rack.setScrollBarThickness (10);
     addAndMakeVisible (rack);
-    for (int t = 0; t < numMachines; ++t)
+    for (int t : rackOrder)
     {
         auto* panel = panels.add (new MachinePanel (processor, t, viewPage));
         panel->onLayoutChange = [this] { layoutRack(); };
@@ -465,26 +467,47 @@ TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
     startScreen.onExample = [this] (int i) { loadExample (i); };
     addChildComponent (startScreen);
 
+    styleButton (fullScreenButton, juce::Colour (0xff3a3b40));
+    fullScreenButton.onClick = [this] { toggleFullScreen(); };
+    fullScreenButton.setTooltip (utf8 ("Plein écran (F11)"));
+    fullScreenButton.setVisible (! processor.isHosted());
+
+    styleButton (languageButton, juce::Colour (0xff3a3b40));
+    languageButton.setButtonText (language() == Language::French ? "FR | en" : "fr | EN");
+    languageButton.onClick = [this] { toggleLanguage(); };
+    languageButton.setTooltip (utf8 ("Langue de l'interface : français ou anglais"));
+
     disableKeyboardFocus (*this);
     setWantsKeyboardFocus (true);
     addMouseListener (this, true);
-
-    setResizable (true, true);
-    setResizeLimits (1440, 700, 3200, 2400);
-    setSize (1600, 880);
     startTimerHz (30);
-
-    // The standalone app always opens on the start screen; the plugin only when its project is empty.
-    showStartScreen (! processor.isHosted() || processor.isProjectEmpty());
 }
 
-TechMachineEditor::~TechMachineEditor()
+void MainView::toggleFullScreen()
+{
+    auto& desktop = juce::Desktop::getInstance();
+    if (desktop.getKioskModeComponent() != nullptr)
+    {
+        desktop.setKioskModeComponent (nullptr);
+        return;
+    }
+    if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
+        desktop.setKioskModeComponent (window, false);
+}
+
+void MainView::toggleLanguage()
+{
+    setLanguage (language() == Language::French ? Language::English : Language::French);
+    if (onLanguageChange) onLanguageChange();
+}
+
+MainView::~MainView()
 {
     removeMouseListener (this);
     setLookAndFeel (nullptr);
 }
 
-InfoButton& TechMachineEditor::addInfo (const HelpText& h)
+InfoButton& MainView::addInfo (const HelpText& h)
 {
     auto* info = infos.add (new InfoButton());
     info->setHelp (h);
@@ -492,7 +515,7 @@ InfoButton& TechMachineEditor::addInfo (const HelpText& h)
     return *info;
 }
 
-void TechMachineEditor::styleButton (juce::Button& button, juce::Colour colour, juce::Colour text)
+void MainView::styleButton (juce::Button& button, juce::Colour colour, juce::Colour text)
 {
     button.setColour (juce::TextButton::buttonColourId, colour);
     button.setColour (juce::TextButton::buttonOnColourId, colour.brighter (0.15f));
@@ -501,19 +524,19 @@ void TechMachineEditor::styleButton (juce::Button& button, juce::Colour colour, 
     addAndMakeVisible (button);
 }
 
-void TechMachineEditor::mouseDown (const juce::MouseEvent&)
+void MainView::mouseDown (const juce::MouseEvent&)
 {
     // Every click or drag starts a new undo step (knob moves, menu choices...).
     processor.undoManager.beginNewTransaction();
 }
 
-void TechMachineEditor::togglePlay()
+void MainView::togglePlay()
 {
     if (processor.isHosted()) return;
     processor.playing = ! processor.playing.load();
 }
 
-void TechMachineEditor::toggleRecord()
+void MainView::toggleRecord()
 {
     if (processor.isRecording())
     {
@@ -529,7 +552,7 @@ void TechMachineEditor::toggleRecord()
     if (processor.isRecording() && ! processor.isHosted()) processor.playing = true;
 }
 
-void TechMachineEditor::showAddMenu()
+void MainView::showAddMenu()
 {
     juce::PopupMenu menu;
     auto section = [&] (const char* title, std::initializer_list<int> types)
@@ -541,9 +564,9 @@ void TechMachineEditor::showAddMenu()
             menu.addItem (t + 1, utf8 (def.name) + utf8 ("   —   ") + utf8 (def.subtitle), true, processor.isShown (t));
         }
     };
-    section ("BOÎTES À RYTHMES", { TR909, TR808, BreakKit });
-    section ("BASSES ET SYNTHÉS MONOPHONIQUES (une note à la fois)", { TB303, SH101, ModelD });
-    section ("SYNTHÉS POLYPHONIQUES (accords et nappes)", { Juno106, JP8000 });
+    section ("BOÎTES À RYTHMES ET PERCUSSIONS", { TR909, TR808, LinnDrum, CR78, MPC, BreakKit, Percussion, SoundFx });
+    section ("BASSES ET SYNTHÉS MONOPHONIQUES (une note à la fois)", { TB303, SH101, ModelD, Sub808 });
+    section ("SYNTHÉS POLYPHONIQUES, CLAVIERS ET CORDES (accords et nappes)", { Juno106, JP8000, DX7, Strings, Organ, Piano, Mallets, Pluck, Choir });
     menu.addSeparator();
     menu.addItem (100, utf8 ("Une coche = machine déjà dans le rack (clique pour la retirer)"), false, false);
 
@@ -557,7 +580,7 @@ void TechMachineEditor::showAddMenu()
     });
 }
 
-void TechMachineEditor::showProjectMenu()
+void MainView::showProjectMenu()
 {
     auto item = [] (int id, const juce::String& text, const juce::String& shortcut = {}, bool enabled = true)
     {
@@ -575,7 +598,7 @@ void TechMachineEditor::showProjectMenu()
     for (int i = 0; i < (int) examples().size(); ++i)
         examplesMenu.addItem (200 + i, utf8 (examples()[(size_t) i].name) + utf8 ("   —   ") + utf8 (examples()[(size_t) i].genre));
     for (int loops : { 1, 2, 4, 8 })
-        exportMenu.addItem (300 + loops, juce::String (loops) + (loops == 1 ? " boucle" : " boucles"));
+        exportMenu.addItem (300 + loops, juce::String (loops) + utf8 (loops == 1 ? " boucle" : " boucles"));
 
     juce::PopupMenu menu;
     menu.addItem (item (1, utf8 ("Accueil…")));
@@ -586,7 +609,7 @@ void TechMachineEditor::showProjectMenu()
     menu.addSubMenu (utf8 ("Projets exemples"), examplesMenu);
     menu.addSeparator();
     menu.addItem (item (4, utf8 ("Enregistrer"), "Ctrl+S"));
-    menu.addItem (item (5, utf8 ("Enregistrer sous…"), "Ctrl+Maj+S"));
+    menu.addItem (item (5, utf8 ("Enregistrer sous…"), utf8 ("Ctrl+Maj+S")));
     menu.addSeparator();
     menu.addSubMenu (utf8 ("Exporter en WAV"), exportMenu);
 
@@ -603,7 +626,7 @@ void TechMachineEditor::showProjectMenu()
     });
 }
 
-void TechMachineEditor::showStartScreen (bool show)
+void MainView::showStartScreen (bool show)
 {
     if (show)
     {
@@ -616,7 +639,7 @@ void TechMachineEditor::showStartScreen (bool show)
     if (! show) grabKeyboardFocus();
 }
 
-void TechMachineEditor::askThen (std::function<void()> action)
+void MainView::askThen (std::function<void()> action)
 {
     if (! processor.isDirty())
     {
@@ -634,7 +657,7 @@ void TechMachineEditor::askThen (std::function<void()> action)
                                            }));
 }
 
-void TechMachineEditor::newProject()
+void MainView::newProject()
 {
     askThen ([this]
     {
@@ -644,7 +667,7 @@ void TechMachineEditor::newProject()
     });
 }
 
-void TechMachineEditor::openProject()
+void MainView::openProject()
 {
     askThen ([this]
     {
@@ -659,7 +682,7 @@ void TechMachineEditor::openProject()
     });
 }
 
-void TechMachineEditor::openProjectFile (const juce::File& f)
+void MainView::openProjectFile (const juce::File& f)
 {
     if (! processor.loadProject (f))
     {
@@ -671,7 +694,7 @@ void TechMachineEditor::openProjectFile (const juce::File& f)
     showStartScreen (false);
 }
 
-void TechMachineEditor::loadExample (int index)
+void MainView::loadExample (int index)
 {
     askThen ([this, index]
     {
@@ -681,7 +704,7 @@ void TechMachineEditor::loadExample (int index)
     });
 }
 
-void TechMachineEditor::saveProject (std::function<void()> then)
+void MainView::saveProject (std::function<void()> then)
 {
     if (processor.projectFile().existsAsFile())
     {
@@ -691,7 +714,7 @@ void TechMachineEditor::saveProject (std::function<void()> then)
     saveProjectAs (std::move (then));
 }
 
-void TechMachineEditor::saveProjectAs (std::function<void()> then)
+void MainView::saveProjectAs (std::function<void()> then)
 {
     const auto suggested = TechMachineProcessor::projectsFolder().getChildFile (juce::File::createLegalFileName (processor.projectName()) + projectExtension);
     chooser = std::make_unique<juce::FileChooser> (utf8 ("Enregistrer le projet"), suggested, juce::String ("*") + projectExtension);
@@ -712,7 +735,7 @@ void TechMachineEditor::saveProjectAs (std::function<void()> then)
                           });
 }
 
-void TechMachineEditor::exportWav (int loops)
+void MainView::exportWav (int loops)
 {
     const auto suggested = juce::File::getSpecialLocation (juce::File::userMusicDirectory).getChildFile ("Tech Machine")
                                .getChildFile (juce::File::createLegalFileName (processor.projectName()) + ".wav");
@@ -741,7 +764,7 @@ void TechMachineEditor::exportWav (int loops)
                           });
 }
 
-void TechMachineEditor::projectChanged()
+void MainView::projectChanged()
 {
     lastGenre = -1;
     lastShownMask = -1;
@@ -750,7 +773,7 @@ void TechMachineEditor::projectChanged()
     layoutRack();
 }
 
-void TechMachineEditor::setPage (int newPage)
+void MainView::setPage (int newPage)
 {
     viewPage = juce::jlimit (0, processor.numSteps() / pageSteps - 1, newPage);
     for (int b = 0; b < 4; ++b)
@@ -762,7 +785,7 @@ void TechMachineEditor::setPage (int newPage)
     }
 }
 
-void TechMachineEditor::layoutRack()
+void MainView::layoutRack()
 {
     const int width = rack.getWidth() - rack.getScrollBarThickness() - 4;
     int y = 0, scrollY = -1;
@@ -789,12 +812,13 @@ void TechMachineEditor::layoutRack()
     }
 }
 
-bool TechMachineEditor::keyPressed (const juce::KeyPress& key)
+bool MainView::keyPressed (const juce::KeyPress& key)
 {
     const auto mods = key.getModifiers();
     const int code = key.getKeyCode();
 
     if (key == juce::KeyPress::spaceKey) { togglePlay(); return true; }
+    if (key == juce::KeyPress::F11Key) { toggleFullScreen(); return true; }
     if (! mods.isCommandDown()) return false;
 
     if (code == 'Z' && mods.isShiftDown()) { processor.undoManager.redo(); return true; }
@@ -807,7 +831,7 @@ bool TechMachineEditor::keyPressed (const juce::KeyPress& key)
     return false;
 }
 
-void TechMachineEditor::timerCallback()
+void MainView::timerCallback()
 {
     if (! focusGrabbed && isShowing())
     {
@@ -877,7 +901,7 @@ void TechMachineEditor::timerCallback()
     redoButton.setEnabled (processor.undoManager.canRedo());
 
     playButton.setEnabled (! processor.isHosted());
-    playButton.setButtonText (playing ? "STOP" : "LECTURE");
+    playButton.setButtonText (playing ? utf8 ("STOP") : utf8 ("LECTURE"));
     playButton.setIcon (playing ? "stop" : "play");
     playButton.setColour (juce::TextButton::buttonColourId, playing ? juce::Colour (0xff8f2f2f) : juce::Colour (0xff2f8f4a));
     if (processor.isHosted())
@@ -903,14 +927,14 @@ void TechMachineEditor::timerCallback()
     vu.push (processor.outputPeak.exchange (0.0f));
 }
 
-void TechMachineEditor::printLabel (juce::Graphics& g, const juce::Component& c, const char* text) const
+void MainView::printLabel (juce::Graphics& g, const juce::Component& c, const char* text) const
 {
     g.setColour (colours::dim);
     g.setFont (paint::condensed (12.0f));
     g.drawText (utf8 (text), c.getX(), c.getY() - 17, c.getWidth() - 18, 15, juce::Justification::centredLeft);
 }
 
-void TechMachineEditor::paint (juce::Graphics& g)
+void MainView::paint (juce::Graphics& g)
 {
     const auto b = getLocalBounds().toFloat();
     g.setGradientFill (juce::ColourGradient (juce::Colour (0xff1b1b1f), b.getCentreX(), b.getCentreY(), juce::Colour (0xff09090a), 0.0f, 0.0f, true));
@@ -932,7 +956,7 @@ void TechMachineEditor::paint (juce::Graphics& g)
     g.drawText ("MACHINE", consoleArea.getX() + 26 + 70, consoleArea.getY() + 12, 140, 30, juce::Justification::centredLeft);
     g.setColour (colours::dim);
     g.setFont (paint::condensed (12.0f));
-    g.drawText (utf8 ("GROOVEBOX  ·  v0.4"), consoleArea.getX() + 27, consoleArea.getY() + 40, 200, 14, juce::Justification::centredLeft);
+    g.drawText (juce::String::fromUTF8 ("GROOVEBOX  ·  v") + JucePlugin_VersionString, consoleArea.getX() + 27, consoleArea.getY() + 40, 200, 14, juce::Justification::centredLeft);
     g.setColour (colours::accent);
     g.fillRect (consoleArea.getX() + 27, consoleArea.getY() + 56, 150, 2);
 
@@ -941,7 +965,7 @@ void TechMachineEditor::paint (juce::Graphics& g)
     printLabel (g, scaleBox, "GAMME");
     g.setColour (colours::dim);
     g.setFont (paint::condensed (12.0f));
-    g.drawText ("MESURES", barButtons[0].getX() - 60, barButtons[0].getY(), 56, barButtons[0].getHeight(), juce::Justification::centredRight);
+    g.drawText (utf8 ("MESURES"), barButtons[0].getX() - 60, barButtons[0].getY(), 56, barButtons[0].getHeight(), juce::Justification::centredRight);
     g.drawText ("PAGE", pageButtons[0].getX() - 46, pageButtons[0].getY(), 42, pageButtons[0].getHeight(), juce::Justification::centredRight);
 
     paint::plate (g, masterArea.toFloat(), juce::Colour (0xff2e2f35), juce::Colour (0xff1c1d21), 6.0f, true);
@@ -956,7 +980,7 @@ void TechMachineEditor::paint (juce::Graphics& g)
     g.drawFittedText (utf8 ("Effets sur tout\nle morceau"), masterArea.getX() + 38, masterArea.getY() + 44, 110, 32, juce::Justification::topLeft, 2);
 }
 
-void TechMachineEditor::resized()
+void MainView::resized()
 {
     const int w = getWidth();
     consoleArea = { 10, 8, w - 20, consoleH };
@@ -984,7 +1008,10 @@ void TechMachineEditor::resized()
     swingKnob->setBounds (x, cy + 8, 66, 66);
     x = swingKnob->getRight() + 10;
     guideButton.setBounds (consoleArea.getRight() - 16 - 44, cy + 14, 44, 48);
-    surpriseButton.setBounds (x, cy + 14, juce::jmin (170, guideButton.getX() - 26 - x), 48);
+    fullScreenButton.setBounds (guideButton.getX() - 4 - 36, cy + 14, 36, 22);
+    languageButton.setBounds (guideButton.getX() - 4 - 64, cy + 40, 64, 22);
+    if (fullScreenButton.isVisible()) fullScreenButton.setBounds (guideButton.getX() - 4 - 64, cy + 14, 64, 22);
+    surpriseButton.setBounds (x, cy + 14, juce::jmin (170, languageButton.getX() - 24 - x), 48);
     surpriseInfo->setBounds (surpriseButton.getRight() + 2, cy + 14, 15, 15);
 
     // Row 2: project, undo, pattern length and pages, rack.
@@ -1025,4 +1052,42 @@ void TechMachineEditor::resized()
     layoutRack();
 
     startScreen.setBounds (getLocalBounds());
+}
+
+//==============================================================================
+TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
+    : AudioProcessorEditor (p), processor (p)
+{
+    setResizable (true, true);
+    setResizeLimits (1440, 700, 3200, 2400);
+
+    // The standalone app always opens on the start screen; the plugin only when its project is empty.
+    rebuild (! processor.isHosted() || processor.isProjectEmpty());
+    setSize (1600, 880);
+}
+
+TechMachineEditor::~TechMachineEditor() = default;
+
+void TechMachineEditor::rebuild (bool showStart)
+{
+    view = std::make_unique<MainView> (processor);
+    juce::Component::SafePointer<TechMachineEditor> safe (this);
+    view->onLanguageChange = [safe]
+    {
+        // Recreate the interface outside of the button callback that asked for it.
+        if (safe == nullptr) return;
+        const bool start = safe->view->isStartScreenShown();
+        juce::MessageManager::callAsync ([safe, start]
+        {
+            if (safe != nullptr) safe->rebuild (start);
+        });
+    };
+    addAndMakeVisible (*view);
+    view->setBounds (getLocalBounds());
+    view->showStartScreen (showStart);
+}
+
+void TechMachineEditor::resized()
+{
+    if (view != nullptr) view->setBounds (getLocalBounds());
 }

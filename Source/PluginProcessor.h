@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Examples.h"
+#include "core/PatternLibrary.h"
 #include "core/Styles.h"
 #include "dsp/Effects.h"
 #include "dsp/Reverb.h"
@@ -55,6 +56,7 @@ public:
     void generate (int machineType, techno::GenerateMode);
     void generateAll();
     void clearMachine (int machineType);
+    void applyPattern (int machineType, const techno::Pattern&);
     void shiftMachine (int machineType, int direction);
     void duplicateFirstBar (int machineType);
     void copyMachine (int machineType);

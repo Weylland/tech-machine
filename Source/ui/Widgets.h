@@ -301,7 +301,7 @@ private:
 
 // One sequencer step drawn as a hardware key. Toggle keys can be painted by dragging along a row;
 // value keys (notes, chords) are switched on by a click and changed by dragging up/down or the wheel.
-class StepCell : public juce::Component
+class StepCell : public juce::Component, public juce::SettableTooltipClient
 {
 public:
     enum class Mode { Toggle, Value };
@@ -313,6 +313,16 @@ public:
     std::function<juce::String()> getLabel;
     std::function<void (int)> nudge;
     std::function<void()> onEditStart;   // called once at the start of each edit gesture (for undo)
+    std::function<int()> getRoll;         // drum cells only: 0 = single hit, 2..4 = roll
+    std::function<void (int)> setRoll;
+
+    void cycleRoll()
+    {
+        const int next = getRoll() >= 4 ? 0 : getRoll() == 0 ? 2 : getRoll() + 1;
+        if (! isOn()) setOn (true);
+        setRoll (next);
+        repaint();
+    }
 
     const int column;
 
@@ -343,6 +353,14 @@ public:
         if (skin.litUsesCap && on && mode == Mode::Toggle)
             paint::led (g, { (float) getWidth() * 0.5f, 6.0f }, 2.6f, skin.led, true);
 
+        if (getRoll && on)
+        {
+            const int roll = getRoll();
+            g.setColour (skin.capText.withAlpha (0.85f));
+            for (int k = 0; k < roll; ++k)
+                g.fillRoundedRectangle ((float) getWidth() * 0.5f - (float) roll * 3.0f + (float) k * 6.0f + 1.0f, (float) getHeight() - 9.0f, 4.0f, 4.0f, 1.0f);
+        }
+
         if (mode == Mode::Value && on && getLabel)
         {
             g.setColour (skin.capText);
@@ -354,6 +372,11 @@ public:
     void mouseDown (const juce::MouseEvent& e) override
     {
         if (onEditStart) onEditStart();
+        if (getRoll && e.mods.isPopupMenu())
+        {
+            cycleRoll();
+            return;
+        }
         if (mode == Mode::Toggle)
         {
             paintState = ! isOn();
@@ -372,6 +395,7 @@ public:
 
     void mouseDrag (const juce::MouseEvent& e) override
     {
+        if (e.mods.isPopupMenu()) return;
         if (mode == Mode::Value)
         {
             const int steps = (dragStartY - e.getPosition().y) / 9;
@@ -407,6 +431,14 @@ public:
 
     void mouseWheelMove (const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override
     {
+        if (getRoll && isOn() && wheel.deltaY != 0.0f)
+        {
+            const auto now = juce::Time::getMillisecondCounter();
+            if (onEditStart && now - lastWheelEdit > 600) onEditStart();
+            lastWheelEdit = now;
+            cycleRoll();
+            return;
+        }
         if (mode != Mode::Value || ! isOn() || wheel.deltaY == 0.0f)
         {
             Component::mouseWheelMove (e, wheel);

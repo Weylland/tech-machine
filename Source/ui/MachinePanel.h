@@ -31,6 +31,7 @@ private:
 
     StepCell& addCell (int column, int row, StepCell::Mode, bool dimmed = false);
     void showDiceMenu();
+    void showPatternMenu();
     void showMoreMenu();
     void showRowFx (int row);
     InfoButton& addInfo (const HelpText&);
@@ -60,7 +61,7 @@ private:
 
     InfoButton machineInfo;
     std::unique_ptr<ParamLed> muteButton, soloButton;
-    IconButton diceButton { "dice", "HASARD" }, moreButton { "more" }, collapseButton { "down" }, removeButton { "close" };
+    IconButton patternButton { "patterns", "PATTERNS" }, diceButton { "dice", utf8 ("HASARD") }, moreButton { "more" }, collapseButton { "down" }, removeButton { "close" };
     std::vector<std::pair<juce::Button*, InfoButton*>> headerButtons;
 
     juce::OwnedArray<InfoButton> infos;

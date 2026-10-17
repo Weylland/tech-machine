@@ -17,9 +17,9 @@ struct DrumPart
     bool firstBarOnly = false;
 };
 
-enum class BassMode { Offbeat, Rolling, Groove, Long, Psy };
+enum class BassMode { Offbeat, Rolling, Groove, Long, Psy, Sub808, Disco, Funk, Reggae, Tresillo };
 enum class LeadMode { Motif, Arp, Riff, Sparse };
-enum class ChordMode { Stabs, Pad, Sparse };
+enum class ChordMode { Stabs, Pad, Sparse, Skank, Comping };
 
 // A genre: what the dice and SURPRISE ! write for each machine.
 struct StyleDef
@@ -55,4 +55,10 @@ void generate (Track&, const MachineDef&, const GenerateContext&, GenerateMode, 
 
 // Rotates a whole part by one step (direction = +1 or -1) over the pattern length.
 void shiftTrack (Track&, int steps, int direction);
+
+// The row of a kit that plays a role (or the closest sound it has), -1 when none fits.
+int rowForRole (const MachineDef&, Role);
+
+// Chord root degree at a step of the current progression.
+int chordRootAt (const GenerateContext&, int step);
 } // namespace techno

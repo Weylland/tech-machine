@@ -74,19 +74,24 @@ public:
 
 private:
     TechMachineProcessor& processor;
-    techno::IconButton newButton { "plus", juce::String::fromUTF8 ("NOUVEAU PROJET VIDE") };
-    techno::IconButton openButton { "folder", juce::String::fromUTF8 ("OUVRIR UN PROJET…") };
-    techno::IconButton resumeButton { "play", juce::String::fromUTF8 ("REPRENDRE LA DERNIÈRE SESSION") };
+    techno::IconButton newButton { "plus", techno::utf8 ("NOUVEAU PROJET VIDE") };
+    techno::IconButton openButton { "folder", techno::utf8 ("OUVRIR UN PROJET…") };
+    techno::IconButton resumeButton { "play", techno::utf8 ("REPRENDRE LA DERNIÈRE SESSION") };
     juce::OwnedArray<juce::TextButton> recentButtons;
     juce::OwnedArray<juce::Button> exampleCards;
     juce::Rectangle<int> panel;
 };
 
-class TechMachineEditor : public juce::AudioProcessorEditor, private juce::Timer
+// The whole interface. Rebuilt from scratch when the language changes.
+class MainView : public juce::Component, private juce::Timer
 {
 public:
-    explicit TechMachineEditor (TechMachineProcessor&);
-    ~TechMachineEditor() override;
+    explicit MainView (TechMachineProcessor&);
+    ~MainView() override;
+
+    std::function<void()> onLanguageChange;
+    bool isStartScreenShown() const { return startScreen.isVisible(); }
+    void showStartScreen (bool show);
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -101,7 +106,8 @@ private:
     void toggleRecord();
     void showAddMenu();
     void showProjectMenu();
-    void showStartScreen (bool show);
+    void toggleFullScreen();
+    void toggleLanguage();
     void setPage (int newPage);
     void layoutRack();
     techno::InfoButton& addInfo (const techno::HelpText&);
@@ -123,12 +129,13 @@ private:
     techno::Theme theme;
     juce::TooltipWindow tooltips { this, 450 };
 
-    techno::IconButton playButton { "play", "LECTURE" }, recordButton { "rec", "REC" }, folderButton { "folder", "FICHIERS" };
+    techno::IconButton playButton { "play", techno::utf8 ("LECTURE") }, recordButton { "rec", "REC" }, folderButton { "folder", techno::utf8 ("FICHIERS") };
     techno::IconButton surpriseButton { "dice", "SURPRISE !" }, addButton { "plus", "MACHINE" }, guideButton { "", "?" };
-    techno::IconButton projectButton { "folder", "PROJET" }, undoButton { "undo" }, redoButton { "redo" };
+    techno::IconButton projectButton { "folder", techno::utf8 ("PROJET") }, undoButton { "undo" }, redoButton { "redo" };
+    techno::IconButton fullScreenButton { "fullscreen" }, languageButton { "", "FR | EN" };
     techno::LedButton barButtons[4] { { "1", techno::colours::lcd }, { "2", techno::colours::lcd }, { "3", techno::colours::lcd }, { "4", techno::colours::lcd } };
     techno::LedButton pageButtons[4] { { "1", techno::colours::info }, { "2", techno::colours::info }, { "3", techno::colours::info }, { "4", techno::colours::info } };
-    techno::LedButton followButton { "SUIVRE", techno::colours::info };
+    techno::LedButton followButton { techno::utf8 ("SUIVRE"), techno::colours::info };
 
     LcdDisplay lcd;
     std::unique_ptr<techno::Knob> swingKnob;
@@ -155,6 +162,23 @@ private:
     int scrollToMachine = -1;
     bool follow = true, focusGrabbed = false;
     juce::String lastTitle;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainView)
+};
+
+class TechMachineEditor : public juce::AudioProcessorEditor
+{
+public:
+    explicit TechMachineEditor (TechMachineProcessor&);
+    ~TechMachineEditor() override;
+
+    void resized() override;
+
+private:
+    void rebuild (bool showStart);
+
+    TechMachineProcessor& processor;
+    std::unique_ptr<MainView> view;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TechMachineEditor)
 };

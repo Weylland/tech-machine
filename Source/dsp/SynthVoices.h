@@ -439,7 +439,7 @@ private:
     {
         float p = (float) pos - delaySamples;
         while (p < 0.0f) p += (float) size;
-        const int i0 = (int) p;
+        const int i0 = std::min ((int) p, size - 1);
         const int i1 = (i0 + 1) % size;
         const float frac = p - (float) i0;
         return buffer[(size_t) i0] + frac * (buffer[(size_t) i1] - buffer[(size_t) i0]);

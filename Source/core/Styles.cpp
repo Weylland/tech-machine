@@ -292,6 +292,216 @@ std::vector<StyleDef> buildStyles()
         { "x..............." },
         false, true });
 
+    list.push_back ({ "Hip-Hop",
+        "Le hip-hop boom bap des années 90 : kick lourd et syncopé, snare qui claque sur 2 et 4, charlestons swingués, "
+        "boucle d'accords jazzy et basse ronde. Tempo conseillé : 85-95, swing marqué (50-60 %).",
+        90.0f, 0.3f, Dorian, { { 0 }, { 0, 3 }, { 0, 0, 5, 5 } },
+        {
+            { Role::Kick, { "x......x..x.....", "x.......x.x.....", "x......xx.....x." } },
+            { Role::Snare, { "....x.......x..." } },
+            { Role::ClosedHat, { "x.x.x.x.x.x.x.x.", "xxxxxxxxxxxxxxxx" } },
+            { Role::OpenHat, { "..............o." } },
+            { Role::Shaker, { "rxrxrxrxrxrxrxrx" } },
+        },
+        { { Role::Kick, { "x......x..x...x." } } },
+        { B::Groove }, { L::Sparse }, { C::Comping },
+        { "x.......x.......", "x.....x........." },
+        false, false });
+
+    list.push_back ({ "Trap",
+        "Le trap d'Atlanta : rythme en demi-tempo (snare sur le 3e temps), charlestons rapides avec des roulements, "
+        "énorme basse 808 qui suit le kick et glisse entre les notes, mélodie sombre. Tempo conseillé : 130-150.",
+        140.0f, 0.0f, HarmonicMinor, { { 0 }, { 0, 5 }, { 0, 6, 5, 6 } },
+        {
+            { Role::Kick, { "x.........x.....", "x......x..x.....", "x.....x...x..x.." } },
+            { Role::Snare, { "........x......." } },
+            { Role::Clap, { "........x......." } },
+            { Role::ClosedHat, { "x.x.x.x.x.x2x.x.", "x.x.x.x.x.x.x3x.", "x.x.x3x.x.x.x2x2", "xxxxxxxx3xxxxx4x" } },
+            { Role::OpenHat, { ".......r........" } },
+            { Role::Snap, { "........x......." } },
+        },
+        { { Role::Snare, { "........x.....xx" } } },
+        { B::Sub808 }, { L::Riff, L::Sparse }, { C::Pad, C::Sparse },
+        { "x..............." },
+        true, true });
+
+    list.push_back ({ "Drill",
+        "La drill (Chicago, UK) : demi-tempo sombre, snares décalés, charlestons en triolets, 808 qui glisse beaucoup "
+        "et mélodies tendues en mineur. Tempo conseillé : 138-145.",
+        142.0f, 0.05f, HarmonicMinor, { { 0 }, { 0, 1 }, { 0, 5 } },
+        {
+            { Role::Kick, { "x.....x...x..x..", "x.......x.....x." } },
+            { Role::Snare, { "........x....x..", "........x.x....." } },
+            { Role::ClosedHat, { "x..x..x.x..x..x.", "x.x..x.x.x..x.x.", "x..x..x.x2.x..x." } },
+            { Role::Rim, { "...x.....x......" } },
+            { Role::Snap, { "........x....x.." } },
+        },
+        {},
+        { B::Sub808 }, { L::Riff }, { C::Pad },
+        {},
+        true, true });
+
+    list.push_back ({ "Lo-fi",
+        "Le lo-fi hip-hop : tranquille et nostalgique. Batterie douce très swinguée, accords jazzy au piano électrique, "
+        "basse discrète, petite mélodie. Tempo conseillé : 70-90, beaucoup de swing.",
+        82.0f, 0.4f, Dorian, { { 0, 3 }, { 0, 5, 3, 4 }, { 1, 4, 0, 0 } },
+        {
+            { Role::Kick, { "x......x.x......", "x.......x.x....." } },
+            { Role::Snare, { "....x.......x..." } },
+            { Role::ClosedHat, { "x.x.x.x.x.x.x.x." } },
+            { Role::Rim, { "..........r....." } },
+            { Role::Shaker, { "r.r.r.r.r.r.r.r." } },
+        },
+        {},
+        { B::Groove }, { L::Sparse, L::Motif }, { C::Comping },
+        {},
+        true, false });
+
+    list.push_back ({ "R&B",
+        "Le R&B moderne : groove lent et sensuel, claquements de doigts, charlestons en doubles croches avec roulements, "
+        "accords riches (7e, 9e), basse 808 ou ronde. Tempo conseillé : 65-100.",
+        92.0f, 0.2f, Dorian, { { 0, 3, 5, 4 }, { 0, 5 }, { 0, 3 } },
+        {
+            { Role::Kick, { "x......x..x..x..", "x.......x.x....." } },
+            { Role::Snare, { "....x.......x..." } },
+            { Role::Snap, { "....x.......x..." } },
+            { Role::ClosedHat, { "xxxxxxxxxxxxxxxx", "xxxxxxx3xxxxxxx2" } },
+            { Role::Rim, { "......r.......r." } },
+        },
+        {},
+        { B::Groove, B::Sub808 }, { L::Motif }, { C::Comping, C::Pad },
+        {},
+        true, false });
+
+    list.push_back ({ "Funk",
+        "Le funk : tout sur le « un ». Basse slap très syncopée, snare avec ghost notes, charlestons en doubles croches, "
+        "petits accords de guitare ou d'orgue qui claquent. Tempo conseillé : 95-115.",
+        105.0f, 0.1f, Mixolydian, { { 0 }, { 0, 3 } },
+        {
+            { Role::Kick, { "x..x..x...x..x..", "x.x...x..x....x." } },
+            { Role::Snare, { "....x.......x..." } },
+            { Role::Ghost, { "..r..r.r...r..r." } },
+            { Role::ClosedHat, { "xxxxxxxxxxxxxxxx", "x.x.x.x.x.x.x.x." } },
+            { Role::OpenHat, { "..............x." } },
+            { Role::Cowbell, { "r.....r.....r..." } },
+        },
+        { { Role::Snare, { "..........x.x.xx" } } },
+        { B::Funk }, { L::Riff }, { C::Stabs },
+        { "..x...x...x.x...", ".x..x..x.x..x..." },
+        false, false });
+
+    list.push_back ({ "Disco",
+        "Le disco : kick sur chaque temps, charleston ouvert sur les contretemps, basse en octaves, cordes et "
+        "accords joyeux. Tempo conseillé : 115-125.",
+        120.0f, 0.05f, Minor, { { 0, 3 }, { 0, 5, 3, 4 } },
+        {
+            { Role::Kick, { "x...x...x...x..." } },
+            { Role::Clap, { "....x.......x..." } },
+            { Role::Snare, { "....x.......x..." } },
+            { Role::OpenHat, { "..x...x...x...x." } },
+            { Role::ClosedHat, { ".x.x.x.x.x.x.x.x" } },
+            { Role::Tambourine, { "xxxxxxxxxxxxxxxx" } },
+        },
+        { { Role::Snare, { "............xxxx" } } },
+        { B::Disco }, { L::Arp, L::Motif }, { C::Stabs, C::Pad },
+        { "..x...x...x...x.", "x..x..x...x..x.." },
+        true, false });
+
+    list.push_back ({ "Synthwave",
+        "La synthwave : l'esthétique des années 80. Batterie à grosse snare, basse en croches qui pulse, nappes, "
+        "arpèges et lead nostalgique. Tempo conseillé : 85-115.",
+        100.0f, 0.0f, Minor, { { 0, 5, 2, 6 }, { 0, 6, 5, 6 } },
+        {
+            { Role::Kick, { "x...x...x...x...", "x.......x.x....." } },
+            { Role::Snare, { "....x.......x..." } },
+            { Role::ClosedHat, { "x.x.x.x.x.x.x.x." } },
+            { Role::Crash, { "x..............." }, true },
+        },
+        { { Role::LowTom, { "............x.x." } }, { Role::HighTom, { "............x.x." } } },
+        { B::Disco }, { L::Motif, L::Arp }, { C::Pad },
+        {},
+        true, true });
+
+    list.push_back ({ "Pop",
+        "La pop : rythme simple et efficace, grille d'accords qui fait chanter (I – V – vi – IV), mélodie accrocheuse. "
+        "Tempo conseillé : 95-125.",
+        110.0f, 0.0f, Major, { { 0, 4, 5, 3 }, { 5, 3, 0, 4 }, { 0, 5, 3, 4 } },
+        {
+            { Role::Kick, { "x.......x.x.....", "x...x...x...x..." } },
+            { Role::Snare, { "....x.......x..." } },
+            { Role::Clap, { "....x.......x..." } },
+            { Role::ClosedHat, { "x.x.x.x.x.x.x.x." } },
+            { Role::Tambourine, { "....x.......x..." } },
+            { Role::Crash, { "x..............." }, true },
+        },
+        { { Role::Snare, { "............x.xx" } } },
+        { B::Groove, B::Offbeat }, { L::Motif }, { C::Pad, C::Stabs },
+        { "x.x.x.x.x.x.x.x.", "x..x..x...x..x.." },
+        true, false });
+
+    list.push_back ({ "Reggaeton",
+        "Le reggaeton : le rythme « dembow » (boum-tchak... boum-tchak) qui fait danser toute l'Amérique latine, "
+        "basse 808 sur le tresillo, accords mineurs. Tempo conseillé : 88-100.",
+        95.0f, 0.0f, Minor, { { 0, 5, 2, 6 }, { 0, 5 } },
+        {
+            { Role::Kick, { "x...x...x...x..." } },
+            { Role::Snare, { "...x..x....x..x." } },
+            { Role::Rim, { "...x..x....x..x." } },
+            { Role::ClosedHat, { "x.x.x.x.x.x.x.x." } },
+            { Role::HighTimbale, { "............x.xx" } },
+        },
+        {},
+        { B::Tresillo, B::Sub808 }, { L::Motif }, { C::Stabs, C::Pad },
+        { "x..x..x.x..x..x.", "..x...x...x...x." },
+        true, false });
+
+    list.push_back ({ "Afro House",
+        "L'afro house : kick sur chaque temps et plein de percussions qui dialoguent (congas, shaker, cloches), "
+        "basse ronde, accords hypnotiques. Tempo conseillé : 118-124.",
+        122.0f, 0.15f, Minor, { { 0 }, { 0, 3 } },
+        {
+            { Role::Kick, { "x...x...x...x..." } },
+            { Role::Clap, { "....x.......x..." } },
+            { Role::ClosedHat, { "..x...x...x...x." } },
+            { Role::Shaker, { "xoxxxoxxxoxxxoxx" } },
+            { Role::LowConga, { "x..x..x...x..x.." } },
+            { Role::HighConga, { "...x..x.x.....x." } },
+            { Role::Agogo, { "r..r..r....r..r." } },
+        },
+        {},
+        { B::Tresillo, B::Groove }, { L::Sparse }, { C::Stabs },
+        { "..x.....x...x...", "...x......x....." },
+        true, false });
+
+    list.push_back ({ "Reggae",
+        "Le reggae et la dub : le « one drop » (kick et rimshot ensemble sur le 3e temps), accords sur les contretemps (skank), "
+        "basse ronde et chantante, beaucoup d'écho. Tempo conseillé : 70-85.",
+        76.0f, 0.2f, Minor, { { 0, 3 }, { 0, 6 }, { 0 } },
+        {
+            { Role::Kick, { "........x......." } },
+            { Role::Rim, { "........x......." } },
+            { Role::ClosedHat, { "x.x.x.x.x.x.x.x.", "x..xx..xx..xx..x" } },
+            { Role::OpenHat, { "..............r." } },
+        },
+        { { Role::Snare, { "............x.xx" } } },
+        { B::Reggae }, { L::Sparse }, { C::Skank },
+        {},
+        false, false });
+
+    list.push_back ({ "Ambient",
+        "L'ambient : peu ou pas de rythme, de longues nappes qui évoluent, des notes éparses, beaucoup de reverb. "
+        "Tempo conseillé : 60-90.",
+        80.0f, 0.0f, Lydian, { { 0, 3 }, { 0, 4 }, { 0 } },
+        {
+            { Role::Kick, { "x..............." } },
+            { Role::Shaker, { "r...r...r...r..." } },
+            { Role::Triangle, { "..........r....." } },
+        },
+        {},
+        { B::Long }, { L::Sparse }, { C::Pad },
+        {},
+        true, false });
+
     return list;
 }
 
@@ -323,7 +533,7 @@ bool hit (char c, juce::Random& r)
 {
     switch (c)
     {
-        case 'X': case 'x': return true;
+        case 'X': case 'x': case '2': case '3': case '4': return true;
         case 'o': return r.nextFloat() < 0.5f;
         case 'r': return r.nextFloat() < 0.2f;
         default: return false;
@@ -332,8 +542,17 @@ bool hit (char c, juce::Random& r)
 
 bool isPercussion (Role role)
 {
-    return role == Role::Rim || role == Role::Claves || role == Role::Cowbell
-        || role == Role::LowTom || role == Role::MidTom || role == Role::HighTom;
+    switch (role)
+    {
+        case Role::Rim: case Role::Claves: case Role::Cowbell:
+        case Role::LowTom: case Role::MidTom: case Role::HighTom:
+        case Role::LowConga: case Role::HighConga: case Role::LowBongo: case Role::HighBongo:
+        case Role::LowTimbale: case Role::HighTimbale: case Role::Agogo: case Role::Guiro:
+        case Role::Triangle: case Role::Perc:
+            return true;
+        default:
+            return false;
+    }
 }
 
 bool onlyScattered (const char* pattern)
@@ -356,6 +575,20 @@ int rowFor (const MachineDef& def, Role role)
     if (role == Role::Clap && find (Role::Ghost) >= 0) return find (Role::Snare);
     if (role == Role::Cymbal) return find (Role::Crash);
     if (role == Role::Crash) return find (Role::Cymbal);
+    if (role == Role::Snap) return find (Role::Clap);
+    if (role == Role::Clap) return find (Role::Snap);
+    if (role == Role::Tambourine) return find (Role::Shaker);
+
+    static constexpr std::pair<Role, Role> pairs[] {
+        { Role::LowConga, Role::HighConga }, { Role::LowBongo, Role::HighBongo }, { Role::LowTimbale, Role::HighTimbale },
+        { Role::LowConga, Role::LowTom }, { Role::HighConga, Role::HighTom }, { Role::HighTimbale, Role::HighTom },
+        { Role::LowTimbale, Role::MidTom }, { Role::Agogo, Role::Cowbell },
+    };
+    for (auto& [a, b] : pairs)
+    {
+        if (role == a) if (const int row = find (b); row >= 0) return row;
+        if (role == b) if (const int row = find (a); row >= 0) return row;
+    }
     return -1;
 }
 
@@ -465,6 +698,7 @@ void drums (Track& t, const MachineDef& def, const GenerateContext& ctx, juce::R
                 if (! on) continue;
                 t.hits[(size_t) row][(size_t) s] = true;
                 if (pattern[i] == 'X') t.accent[(size_t) s] = true;
+                if (pattern[i] >= '2' && pattern[i] <= '4') t.rolls[(size_t) row][(size_t) s] = (std::uint8_t) (pattern[i] - '0');
             }
         }
     };
@@ -472,6 +706,23 @@ void drums (Track& t, const MachineDef& def, const GenerateContext& ctx, juce::R
     for (auto& part : ctx.style.drums) apply (part, 0, bars - 1);
     if (bars > 1)
         for (auto& part : ctx.style.fill) apply (part, bars - 1, bars - 1);
+
+    if (rowFor (def, Role::Kick) < 0)
+    {
+        int count = 0;
+        for (auto& row : t.hits)
+            for (int s = 0; s < pageSteps; ++s) count += row[(size_t) s] ? 1 : 0;
+        if (count < 8)
+        {
+            static const DrumPart defaults[] {
+                { Role::LowConga, { "r.r.r.r.r.r.r.r." } },
+                { Role::HighConga, { ".r.r.r.r.r.r.r.r" } },
+                { Role::Shaker, { "xoxxxoxxxoxxxoxx", "x.x.x.x.x.x.x.x." } },
+                { Role::HighBongo, { "...r...r...r...r" } },
+            };
+            for (auto& part : defaults) apply (part, 0, bars - 1);
+        }
+    }
 
     // A closed hat never plays together with the open hat, nor a ghost note with the snare.
     const int ch = rowFor (def, Role::ClosedHat), oh = rowFor (def, Role::OpenHat);
@@ -596,6 +847,104 @@ void bassLine (Line& line, const GenerateContext& ctx, BassMode mode, juce::Rand
                 if ((s / pageSteps) % 2 == 1 && i >= 13) d = pickWeighted ({ { 0, 2 }, { 1, 1 }, { 4, 1 }, { 7, 1 } }, r);
                 line.note (s, chordAt (ctx, s) + d);
             }
+            break;
+        }
+
+        case BassMode::Sub808:
+        {
+            // The 808 follows the kick and holds each note until the next one, sometimes gliding up or down.
+            int last = -1;
+            for (int s = 0; s < steps; ++s)
+            {
+                if (! ctx.kick[(size_t) s]) continue;
+                const int i = s % pageSteps;
+                const int d = i == 0 ? 0 : pickWeighted ({ { 0, 6 }, { 7, 2 }, { -2, 1 }, { 4, 1 }, { 5, 1 } }, r);
+                line.note (s, chordAt (ctx, s) + d, i == 0);
+                last = s;
+            }
+            if (last < 0)
+            {
+                for (int s = 0; s < steps; s += pageSteps / 2) line.note (s, chordAt (ctx, s), true);
+            }
+            for (int s = 0; s < steps; ++s)
+            {
+                if (! line.on[(size_t) s] || (s > 0 && line.slide[(size_t) (s - 1)])) continue;
+                int next = s + 1;
+                while (next < steps && ! line.on[(size_t) next]) ++next;
+                const int end = juce::jmin (next - 1, s + 2 + r.nextInt (6));
+                if (end > s) line.hold (s, end, steps);
+                if (next < steps && end == next - 1 && chance (r, 0.3f)) line.slide[(size_t) end] = true;
+            }
+            break;
+        }
+
+        case BassMode::Disco:
+        {
+            // Octave jumps on every 8th note.
+            const bool sixteenths = chance (r, 0.3f);
+            for (int s = 0; s < steps; ++s)
+            {
+                const int i = s % pageSteps;
+                if (i % 2 == 1 && ! (sixteenths && i % 4 == 3)) continue;
+                const bool up = i % 4 != 0;
+                line.note (s, chordAt (ctx, s) + (up ? 7 : 0), i % 4 == 0);
+            }
+            break;
+        }
+
+        case BassMode::Funk:
+        {
+            // A strong note on "the one", syncopated 16ths, octave pops and passing notes.
+            static const std::vector<const char*> rhythms {
+                "x..xx.x...x.xx.x", "x.x..x.x..xx.x..", "x..x..x.xx..x.x.", "x.xx..x..x.x..xx"
+            };
+            const char* rhythm = pickOne (rhythms, r);
+            int deg[pageSteps];
+            for (int i = 0; i < pageSteps; ++i)
+                deg[i] = i == 0 ? 0 : pickWeighted ({ { 0, 5 }, { 7, 3 }, { 4, 2 }, { 6, 1 }, { 2, 1 }, { 3, 1 } }, r);
+            for (int s = 0; s < steps; ++s)
+            {
+                const int i = s % pageSteps;
+                if (rhythm[i] != 'x') continue;
+                line.note (s, chordAt (ctx, s) + deg[i], i == 0 || deg[i] == 7);
+            }
+            break;
+        }
+
+        case BassMode::Reggae:
+        {
+            // A round, singing line that leaves space on the downbeat of bar 1 and walks through chord tones.
+            static const std::vector<std::vector<std::pair<int, int>>> shapes {
+                { { 2, 0 }, { 4, 0 }, { 6, 2 }, { 8, 4 }, { 11, 2 }, { 12, 0 } },
+                { { 0, 0 }, { 3, 0 }, { 6, 4 }, { 8, 7 }, { 10, 4 }, { 14, 2 } },
+                { { 2, 0 }, { 6, 0 }, { 7, 2 }, { 10, 4 }, { 12, 2 }, { 14, 0 } },
+            };
+            const auto& shape = pickOne (shapes, r);
+            for (int bar = 0; bar < steps; bar += pageSteps)
+                for (size_t k = 0; k < shape.size(); ++k)
+                {
+                    const int s = bar + shape[k].first;
+                    const int end = k + 1 < shape.size() ? bar + shape[k + 1].first - 1 : bar + pageSteps - 1;
+                    line.note (s, chordAt (ctx, s) + shape[k].second);
+                    line.hold (s, juce::jmin (end, s + 1), steps);
+                }
+            for (int s = 0; s + 1 < steps; ++s) line.slide[(size_t) s] = false;
+            break;
+        }
+
+        case BassMode::Tresillo:
+        {
+            // 3-3-2: the Latin / Afro rhythm under reggaeton and afro house.
+            static constexpr int starts[] { 0, 3, 6, 8, 11, 14 };
+            for (int bar = 0; bar < steps; bar += pageSteps)
+                for (int k = 0; k < 6; ++k)
+                {
+                    const int s = bar + starts[k];
+                    const int d = k == 0 || k == 3 ? 0 : pickWeighted ({ { 0, 5 }, { 7, 2 }, { 4, 2 } }, r);
+                    line.note (s, chordAt (ctx, s) + d, k == 0 || k == 3);
+                    if (k < 5) line.hold (s, s + 1, steps);
+                }
+            for (int s = 0; s + 1 < steps; ++s) line.slide[(size_t) s] = false;
             break;
         }
     }
@@ -771,6 +1120,38 @@ void chordLine (Line& line, const GenerateContext& ctx, ChordMode mode, juce::Ra
         return;
     }
 
+    if (mode == ChordMode::Skank)
+    {
+        // Short chords on beats 2 and 4 (reggae) or on every off-beat, sometimes doubled.
+        const bool everyOffbeat = chance (r, 0.4f), doubled = chance (r, 0.35f);
+        for (int s = 0; s < steps; ++s)
+        {
+            const int i = s % pageSteps;
+            const bool on = everyOffbeat ? i % 4 == 2 : (i == 4 || i == 12 || (doubled && (i == 5 || i == 13)));
+            if (on) line.note (s, chordAt (ctx, s), i == 4 || i == 12);
+        }
+        for (int s = 0; s < steps; ++s) line.slide[(size_t) s] = false;
+        return;
+    }
+
+    if (mode == ChordMode::Comping)
+    {
+        // Jazzy held chords on syncopated positions, a little different on each bar.
+        static const std::vector<std::vector<int>> rhythms { { 0, 7 }, { 0, 6, 10 }, { 3, 10 }, { 0, 3, 10 }, { 2, 8, 14 } };
+        for (int bar = 0; bar < steps; bar += pageSteps)
+        {
+            const auto& starts = pickOne (rhythms, r);
+            for (size_t k = 0; k < starts.size(); ++k)
+            {
+                const int s = bar + starts[k];
+                const int next = k + 1 < starts.size() ? bar + starts[k + 1] : bar + pageSteps;
+                line.note (s, chordAt (ctx, s), k == 0);
+                line.hold (s, juce::jmin (next - 2, s + 2 + r.nextInt (4)), steps);
+            }
+        }
+        return;
+    }
+
     const char* rhythm = pickOne (ctx.style.chordRhythms, r);
     for (int s = 0; s < steps; ++s)
     {
@@ -893,6 +1274,13 @@ void generate (Track& track, const MachineDef& def, const GenerateContext& ctx, 
     if (def.kind == MachineKind::Drum)
     {
         drums (track, def, ctx, r);
+        // Effects: a riser leading into the loop and, with the style's crash, an impact on the first beat.
+        if (def.type == SoundFx && ctx.steps > pageSteps)
+        {
+            if (const int rise = rowFor (def, Role::Perc); rise >= 0)
+                track.hits[(size_t) rise][(size_t) (ctx.steps - pageSteps)] = true;
+            track.tile (ctx.steps);
+        }
         return;
     }
 
@@ -911,10 +1299,35 @@ void generate (Track& track, const MachineDef& def, const GenerateContext& ctx, 
             if (style.leadOn8000) leadLine (line, ctx, pickOne (style.leadModes, r), r);
             else chordLine (line, ctx, pickOne (style.chordModes, r), r);
             break;
+        case Sub808:
+        {
+            const auto& modes = style.bassModes;
+            const bool has808 = std::find (modes.begin(), modes.end(), BassMode::Sub808) != modes.end();
+            bassLine (line, ctx, has808 ? BassMode::Sub808 : pickOne (modes, r), r);
+            break;
+        }
+        case DX7:
+        case Organ:
+        case Piano:   chordLine (line, ctx, pickOne (style.chordModes, r), r); break;
+        case Strings:
+        case Choir:   chordLine (line, ctx, ChordMode::Pad, r); break;
+        case Mallets: leadLine (line, ctx, pickOne (style.leadModes, r), r); break;
+        case Pluck:
+        {
+            const auto& modes = style.chordModes;
+            if (std::find (modes.begin(), modes.end(), ChordMode::Skank) != modes.end()) chordLine (line, ctx, ChordMode::Skank, r);
+            else if (std::find (modes.begin(), modes.end(), ChordMode::Comping) != modes.end()) chordLine (line, ctx, ChordMode::Comping, r);
+            else leadLine (line, ctx, LeadMode::Arp, r);
+            break;
+        }
         default: break;
     }
     line.write (track, ctx);
 }
+
+int rowForRole (const MachineDef& def, Role role) { return rowFor (def, role); }
+
+int chordRootAt (const GenerateContext& ctx, int step) { return chordAt (ctx, step); }
 
 void shiftTrack (Track& t, int steps, int direction)
 {
@@ -922,7 +1335,11 @@ void shiftTrack (Track& t, int steps, int direction)
     for (int s = 0; s < steps; ++s)
     {
         const auto src = (size_t) s, dst = (size_t) ((s + direction + steps) % steps);
-        for (size_t row = 0; row < t.hits.size(); ++row) copy.hits[row][dst] = t.hits[row][src].load();
+        for (size_t row = 0; row < t.hits.size(); ++row)
+        {
+            copy.hits[row][dst] = t.hits[row][src].load();
+            copy.rolls[row][dst] = t.rolls[row][src].load();
+        }
         copy.on[dst] = t.on[src].load();
         copy.accent[dst] = t.accent[src].load();
         copy.slide[dst] = t.slide[src].load();
@@ -931,7 +1348,11 @@ void shiftTrack (Track& t, int steps, int direction)
     for (int s = 0; s < steps; ++s)
     {
         const auto i = (size_t) s;
-        for (size_t row = 0; row < t.hits.size(); ++row) t.hits[row][i] = copy.hits[row][i].load();
+        for (size_t row = 0; row < t.hits.size(); ++row)
+        {
+            t.hits[row][i] = copy.hits[row][i].load();
+            t.rolls[row][i] = copy.rolls[row][i].load();
+        }
         t.on[i] = copy.on[i].load();
         t.accent[i] = copy.accent[i].load();
         t.slide[i] = copy.slide[i].load();

@@ -17,8 +17,8 @@ juce::String filterText (float v, int)
 
 juce::String panText (float v, int)
 {
-    if (std::abs (v - 0.5f) < 0.02f) return "Centre";
-    return (v < 0.5f ? "G " : "D ") + juce::String (juce::roundToInt (std::abs (v - 0.5f) * 200.0f));
+    if (std::abs (v - 0.5f) < 0.02f) return techno::utf8 ("Centre");
+    return techno::utf8 (v < 0.5f ? "G " : "D ") + juce::String (juce::roundToInt (std::abs (v - 0.5f) * 200.0f));
 }
 
 std::unique_ptr<juce::RangedAudioParameter> knob (const juce::String& id, const juce::String& name, float def,
@@ -199,6 +199,7 @@ void TechMachineProcessor::prepareToPlay (double newSampleRate, int samplesPerBl
     pump.prepare (sampleRate);
     compressor.prepare (sampleRate);
     limiter.prepare (sampleRate);
+    setLatencySamples (techno::PeakLimiter::lookahead - 1);
 
     reverb.prepare (sampleRate);
     lastReverbSize = -1.0f;
@@ -311,8 +312,8 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         l *= volumeValue;
         r *= volumeValue;
         limiter.process (l, r);
-        left[i] = l;
-        right[i] = r;
+        left[i] = std::isfinite (l) ? juce::jlimit (-1.0f, 1.0f, l) : 0.0f;
+        right[i] = std::isfinite (r) ? juce::jlimit (-1.0f, 1.0f, r) : 0.0f;
         peak = std::max (peak, std::max (std::abs (l), std::abs (r)));
     }
     outputPeak = std::max (outputPeak.load(), peak);
@@ -512,10 +513,10 @@ GenerateContext TechMachineProcessor::context() const
 
     // Where the kick plays: taken from the drum machines in the rack, otherwise four on the floor.
     bool anyKick = false;
-    for (int t : { TR909, TR808, BreakKit })
+    for (int t = 0; t < numMachines; ++t)
     {
-        if (! isShown (t)) continue;
         const auto& def = machineDef (t);
+        if (! isShown (t) || def.kind != MachineKind::Drum) continue;
         for (size_t r = 0; r < def.rows.size(); ++r)
         {
             if (def.rows[r].role != Role::Kick) continue;
@@ -588,6 +589,14 @@ void TechMachineProcessor::clearMachine (int type)
     undoManager.beginNewTransaction();
     beginPatternEdit();
     machines[(size_t) type]->track.clear();
+    touchPattern();
+}
+
+void TechMachineProcessor::applyPattern (int type, const Pattern& pattern)
+{
+    undoManager.beginNewTransaction();
+    beginPatternEdit();
+    techno::applyPattern (machines[(size_t) type]->track, machineDef (type), context(), pattern);
     touchPattern();
 }
 
@@ -713,7 +722,17 @@ std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
         auto* e = patterns->createNewChildElement ("Machine");
         e->setAttribute ("id", m->def.id);
         for (size_t r = 0; r < m->def.rows.size(); ++r)
+        {
             e->setAttribute ("hits" + juce::String ((int) r), encodeBools (m->track.hits[r]));
+            juce::String rolls;
+            bool any = false;
+            for (auto& v : m->track.rolls[r])
+            {
+                rolls << juce::String ((int) v.load());
+                any = any || v.load() > 0;
+            }
+            if (any) e->setAttribute ("rolls" + juce::String ((int) r), rolls);
+        }
         e->setAttribute ("accent", encodeBools (m->track.accent));
         e->setAttribute ("on", encodeBools (m->track.on));
         e->setAttribute ("slide", encodeBools (m->track.slide));
@@ -745,7 +764,12 @@ void TechMachineProcessor::restoreProjectXml (const juce::XmlElement& source)
             if (e->getStringAttribute ("id") != m->def.id) continue;
             m->track.clear();
             for (size_t r = 0; r < m->def.rows.size(); ++r)
+            {
                 decodeBools (e->getStringAttribute ("hits" + juce::String ((int) r)), m->track.hits[r]);
+                const auto rolls = e->getStringAttribute ("rolls" + juce::String ((int) r));
+                for (int s = 0; s < maxSteps && s < rolls.length(); ++s)
+                    m->track.rolls[r][(size_t) s] = (std::uint8_t) juce::jlimit (0, 4, (int) (rolls[s] - (juce::juce_wchar) 48));
+            }
             decodeBools (e->getStringAttribute ("accent"), m->track.accent);
             decodeBools (e->getStringAttribute ("on"), m->track.on);
             decodeBools (e->getStringAttribute ("slide"), m->track.slide);
@@ -771,22 +795,6 @@ juce::File TechMachineProcessor::projectsFolder()
     return folder;
 }
 
-namespace
-{
-juce::PropertiesFile& settings()
-{
-    static juce::PropertiesFile props ([]
-    {
-        juce::PropertiesFile::Options o;
-        o.applicationName = "Tech Machine";
-        o.filenameSuffix = "settings";
-        o.folderName = "Tech Machine";
-        o.osxLibrarySubFolder = "Application Support";
-        return o;
-    }());
-    return props;
-}
-} // namespace
 
 juce::StringArray TechMachineProcessor::recentProjects()
 {

@@ -535,6 +535,28 @@ void icon (Graphics& g, const juce::String& name, Rect r, Colour colour)
         head.applyTransform (juce::AffineTransform::rotation (undo ? -0.6f : 0.6f, hx, hy));
         g.fillPath (head);
     }
+    else if (name == "fullscreen")
+    {
+        const float t = juce::jmax (1.4f, s * 0.1f), m = s * 0.18f, l = s * 0.26f;
+        const auto box = b.reduced (m);
+        for (auto corner : { box.getTopLeft(), box.getTopRight(), box.getBottomLeft(), box.getBottomRight() })
+        {
+            const float dx = corner.x < box.getCentreX() ? l : -l, dy = corner.y < box.getCentreY() ? l : -l;
+            g.drawLine (corner.x, corner.y, corner.x + dx, corner.y, t);
+            g.drawLine (corner.x, corner.y, corner.x, corner.y + dy, t);
+        }
+    }
+    else if (name == "patterns")
+    {
+        const float cell = s * 0.22f, gap = s * 0.1f, x0 = b.getX() + s * 0.13f, y0 = b.getY() + s * 0.13f;
+        for (int row = 0; row < 3; ++row)
+            for (int col = 0; col < 3; ++col)
+            {
+                const Rect r (x0 + (float) col * (cell + gap), y0 + (float) row * (cell + gap), cell, cell);
+                if ((row + col) % 2 == 0) g.fillRoundedRectangle (r, s * 0.04f);
+                else g.drawRoundedRectangle (r.reduced (s * 0.02f), s * 0.04f, juce::jmax (1.0f, s * 0.05f));
+            }
+    }
     else if (name == "folder")
     {
         juce::Path p;

@@ -14,12 +14,16 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "ou pars d'un PROJET VIDE.\n\n"
             "2. Ajoute des machines avec « + MACHINE » : une boîte à rythmes, une basse, des accords… Elles arrivent vides.\n\n"
             "3. Clique sur les cases pour placer des sons. Chaque colonne est un « pas » : 16 pas = 1 mesure = 4 temps. "
-            "Sur les notes et les accords, glisse vers le haut ou le bas pour changer la hauteur.\n\n"
-            "4. En panne d'idée ? Choisis un GENRE puis clique sur SURPRISE ! (tout le rack) ou sur le dé d'une machine "
+            "Sur les notes et les accords, glisse vers le haut ou le bas pour changer la hauteur. "
+            "Sur la batterie, clic droit (ou molette) sur une case = roulement ×2, ×3, ×4 (les charlestons rapides du trap).\n\n"
+            "4. Envie d'un rythme connu ? Le bouton PATTERNS de chaque machine propose les grands classiques : Four on the Floor, "
+            "Motown, Billie Jean, Amen Break, boom bap, trap, reggaeton… et des lignes de basse, accords et arpèges.\n\n"
+            "5. En panne d'idée ? Choisis un GENRE puis clique sur SURPRISE ! (tout le rack) ou sur HASARD d'une machine "
             "(Nouvelle idée, Varier un peu, Plus de notes, Moins de notes).\n\n"
-            "5. Appuie sur LECTURE (barre Espace) et tourne les boutons pendant que ça joue. Double-clic sur un bouton = valeur d'origine.\n\n"
-            "6. Une erreur ? Ctrl+Z annule, Ctrl+Y rétablit.\n\n"
-            "7. Enregistre ton projet (Ctrl+S) et exporte-le en WAV depuis le menu PROJET.\n\n"
+            "6. Appuie sur LECTURE (barre Espace) et tourne les boutons pendant que ça joue. Double-clic sur un bouton = valeur d'origine.\n\n"
+            "7. Une erreur ? Ctrl+Z annule, Ctrl+Y rétablit.\n\n"
+            "8. Enregistre ton projet (Ctrl+S) et exporte-le en WAV depuis le menu PROJET.\n\n"
+            "F11 = plein écran. Le bouton FR | EN change la langue.\n\n"
             "Le petit « i » à côté de chaque élément explique à quoi il sert. Survole un bouton pour un résumé rapide." } },
 
         { "play", { "Lecture / Stop",
@@ -27,11 +31,12 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "La lecture repart toujours du début de la séquence. En plugin (VST3), la lecture suit ton logiciel de musique." } },
         { "tempo", { "Tempo (BPM)",
             "Vitesse du morceau en battements par minute. Glisse vers le haut ou le bas sur l'écran (ou molette) pour le changer.\n\n"
-            "Repères : house 120-128, techno 125-135, trance 136-140, psytrance 140-148, hard techno 145-160, "
+            "Repères : reggae 70-85, lo-fi 70-90, hip-hop 85-95, reggaeton 90-100, funk 95-115, disco 115-125, "
+            "house 120-128, techno 125-135, trance 136-140, trap 130-150, psytrance 140-148, hard techno 145-160, "
             "drum & bass 170-176, gabber 170-200. En plugin, le tempo suit ton logiciel de musique." } },
         { "swing", { "Swing",
             "Décale légèrement un pas sur deux pour donner un groove « chaloupé » au lieu d'un rythme robotique.\n\n"
-            "0 = parfaitement droit (techno, trance). Un peu = groove house. Beaucoup = UK garage, shuffle." } },
+            "0 = parfaitement droit (techno, trance, trap). Un peu = groove house, funk. Beaucoup = hip-hop, lo-fi, UK garage." } },
         { "genre", { "Genre du hasard",
             "Le genre dont s'inspirent SURPRISE ! et le dé de chaque machine pour écrire des rythmes, des lignes de basse, "
             "des mélodies et des accords typiques.\n\n"
@@ -81,6 +86,12 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "Varier un peu : change quelques notes ou coups sans casser l'idée.\n\n"
             "Plus de notes / Moins de notes : rend la partie plus chargée ou plus aérée.\n\n"
             "Tout s'annule avec Ctrl+Z." } },
+        { "machine.patterns", { "Patterns célèbres",
+            "Une bibliothèque de rythmes et de parties connus, prêts à jouer : Four on the Floor, Motown, Billie Jean, "
+            "Funky Drummer, Amen Break, boom bap, trap, reggaeton, bossa nova, one drop...\n\n"
+            "Sur une boîte à rythmes : choisis un style puis un rythme. Le tempo d'origine est indiqué entre parenthèses.\n"
+            "Sur un synthé : lignes de basse, accords ou arpèges. Les notes suivent automatiquement les accords et la gamme du morceau.\n\n"
+            "Le pattern remplace la partie de la machine. Ctrl+Z pour revenir en arrière." } },
         { "machine.more", { "Outils",
             "Copier / coller la partie, dupliquer la 1re mesure sur toute la séquence, décaler toute la partie d'un pas "
             "vers la gauche ou la droite, ou tout effacer." } },

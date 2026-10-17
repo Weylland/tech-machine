@@ -47,8 +47,8 @@ private:
     float read (const std::vector<float>& buffer, float delay) const
     {
         float pos = (float) writePos - delay;
-        if (pos < 0.0f) pos += (float) size;
-        const int i0 = (int) pos;
+        while (pos < 0.0f) pos += (float) size;
+        const int i0 = std::min ((int) pos, size - 1);   // writePos - delay + size can round up to size
         const int i1 = (i0 + 1) % size;
         const float frac = pos - (float) i0;
         return buffer[(size_t) i0] + frac * (buffer[(size_t) i1] - buffer[(size_t) i0]);

@@ -71,6 +71,71 @@ inline const Skin& skinFor (int machineType)
           C (0xff59c3ff), C (0xff59c3ff), { C (0xffbac4d8), C (0xffa9b4ca), C (0xffbac4d8), C (0xffa9b4ca) },
           C (0xff8fe0ff), C (0xff0a1626), KnobStyle::Modern, C (0xff2a3446), false, false, false, false,
           "ANALOG MODELING SYNTHESIZER", "8000" },
+        // LinnDrum: dark panel, wood cheeks, red LEDs, grey rubber keys.
+        { C (0xff2b2b2e), C (0xff1c1c1e), C (0xff111112), C (0xfff0ece4), C (0xfff0ece4), C (0xffb8b2a8), C (0xff6d685f),
+          C (0xffe0453a), C (0xffff3b1f), { C (0xff8a8a8e), C (0xff7c7c80), C (0xff8a8a8e), C (0xff7c7c80) },
+          C (0xffff6b5c), C (0xff1a1a1a), KnobStyle::Classic, C (0xff3c3c40), false, true, false, false,
+          "DIGITAL DRUM MACHINE", "LINN" },
+        // CR-78: cream panel, wood cheeks, brown keys, amber light.
+        { C (0xffe3d6b8), C (0xffc9b994), C (0xff4a3426), C (0xfff3e7cf), C (0xff2b2118), C (0xff5a4a3a), C (0xff8a7860),
+          C (0xffc8702e), C (0xffff5a1f), { C (0xff6b4c36), C (0xff5c412e), C (0xff6b4c36), C (0xff5c412e) },
+          C (0xffffb04d), C (0xff1a1206), KnobStyle::Cap, C (0xffe9dcc0), false, true, false, true,
+          "COMPU RHYTHM", "CR-78" },
+        // Sampler: light grey, red rubber pads.
+        { C (0xffcfcfcb), C (0xffb3b3ae), C (0xff2a2a2c), C (0xffeeeeee), C (0xff222222), C (0xff505050), C (0xff7d7d78),
+          C (0xffd23b2f), C (0xffff3b1f), { C (0xff9a9a96), C (0xff8e8e8a), C (0xff9a9a96), C (0xff8e8e8a) },
+          C (0xffff6a4a), C (0xff1a1a1a), KnobStyle::Classic, C (0xff4b4b50), false, false, false, true,
+          "MIDI PRODUCTION CENTER", "MPC" },
+        // Percussion: warm wood plate, tan skins, orange light.
+        { C (0xff4a2f1f), C (0xff2f1d13), C (0xff1e120b), C (0xfff6e6d0), C (0xfff6e6d0), C (0xffcdb498), C (0xff8a6a50),
+          C (0xffff9a3c), C (0xffff7a1f), { C (0xffc9a27a), C (0xffb88f66), C (0xffc9a27a), C (0xffb88f66) },
+          C (0xffffc06b), C (0xff2a1608), KnobStyle::Cap, C (0xfff1dfc3), false, true, false, false,
+          "LATIN & AFRO PERCUSSION", "PERCU" },
+        // DX7: dark brown panel, teal accents, burgundy keys.
+        { C (0xff3b332c), C (0xff29231e), C (0xff1a1613), C (0xffe8e2d6), C (0xffe8e2d6), C (0xffb4aa9a), C (0xff6e6458),
+          C (0xff3fd0b0), C (0xff3fd0b0), { C (0xff7a2e3b), C (0xff6c2834), C (0xff7a2e3b), C (0xff6c2834) },
+          C (0xff5ff0cf), C (0xff0b201a), KnobStyle::Modern, C (0xff3a322b), false, false, false, false,
+          "FM DIGITAL SYNTHESIZER", "DX7" },
+        // String machine: black panel, orange accents, silver keys.
+        { C (0xff222224), C (0xff151516), C (0xff0d0d0e), C (0xffffffff), C (0xfff2f2f2), C (0xffbfbfc4), C (0xff6c6c72),
+          C (0xffffb347), C (0xffff8a1f), { C (0xffcfd2d6), C (0xffbfc2c7), C (0xffcfd2d6), C (0xffbfc2c7) },
+          C (0xffffc56b), C (0xff201406), KnobStyle::Chicken, C (0xffd9d9d9), false, false, false, false,
+          "STRING ENSEMBLE", "STRINGS" },
+        // Organ: wood cabinet, cream drawbars.
+        { C (0xff5a3520), C (0xff3d2314), C (0xff24150c), C (0xfff4e9d0), C (0xfff4e9d0), C (0xffd2bf9e), C (0xff8d6c50),
+          C (0xffe8c070), C (0xffff3b1f), { C (0xffefe3c8), C (0xffe2d4b6), C (0xffefe3c8), C (0xffe2d4b6) },
+          C (0xffffd98a), C (0xff2a1a08), KnobStyle::Cap, C (0xffefe3c8), true, true, false, false,
+          "TONEWHEEL ORGAN", "ORGAN" },
+        // 808 bass: black with red.
+        { C (0xff1b1b1d), C (0xff0f0f10), C (0xff080809), C (0xffffffff), C (0xfff2f2f2), C (0xffb0b0b6), C (0xff5c5c62),
+          C (0xffff2d3a), C (0xffff2d3a), { C (0xff333336), C (0xff2c2c2f), C (0xff333336), C (0xff2c2c2f) },
+          C (0xffff5562), C (0xff1a0406), KnobStyle::Modern, C (0xff2a2a2e), false, false, false, false,
+          "TRAP BASS", "808 SUB" },
+        // Piano: black lacquer, ivory keys, gold print.
+        { C (0xff1a1a1c), C (0xff0c0c0d), C (0xff050506), C (0xffe9d8a6), C (0xffe9d8a6), C (0xffb9ab86), C (0xff5e5543),
+          C (0xffe9c46a), C (0xffffd36b), { C (0xfff4efe1), C (0xffe6e0cf), C (0xfff4efe1), C (0xffe6e0cf) },
+          C (0xffe9c46a), C (0xff1a1406), KnobStyle::Modern, C (0xff2a2a2c), false, false, false, false,
+          "ACOUSTIC PIANO", "PIANO" },
+        // Mallets: brushed aluminium bars, sky blue.
+        { C (0xffc9d3dc), C (0xffa9b4be), C (0xff2b3540), C (0xffe6f4ff), C (0xff1d2630), C (0xff4a5663), C (0xff6c7a88),
+          C (0xff2f9fe0), C (0xff3fc0ff), { C (0xffe9eef2), C (0xffd6dde3), C (0xffe9eef2), C (0xffd6dde3) },
+          C (0xff6fd0ff), C (0xff0a1a26), KnobStyle::Classic, C (0xff3c4650), false, false, false, true,
+          "MALLETS & BELLS", "MALLETS" },
+        // Pluck: spruce top, rosewood band.
+        { C (0xffd9b98a), C (0xffc19d6b), C (0xff4a2a18), C (0xfff3e2c8), C (0xff2a1a0e), C (0xff5c4330), C (0xff8a6a4c),
+          C (0xffb5581f), C (0xffff7a1f), { C (0xff6b3f22), C (0xff5c351c), C (0xff6b3f22), C (0xff5c351c) },
+          C (0xffffa04d), C (0xff1a0e04), KnobStyle::Cap, C (0xfff0dcc0), false, true, false, true,
+          "PLUCKED STRINGS", "PLUCK" },
+        // Choir: deep violet, lavender.
+        { C (0xff2c2240), C (0xff1c152b), C (0xff120d1c), C (0xffe8dcff), C (0xffece4ff), C (0xffb7a8d6), C (0xff6a5c88),
+          C (0xffb48cff), C (0xffc8a8ff), { C (0xff4a3d66), C (0xff42365c), C (0xff4a3d66), C (0xff42365c) },
+          C (0xffd2b8ff), C (0xff1a1028), KnobStyle::Modern, C (0xff3a3050), false, false, false, false,
+          "VOCAL ENSEMBLE", "CHOIR" },
+        // FX: black with acid green.
+        { C (0xff1e2120), C (0xff121413), C (0xff0a0b0b), C (0xffd8ffc0), C (0xffe8ffe0), C (0xffa8c0a0), C (0xff56645a),
+          C (0xff9cff57), C (0xff9cff57), { C (0xff2f3532), C (0xff29302c), C (0xff2f3532), C (0xff29302c) },
+          C (0xffb8ff7a), C (0xff0e1a06), KnobStyle::Modern, C (0xff2a302c), false, false, true, false,
+          "SOUND EFFECTS", "FX" },
     }};
     return skins[(size_t) machineType];
 }

@@ -85,7 +85,40 @@ public:
 
             voices[(size_t) i]->trigger (velocity, settings[i]);
             if (role == Role::Kick) kickHit = true;
+
+            // Roll: the sound is repeated 2 to 4 times inside the step.
+            const int roll = track.rolls[(size_t) i][st].load();
+            if (roll >= 2)
+            {
+                rollInterval[i] = (float) s.stepSamples / (float) roll;
+                rollCountdown[i] = rollInterval[i];
+                rollsLeft[i] = roll - 1;
+                rollVelocity[i] = velocity;
+            }
+            else
+            {
+                rollsLeft[i] = 0;
+            }
         }
+    }
+
+    void tick() override
+    {
+        for (int i = 0; i < numRows; ++i)
+        {
+            if (rollsLeft[i] <= 0 || (rollCountdown[i] -= 1.0f) > 0.0f) continue;
+            rollCountdown[i] += rollInterval[i];
+            --rollsLeft[i];
+            rollVelocity[i] *= 0.9f;
+            if (def.rows[(size_t) i].role == Role::ClosedHat && openHatRow >= 0)
+                voices[(size_t) openHatRow]->choke();
+            voices[(size_t) i]->trigger (rollVelocity[i], settings[i]);
+        }
+    }
+
+    void stop() override
+    {
+        for (auto& n : rollsLeft) n = 0;
     }
 
     void render (Frame& f) override
@@ -127,6 +160,8 @@ private:
     float fs = 44100.0f;
     DrumSettings settings[maxDrumRows];
     float levels[maxDrumRows] {}, trims[maxDrumRows] {};
+    int rollsLeft[maxDrumRows] {};
+    float rollInterval[maxDrumRows] {}, rollCountdown[maxDrumRows] {}, rollVelocity[maxDrumRows] {};
     bool mutes[maxDrumRows] {};
     float accentAmount = 0.5f;
     juce::Random random;
@@ -171,7 +206,10 @@ protected:
 class MonoMachine : public SynthMachine
 {
 public:
-    MonoMachine (int machineType, std::unique_ptr<MonoVoice> v) : SynthMachine (machineType), voice (std::move (v)) {}
+    MonoMachine (int machineType, std::unique_ptr<MonoVoice> v, float gateLength = 0.5f) : SynthMachine (machineType), voice (std::move (v))
+    {
+        gateFraction = gateLength;
+    }
 
     void prepare (float sampleRate) override { voice->prepare (sampleRate * 2.0f); }
 
@@ -450,6 +488,243 @@ private:
     SuperParams shared;
     std::vector<SuperVoice*> superVoices;
 };
+class FmMachine : public PolyMachine
+{
+public:
+    FmMachine() : PolyMachine (DX7)
+    {
+        gateFraction = 0.9f;
+        for (int i = 0; i < 10; ++i) voices.push_back (std::make_unique<FmVoice> (shared));
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.preset = (int) values[pDX7::Preset];
+        shared.brightness = values[pDX7::Brightness];
+        shared.decay = values[pDX7::Decay];
+        shared.release = values[pDX7::Release];
+        shared.detune = values[pDX7::Detune];
+        shared.tremolo = values[pDX7::Tremolo];
+    }
+
+    void postProcess (float& left, float& right) override
+    {
+        advance (lfoPhase, 5.2f / fs);
+        shared.lfo = std::sin (2.0f * pi * lfoPhase);
+        left *= 0.85f;
+        right *= 0.85f;
+    }
+
+    FmParams shared;
+    float lfoPhase = 0;
+};
+
+class StringMachine : public PolyMachine
+{
+public:
+    StringMachine() : PolyMachine (Strings)
+    {
+        gateFraction = 0.9f;
+        for (int i = 0; i < 10; ++i)
+        {
+            auto v = std::make_unique<StringVoice> (shared);
+            stringVoices.push_back (v.get());
+            voices.push_back (std::move (v));
+        }
+    }
+
+    void prepare (float sampleRate) override
+    {
+        PolyMachine::prepare (sampleRate);
+        ensemble.prepare (sampleRate);
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.violin = values[pStrings::Violin];
+        shared.cello = values[pStrings::Cello];
+        shared.brightness = values[pStrings::Brightness];
+        ensembleAmount = values[pStrings::Ensemble];
+        for (auto* v : stringVoices)
+            v->setEnvelope (knobTime (values[pStrings::Attack], 0.005f, 3.0f), knobTime (values[pStrings::Release], 0.02f, 5.0f));
+    }
+
+    void postProcess (float& left, float& right) override
+    {
+        ensemble.process (left * 1.8f, ensembleAmount, left, right);
+    }
+
+    StringParams shared;
+    std::vector<StringVoice*> stringVoices;
+    EnsembleChorus ensemble;
+    float ensembleAmount = 0.7f;
+};
+
+class OrganMachine : public PolyMachine
+{
+public:
+    OrganMachine() : PolyMachine (Organ)
+    {
+        gateFraction = 0.9f;
+        for (int i = 0; i < 10; ++i) voices.push_back (std::make_unique<OrganVoice> (shared));
+        buildOrganTable (shared, 0.8f, 0.5f, 0.3f, false);
+    }
+
+    void prepare (float sampleRate) override
+    {
+        PolyMachine::prepare (sampleRate);
+        leslie.prepare (sampleRate);
+    }
+
+private:
+    void applyParams() override
+    {
+        const float bass = values[pOrgan::Bass], middle = values[pOrgan::Middle], high = values[pOrgan::High];
+        const bool house = values[pOrgan::Type] > 0.5f;
+        if (bass != lastBass || middle != lastMiddle || high != lastHigh || house != lastHouse)
+        {
+            buildOrganTable (shared, bass, middle, high, house);
+            lastBass = bass;
+            lastMiddle = middle;
+            lastHigh = high;
+            lastHouse = house;
+        }
+        shared.percussion = values[pOrgan::Percussion];
+        shared.click = values[pOrgan::Click];
+        leslieAmount = values[pOrgan::Leslie];
+        drive = 1.0f + values[pOrgan::Drive] * 8.0f;
+    }
+
+    void postProcess (float& left, float& right) override
+    {
+        const float x = fastTanh (left * 1.6f * drive) / fastTanh (drive);
+        leslie.process (x, leslieAmount, left, right);
+    }
+
+    OrganParams shared;
+    Leslie leslie;
+    float lastBass = -1, lastMiddle = -1, lastHigh = -1, leslieAmount = 0.4f, drive = 1.0f;
+    bool lastHouse = false;
+};
+
+class PianoMachine : public PolyMachine
+{
+public:
+    PianoMachine() : PolyMachine (Piano)
+    {
+        gateFraction = 0.9f;
+        for (int i = 0; i < 10; ++i) voices.push_back (std::make_unique<PianoVoice> (shared));
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.type = (int) values[pPiano::Type];
+        shared.brightness = values[pPiano::Brightness];
+        shared.decay = values[pPiano::Decay];
+        shared.release = values[pPiano::Release];
+        shared.hammer = values[pPiano::Hammer];
+        shared.width = values[pPiano::Width];
+    }
+
+    PianoParams shared;
+};
+
+class MalletMachine : public PolyMachine
+{
+public:
+    MalletMachine() : PolyMachine (Mallets)
+    {
+        gateFraction = 0.9f;
+        for (int i = 0; i < 10; ++i) voices.push_back (std::make_unique<MalletVoice> (shared));
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.type = (int) values[pMallets::Type];
+        shared.brightness = values[pMallets::Brightness];
+        shared.decay = values[pMallets::Decay];
+        shared.release = values[pMallets::Release];
+        shared.mallet = values[pMallets::Mallet];
+        shared.vibrato = values[pMallets::Vibrato];
+    }
+
+    void postProcess (float&, float&) override
+    {
+        advance (lfoPhase, 5.5f / fs);
+        shared.lfo = std::sin (2.0f * pi * lfoPhase);
+    }
+
+    MalletParams shared;
+    float lfoPhase = 0;
+};
+
+class PluckMachine : public PolyMachine
+{
+public:
+    PluckMachine() : PolyMachine (Pluck)
+    {
+        gateFraction = 0.9f;
+        for (int i = 0; i < 8; ++i) voices.push_back (std::make_unique<PluckVoice> (shared));
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.type = (int) values[pPluck::Type];
+        shared.brightness = values[pPluck::Brightness];
+        shared.decay = values[pPluck::Decay];
+        shared.release = values[pPluck::Release];
+        shared.strum = values[pPluck::Strum];
+        shared.body = values[pPluck::Body];
+    }
+
+    // All the notes of a chord start during the same step, before the next sample: the strum restarts here.
+    void postProcess (float&, float&) override { shared.strumIndex = 0; }
+
+    PluckParams shared;
+};
+
+class ChoirMachine : public PolyMachine
+{
+public:
+    ChoirMachine() : PolyMachine (Choir)
+    {
+        gateFraction = 0.9f;
+        for (int i = 0; i < 8; ++i)
+        {
+            auto v = std::make_unique<ChoirVoice> (shared);
+            choirVoices.push_back (v.get());
+            voices.push_back (std::move (v));
+        }
+    }
+
+    void prepare (float sampleRate) override
+    {
+        PolyMachine::prepare (sampleRate);
+        ensemble.prepare (sampleRate);
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.vowel = (int) values[pChoir::Vowel];
+        shared.ensemble = values[pChoir::Ensemble];
+        shared.brightness = values[pChoir::Brightness];
+        shared.breath = values[pChoir::Breath];
+        for (auto* v : choirVoices)
+            v->setEnvelope (knobTime (values[pChoir::Attack], 0.01f, 3.0f), knobTime (values[pChoir::Release], 0.05f, 5.0f));
+    }
+
+    void postProcess (float& left, float& right) override { ensemble.process (left, 0.3f + shared.ensemble * 0.6f, left, right); }
+
+    ChoirParams shared;
+    std::vector<ChoirVoice*> choirVoices;
+    EnsembleChorus ensemble;
+};
 } // namespace
 
 std::unique_ptr<Machine> createMachine (int type)
@@ -464,6 +739,19 @@ std::unique_ptr<Machine> createMachine (int type)
         case ModelD:   return std::make_unique<MonoMachine> (type, std::make_unique<ModelDVoice>());
         case Juno106:  return std::make_unique<JunoMachine>();
         case JP8000:   return std::make_unique<SuperMachine>();
+        case LinnDrum:
+        case CR78:
+        case MPC:
+        case Percussion:
+        case SoundFx:  return std::make_unique<DrumMachine> (type);
+        case DX7:      return std::make_unique<FmMachine>();
+        case Strings:  return std::make_unique<StringMachine>();
+        case Organ:    return std::make_unique<OrganMachine>();
+        case Piano:    return std::make_unique<PianoMachine>();
+        case Mallets:  return std::make_unique<MalletMachine>();
+        case Pluck:    return std::make_unique<PluckMachine>();
+        case Choir:    return std::make_unique<ChoirMachine>();
+        case Sub808:   return std::make_unique<MonoMachine> (type, std::make_unique<Sub808Voice>(), 14.0f);
         default:       break;
     }
     jassertfalse;

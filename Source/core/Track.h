@@ -2,6 +2,7 @@
 
 #include <array>
 #include <atomic>
+#include <cstdint>
 
 namespace techno
 {
@@ -14,6 +15,7 @@ constexpr int noteRange = 36;
 struct TrackData
 {
     std::array<std::array<bool, maxSteps>, maxDrumRows> hits {};
+    std::array<std::array<std::uint8_t, maxSteps>, maxDrumRows> rolls {};
     std::array<bool, maxSteps> on {}, accent {}, slide {};
     std::array<int, maxSteps> note {};
 };
@@ -24,6 +26,7 @@ struct TrackData
 struct Track
 {
     std::array<std::array<std::atomic<bool>, maxSteps>, maxDrumRows> hits;
+    std::array<std::array<std::atomic<std::uint8_t>, maxSteps>, maxDrumRows> rolls;   // 0 = single hit, 2..4 = roll
     std::array<std::atomic<bool>, maxSteps> on, accent, slide;
     std::array<std::atomic<int>, maxSteps> note;
 
@@ -33,6 +36,8 @@ struct Track
     {
         for (auto& row : hits)
             for (auto& cell : row) cell = false;
+        for (auto& row : rolls)
+            for (auto& cell : row) cell = 0;
         for (int i = 0; i < maxSteps; ++i)
         {
             on[(size_t) i] = accent[(size_t) i] = slide[(size_t) i] = false;
@@ -44,7 +49,11 @@ struct Track
     {
         TrackData d;
         for (size_t r = 0; r < hits.size(); ++r)
-            for (size_t s = 0; s < (size_t) maxSteps; ++s) d.hits[r][s] = hits[r][s].load();
+            for (size_t s = 0; s < (size_t) maxSteps; ++s)
+            {
+                d.hits[r][s] = hits[r][s].load();
+                d.rolls[r][s] = rolls[r][s].load();
+            }
         for (size_t s = 0; s < (size_t) maxSteps; ++s)
         {
             d.on[s] = on[s].load();
@@ -58,7 +67,11 @@ struct Track
     void restore (const TrackData& d)
     {
         for (size_t r = 0; r < hits.size(); ++r)
-            for (size_t s = 0; s < (size_t) maxSteps; ++s) hits[r][s] = d.hits[r][s];
+            for (size_t s = 0; s < (size_t) maxSteps; ++s)
+            {
+                hits[r][s] = d.hits[r][s];
+                rolls[r][s] = d.rolls[r][s];
+            }
         for (size_t s = 0; s < (size_t) maxSteps; ++s)
         {
             on[s] = d.on[s];
@@ -86,6 +99,7 @@ struct Track
         {
             const auto src = (size_t) (i % fromSteps), dst = (size_t) i;
             for (auto& row : hits) row[dst] = row[src].load();
+            for (auto& row : rolls) row[dst] = row[src].load();
             on[dst] = on[src].load();
             accent[dst] = accent[src].load();
             slide[dst] = slide[src].load();

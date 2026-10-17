@@ -327,6 +327,264 @@ std::vector<MachineDef> buildDefs()
             { "release", "RELEASE", 0.4f, releaseHelp, {} },
         } });
 
+    defs.push_back ({ LinnDrum, "linn", "LINN DRUMS", "Boîte à rythmes · inspirée de la LinnDrum (1982)", MachineKind::Drum,
+        0xffe0453a, 0,
+        "La boîte à rythmes à samples des années 80 : de vrais sons de batterie enregistrés en 8 bits. C'est le son de la pop, "
+        "de la funk, du R&B et du hip-hop de l'époque (Prince, Michael Jackson, Herbie Hancock).\n\n"
+        "Snare claquante, sidestick, tambourin, congas, toms ronds : parfaite pour des grooves funky et de la synthwave.",
+        {
+            row ("bd", "KICK", Role::Kick, 0.85f, 0.4f, 0.55f, "Grosse caisse 80s : courte, ronde et claquante.", "Claquement de la batte."),
+            row ("sd", "SNARE", Role::Snare, 0.7f, 0.45f, 0.6f, "La snare 80s, grosse et brillante. Sur 2 et 4.", "Snappy : quantité de timbre."),
+            row ("ss", "SIDESTICK", Role::Rim, 0.5f, 0.35f, 0.5f, "Le « clic » de la baguette posée sur le bord de la caisse claire. Typique des ballades et du R&B.", "Brillance du clic."),
+            row ("cp", "CLAP", Role::Clap, 0.6f, 0.35f, 0.55f, "Clap 80s serré, souvent doublé avec la snare.", "Couleur du clap."),
+            row ("ch", "HAT", Role::ClosedHat, 0.45f, 0.35f, 0.5f, "Charleston fermé, grain 8 bits.", "Brillance."),
+            row ("oh", "OPEN HAT", Role::OpenHat, 0.4f, 0.4f, 0.5f, "Charleston ouvert, grain 8 bits.", "Brillance."),
+            row ("lt", "TOM LOW", Role::LowTom, 0.55f, 0.45f, 0.4f, "Tom grave, rond : parfait pour les roulements de fin.", "Attaque de la peau."),
+            row ("ht", "TOM HIGH", Role::HighTom, 0.55f, 0.4f, 0.4f, "Tom aigu.", "Attaque de la peau."),
+            row ("cb", "COWBELL", Role::Cowbell, 0.4f, 0.3f, 0.6f, "Cowbell funky.", "Couleur de la cloche."),
+            row ("tb", "TAMBOURINE", Role::Tambourine, 0.4f, 0.4f, 0.5f, "Tambourin : sur 2 et 4 ou en doubles croches, il donne de l'énergie à la pop et à la soul.", "Écart entre les deux secousses."),
+            row ("cg", "CONGA", Role::LowConga, 0.5f, 0.4f, 0.5f, "Conga : ajoute un groove latin.", "Claque de la main."),
+            row ("cr", "CRASH", Role::Crash, 0.4f, 0.6f, 0.5f, "Cymbale crash 8 bits.", "Brillance."),
+            row ("rd", "RIDE", Role::Ride, 0.35f, 0.55f, 0.5f, "Cymbale ride 8 bits.", "Brillance."),
+        },
+        {} });
+
+    defs.push_back ({ CR78, "cr78", "CR-78", "Boîte à rythmes vintage · inspirée de la Roland CR-78 (1978)", MachineKind::Drum,
+        0xffc8702e, 0,
+        "Une des premières boîtes à rythmes programmables : des sons analogiques doux et feutrés, avec plein de percussions "
+        "(guiro, bongos, maracas, claves). Son très reconnaissable chez Phil Collins, Blondie ou Hall & Oates.\n\n"
+        "Idéale pour des rythmes rétro, de la pop douce, du lo-fi ou des grooves latins discrets.",
+        {
+            row ("bd", "KICK", Role::Kick, 0.85f, 0.3f, 0.3f, "Kick doux et court, très feutré.", "Clic d'attaque."),
+            row ("sd", "SNARE", Role::Snare, 0.6f, 0.3f, 0.4f, "Snare légère et analogique.", "Snappy."),
+            row ("rs", "RIM", Role::Rim, 0.5f, 0.3f, 0.5f, "Rimshot sec.", "Brillance."),
+            row ("ch", "HAT", Role::ClosedHat, 0.45f, 0.3f, 0.5f, "Charleston fin et métallique.", "Brillance."),
+            row ("cy", "CYMBAL", Role::Cymbal, 0.4f, 0.5f, 0.5f, "Cymbale douce.", "Grave/aigu."),
+            row ("cl", "CLAVES", Role::Claves, 0.45f, 0.3f, 0.5f, "Claves : petit « toc » boisé.", "Brillance."),
+            row ("ma", "MARACAS", Role::Shaker, 0.4f, 0.3f, 0.5f, "Maracas.", "Brillance."),
+            row ("cb", "COWBELL", Role::Cowbell, 0.4f, 0.3f, 0.7f, "Cowbell aiguë.", "Couleur."),
+            row ("gu", "GUIRO", Role::Guiro, 0.45f, 0.4f, 0.5f, "Guiro : le « rrrip » râpé des musiques latines.", "Couleur du grattement."),
+            row ("bl", "BONGO LOW", Role::LowBongo, 0.5f, 0.35f, 0.4f, "Bongo grave.", "Claque de la main."),
+            row ("bh", "BONGO HIGH", Role::HighBongo, 0.5f, 0.3f, 0.4f, "Bongo aigu.", "Claque de la main."),
+            row ("cg", "CONGA", Role::LowConga, 0.5f, 0.4f, 0.4f, "Conga.", "Claque de la main."),
+            row ("tb", "TAMBOURINE", Role::Tambourine, 0.4f, 0.35f, 0.5f, "Tambourin.", "Écart entre les secousses."),
+        },
+        {} });
+
+    defs.push_back ({ MPC, "mpc", "MPC KIT", "Kit hip-hop · son des samplers MPC / SP-1200", MachineKind::Drum,
+        0xffd23b2f, 0,
+        "Le kit du hip-hop boom bap : kick épais, snare qui claque, finger snap, charlestons poussiéreux, le tout avec le grain "
+        "12 bits des samplers qui ont fait le rap des années 90 (Pete Rock, DJ Premier, J Dilla).\n\n"
+        "Mets un peu de swing (50-60 %) : c'est le secret du groove MPC.",
+        {
+            row ("bd", "KICK", Role::Kick, 0.9f, 0.45f, 0.5f, "Kick boom bap : rond, épais et saturé.", "Claquement d'attaque."),
+            row ("sd", "SNARE", Role::Snare, 0.75f, 0.45f, 0.55f, "Snare qui claque avec un peu de pièce autour.", "Snappy : quantité de timbre."),
+            row ("sn", "SNAP", Role::Snap, 0.55f, 0.3f, 0.5f, "Claquement de doigts : très utilisé en trap, R&B et hip-hop, seul ou avec la snare.", "Couleur du claquement."),
+            row ("rs", "RIM", Role::Rim, 0.45f, 0.3f, 0.5f, "Rimshot.", "Brillance."),
+            row ("ch", "HAT", Role::ClosedHat, 0.45f, 0.35f, 0.45f, "Charleston fermé poussiéreux.", "Brillance."),
+            row ("oh", "OPEN HAT", Role::OpenHat, 0.4f, 0.4f, 0.45f, "Charleston ouvert.", "Brillance."),
+            row ("sh", "SHAKER", Role::Shaker, 0.35f, 0.3f, 0.5f, "Shaker : remplit le groove en doubles croches.", "Brillance."),
+            row ("pc", "PERC", Role::Perc, 0.45f, 0.5f, 0.5f, "Percussion boisée (wood block) pour les relances.", "Claque."),
+            row ("cr", "CRASH", Role::Crash, 0.35f, 0.6f, 0.45f, "Cymbale crash.", "Brillance."),
+        },
+        {} });
+
+    defs.push_back ({ Percussion, "perc", "PERCUSSIONS", "Percussions latines et africaines", MachineKind::Drum,
+        0xffff9a3c, 0,
+        "Congas, bongos, timbales, agogo, guiro, shaker, tambourin, triangle et claves : tout ce qu'il faut pour de l'afro house, "
+        "du reggaeton, de la salsa, de la house latine ou pour enrichir n'importe quel groove.\n\n"
+        "Astuce : ajoute 2 ou 3 percussions discrètes par-dessus une batterie simple, c'est ce qui donne vie au rythme.",
+        {
+            row ("cgl", "CONGA LOW", Role::LowConga, 0.55f, 0.45f, 0.4f, "Conga grave (tumba).", "Claque de la main."),
+            row ("cgh", "CONGA HIGH", Role::HighConga, 0.55f, 0.4f, 0.5f, "Conga aiguë (quinto).", "Claque de la main."),
+            row ("bl", "BONGO LOW", Role::LowBongo, 0.5f, 0.35f, 0.5f, "Bongo grave (hembra).", "Claque de la main."),
+            row ("bh", "BONGO HIGH", Role::HighBongo, 0.5f, 0.3f, 0.5f, "Bongo aigu (macho).", "Claque de la main."),
+            row ("tl", "TIMBALE LOW", Role::LowTimbale, 0.5f, 0.45f, 0.6f, "Timbale grave : sonne métallique, typique de la salsa.", "Claque."),
+            row ("th", "TIMBALE HIGH", Role::HighTimbale, 0.5f, 0.4f, 0.6f, "Timbale aiguë.", "Claque."),
+            row ("cb", "COWBELL", Role::Cowbell, 0.4f, 0.35f, 0.5f, "Cloche (cencerro).", "Couleur."),
+            row ("ag", "AGOGO", Role::Agogo, 0.4f, 0.35f, 0.5f, "Agogo : cloche africaine/brésilienne.", "Brillance de la cloche."),
+            row ("gu", "GUIRO", Role::Guiro, 0.45f, 0.4f, 0.5f, "Guiro râpé.", "Couleur du grattement."),
+            row ("sh", "SHAKER", Role::Shaker, 0.4f, 0.3f, 0.5f, "Shaker en doubles croches.", "Brillance."),
+            row ("tb", "TAMBOURINE", Role::Tambourine, 0.4f, 0.35f, 0.5f, "Tambourin.", "Écart entre les secousses."),
+            row ("tr", "TRIANGLE", Role::Triangle, 0.35f, 0.4f, 0.5f, "Triangle : un « ting » cristallin qui résonne.", "Brillance."),
+            row ("cl", "CLAVES", Role::Claves, 0.45f, 0.3f, 0.5f, "Claves : jouent la « clave », le rythme qui guide la musique latine.", "Brillance."),
+        },
+        {} });
+
+    defs.push_back ({ DX7, "dx7", "DX7 FM", "Synthé FM · inspiré du Yamaha DX7 (1983)", MachineKind::Poly,
+        0xff3fd0b0, 24,
+        "Le synthé le plus vendu des années 80, basé sur la synthèse FM : des sons brillants et précis. Son piano électrique "
+        "est partout dans la pop, le R&B, le lo-fi et la house ; ses basses FM et ses cloches sont devenues légendaires.\n\n"
+        "Choisis un SON (piano électrique, basse FM, cloche, cuivres, marimba, nappe), puis règle la BRILLANCE et la DURÉE.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "preset", "SON", 0.0f,
+              "Le type de son FM. Piano électrique = doux et chaleureux (lo-fi, R&B, house). Basse FM = basse claquante des années 80. "
+              "Cloche = son cristallin (trap, ambient). Cuivres = attaque cuivrée. Marimba = percussion boisée. Nappe = son long et doux.",
+              { "Piano électrique", "Basse FM", "Cloche", "Cuivres", "Marimba", "Nappe FM" } },
+            { "brightness", "BRILLANCE", 0.5f, "Quantité de modulation FM : à gauche le son est doux et rond, à droite il devient brillant, métallique et agressif.", {} },
+            { "decay", "DURÉE", 0.5f, "Durée naturelle du son : court = notes sèches et percussives, long = notes qui résonnent.", {} },
+            { "release", "RELEASE", 0.3f, releaseHelp, {} },
+            { "detune", "DÉSACCORD", 0.2f, "Désaccorde légèrement deux couches du son pour l'épaissir (effet chorus).", {} },
+            { "tremolo", "TRÉMOLO", 0.2f, "Fait onduler le volume, comme sur un vrai piano électrique.", {} },
+        } });
+
+    defs.push_back ({ Strings, "strings", "STRINGS", "String machine · inspirée de l'ARP Solina (1974)", MachineKind::Poly,
+        0xffffb347, 24,
+        "La « string machine » : un orgue à cordes électronique passé dans un chorus d'ensemble qui le rend large et soyeux. "
+        "Le son des nappes disco, de la synthwave, de la dub, de l'ambient et de Jean-Michel Jarre.\n\n"
+        "Joue des accords tenus (rangée TENIR) avec une attaque et un release longs.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "violin", "VIOLONS", 0.8f, "Volume des registres aigus (violons) : brillant et léger.", {} },
+            { "cello", "VIOLONCELLES", 0.5f, "Volume du registre grave (violoncelles) une octave en dessous : donne du corps.", {} },
+            { "attack", "ATTACK", 0.45f, attackHelp, {} },
+            { "release", "RELEASE", 0.5f, releaseHelp, {} },
+            { "ensemble", "ENSEMBLE", 0.7f, "Le chorus d'ensemble qui fait sonner l'instrument comme une section de cordes. À fond = son très large et ondulant.", {} },
+            { "brightness", "BRILLANCE", 0.55f, "Filtre : sombre à gauche, brillant à droite.", {} },
+        } });
+
+    defs.push_back ({ Organ, "organ", "ORGAN", "Orgue · inspiré de l'orgue Hammond B3 et de l'orgue house du Korg M1", MachineKind::Poly,
+        0xffe8c070, 24,
+        "Deux orgues en un. TIRETTES : l'orgue à roues phoniques (Hammond) du gospel, de la soul, du funk et du reggae, avec sa cabine "
+        "rotative (Leslie). ORGUE HOUSE : le son percussif du Korg M1, emblème de la house des années 90.\n\n"
+        "Les faders sont les « tirettes » : ils dosent les harmoniques graves, médiums et aiguës.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "type", "TYPE", 0.0f, "Tirettes = orgue Hammond (soul, gospel, reggae, funk). Orgue house = orgue percussif du Korg M1 (house des années 90).",
+              { "Tirettes", "Orgue house" } },
+            { "bass", "GRAVES", 0.8f, "Tirettes graves (16' et 8') : le fondement du son.", {} },
+            { "middle", "MÉDIUMS", 0.5f, "Tirettes médiums (4' et 2 2/3') : donnent de la présence.", {} },
+            { "high", "AIGUS", 0.3f, "Tirettes aiguës (2', 1 3/5', 1') : son brillant et perçant.", {} },
+            { "percussion", "PERCUSSION", 0.3f, "Petite note harmonique qui claque au début de chaque note : le « pop » typique de l'orgue jazz et house.", {} },
+            { "leslie", "LESLIE", 0.4f, "La cabine à haut-parleur tournant : ondulation lente (milieu) ou rapide (à fond). À zéro : coupée.", {} },
+            { "drive", "DRIVE", 0.2f, "Saturation de l'ampli : orgue rock et sale quand on pousse.", {} },
+            { "click", "CLIC", 0.3f, "Le petit clic de contact des touches, typique des vrais orgues.", {} },
+        } });
+
+    defs.push_back ({ Sub808, "sub808", "808 SUB", "Basse 808 · la basse glissée du trap et de la drill", MachineKind::Mono,
+        0xffff2d3a, 0,
+        "La basse 808 : un kick 808 très long joué comme une note de basse. C'est LA basse du trap, de la drill, du R&B moderne "
+        "et du reggaeton : profonde, avec ses fameux glissés entre les notes.\n\n"
+        "Place souvent les notes au même endroit que le kick, et mets un SLIDE pour faire glisser vers la note suivante.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "decay", "DURÉE", 0.6f, "Durée de chaque note : court = basse rebondissante, long = grosse note qui tient.", {} },
+            { "glide", "GLIDE", 0.35f, "Durée du glissé vers la note suivante quand SLIDE est activé. C'est la signature des basses trap.", {} },
+            { "punch", "PUNCH", 0.4f, "Attaque du début de note (une petite chute de hauteur, comme un kick) : plus de punch = la basse claque mieux.", {} },
+            { "drive", "DISTO", 0.3f, "Saturation : rend la basse audible même sur les petits haut-parleurs (téléphone, laptop).", {} },
+            { "tone", "TIMBRE", 0.6f, "Filtre après la saturation : sombre à gauche, plus mordant à droite.", {} },
+        } });
+
+    defs.push_back ({ Piano, "piano", "PIANO", "Piano acoustique · à queue, droit, bastringue, pop, feutré", MachineKind::Poly,
+        0xfff2e6c8, 24,
+        "Le piano acoustique, recréé par synthèse (cordes, marteaux, étouffoirs). Indispensable pour la house « piano », "
+        "la pop, les ballades, le lo-fi, le gospel et le R&B.\n\n"
+        "Choisis un TYPE : piano à queue (riche), piano droit (plus sec), bastringue (désaccordé, saloon), pop brillant "
+        "(qui perce dans le mix) ou feutré (très doux, idéal en lo-fi). Allume TENIR pour laisser résonner les accords.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "type", "TYPE", 0.0f,
+              "Le modèle de piano. À queue = son riche et ample. Droit = plus sec et intime. Bastringue = cordes désaccordées, "
+              "son de saloon. Pop brillant = attaque claire qui ressort dans le mix (house, pop). Feutré = très doux et chaud (lo-fi, piano de nuit).",
+              { "Piano à queue", "Piano droit", "Piano bastringue", "Piano pop brillant", "Piano feutré" } },
+            { "brightness", "BRILLANCE", 0.5f, "Sombre et doux à gauche, brillant et percutant à droite (comme si on jouait plus fort).", {} },
+            { "decay", "TENUE", 0.5f, "Combien de temps les cordes résonnent quand la note est tenue.", {} },
+            { "release", "ÉTOUFFOIR", 0.4f, "Vitesse à laquelle le son s'arrête quand on relâche la note : court = notes détachées, long = comme avec la pédale.", {} },
+            { "hammer", "MARTEAUX", 0.4f, "Le petit bruit des marteaux qui frappent les cordes : plus = attaque plus réaliste et percussive.", {} },
+            { "width", "STÉRÉO", 0.5f, "Écarte les graves à gauche et les aigus à droite, comme quand on est assis au piano.", {} },
+        } });
+
+    defs.push_back ({ Mallets, "mallets", "MALLETS", "Cloches et percussions mélodiques · glockenspiel, vibraphone, kalimba…", MachineKind::Poly,
+        0xff7fd6ff, 24,
+        "Tout ce qui se joue avec une mailloche ou qui sonne comme une cloche : glockenspiel, vibraphone, célesta, boîte à musique, "
+        "kalimba, steel drum, cloches tubulaires et marimba.\n\n"
+        "Parfait pour les mélodies de trap et de drill (cloches, boîte à musique), le lo-fi (vibraphone, kalimba), l'afro et les "
+        "musiques des îles (marimba, steel drum) ou les ambiances féeriques (célesta).",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 0.0f, chordHelp, chordChoices() },
+            { "type", "TYPE", 0.0f,
+              "L'instrument. Glockenspiel = petites lames de métal très aiguës. Vibraphone = lames métalliques avec un vibrato doux (jazz, lo-fi). "
+              "Célesta = clochettes féeriques. Boîte à musique = mélodie de berceuse (trap). Kalimba = piano à pouces africain. "
+              "Steel drum = son des Caraïbes. Cloches tubulaires = grandes cloches d'église. Marimba = lames de bois.",
+              { "Glockenspiel", "Vibraphone", "Célesta", "Boîte à musique", "Kalimba", "Steel drum", "Cloches tubulaires", "Marimba" } },
+            { "brightness", "BRILLANCE", 0.5f, "Quantité d'harmoniques aiguës : sombre à gauche, scintillant à droite.", {} },
+            { "decay", "DURÉE", 0.5f, "Combien de temps la lame ou la cloche résonne.", {} },
+            { "release", "RELEASE", 0.5f, releaseHelp, {} },
+            { "mallet", "MAILLOCHE", 0.5f, "Dureté de la mailloche : douce = son rond et feutré, dure = attaque claquante et brillante.", {} },
+            { "vibrato", "VIBRATO", 0.3f, "Fait onduler le son (le moteur du vibraphone). Surtout audible sur le vibraphone.", {} },
+        } });
+
+    defs.push_back ({ Pluck, "pluck", "PLUCK", "Cordes pincées · guitares, harpe, koto, sitar, pizzicato", MachineKind::Poly,
+        0xffe0a060, 24,
+        "Des cordes pincées recréées par synthèse physique (une corde qui vibre vraiment) : guitare acoustique, nylon, guitare funk "
+        "étouffée, harpe, koto japonais, sitar indien et pizzicato de cordes.\n\n"
+        "Les accords sont « grattés » comme sur une guitare (bouton GRATTAGE). Super pour le reggaeton et l'afro (guitare), le funk "
+        "(guitare étouffée), le lo-fi (nylon) ou des couleurs du monde (koto, sitar).",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "type", "TYPE", 0.0f,
+              "L'instrument. Guitare acoustique = cordes métal brillantes. Nylon = guitare classique douce. Funk = notes courtes étouffées "
+              "avec la paume (« tchik »). Harpe = cordes douces qui résonnent longtemps. Koto = cithare japonaise. Sitar = son indien qui "
+              "grésille. Pizzicato = cordes de violon pincées.",
+              { "Guitare acoustique", "Guitare nylon", "Guitare funk (étouffée)", "Harpe", "Koto", "Sitar", "Pizzicato (cordes)" } },
+            { "brightness", "BRILLANCE", 0.5f, "Où et comment la corde est pincée : sombre (avec le pouce) à gauche, brillant (au médiator) à droite.", {} },
+            { "decay", "DURÉE", 0.5f, "Combien de temps la corde vibre.", {} },
+            { "release", "AMORTI", 0.3f, "Vitesse à laquelle la corde s'arrête quand on relâche la note.", {} },
+            { "strum", "GRATTAGE", 0.3f, "Décalage entre les notes d'un accord, comme un coup de médiator sur les cordes. À zéro, toutes les notes partent ensemble.", {} },
+            { "body", "CAISSE", 0.5f, "La résonance de la caisse en bois de l'instrument : plus = son plus rond et plus « boisé ».", {} },
+        } });
+
+    defs.push_back ({ Choir, "choir", "CHOIR", "Chœurs · voix « aah », « ooh », « eeh », « mmh »", MachineKind::Poly,
+        0xffc8a8ff, 24,
+        "Un chœur de voix synthétiques qui chantent des voyelles. Le son des nappes vocales de la house, de la trance, du gospel, "
+        "des musiques de film et de l'ambient.\n\n"
+        "Choisis une VOYELLE, joue des accords tenus (rangée TENIR) avec une attaque lente : effet garanti.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "vowel", "VOYELLE", 0.0f, "La voyelle chantée : Aah = ouvert et puissant, Ooh = rond et doux, Eeh = plus nasal et brillant, Mmh = bouche fermée, très doux.",
+              { "Aah", "Ooh", "Eeh", "Mmh" } },
+            { "attack", "ATTACK", 0.5f, attackHelp, {} },
+            { "release", "RELEASE", 0.5f, releaseHelp, {} },
+            { "ensemble", "ENSEMBLE", 0.5f, "Nombre apparent de chanteurs : à gauche une voix seule, à droite un grand chœur large.", {} },
+            { "brightness", "BRILLANCE", 0.5f, "Présence des aigus de la voix : sombre et lointain à gauche, clair et proche à droite.", {} },
+            { "breath", "SOUFFLE", 0.2f, "Ajoute le souffle de l'air dans la voix, pour un chœur plus intime et aérien.", {} },
+        } });
+
+    defs.push_back ({ SoundFx, "fx", "FX", "Effets sonores · risers, impacts, sirène, air horn, vinyle", MachineKind::Drum,
+        0xff9cff57, 0,
+        "Les effets qui font vivre un morceau : montées (riser), descentes, gros impacts, souffles, laser, sirène dub, air horn du "
+        "dancehall, craquements de vinyle et cymbale à l'envers.\n\n"
+        "Chaque case déclenche l'effet ; le bouton DURÉE règle sa longueur. Exemple : un RISER au début de la dernière mesure, "
+        "un IMPACT sur le premier temps qui suit. Le VINYLE, long, donne le grain lo-fi.",
+        {
+            row ("rise", "RISER", Role::Perc, 0.55f, 0.5f, 0.3f, "Montée de bruit et de son qui grimpe vers l'aigu : annonce l'arrivée du refrain ou du drop.", "Bruit (à gauche) ou son (à droite)."),
+            row ("down", "DOWN", Role::Perc, 0.5f, 0.45f, 0.3f, "Descente : un balayage qui retombe vers le grave, juste après un drop ou à la fin d'une partie.", "Bruit (à gauche) ou son (à droite)."),
+            row ("imp", "IMPACT", Role::Crash, 0.7f, 0.5f, 0.4f, "Gros coup de cinéma : un boom grave et une queue de bruit. Sur le premier temps d'une nouvelle partie.", "Plus de boom (à gauche) ou de souffle (à droite)."),
+            row ("swp", "SWEEP", Role::Perc, 0.45f, 0.45f, 0.3f, "Un souffle de bruit blanc qui s'ouvre puis se referme (« whoosh ») pour lier deux parties.", "Résonance du souffle."),
+            row ("zap", "LASER", Role::Perc, 0.4f, 0.4f, 0.3f, "Le « piou » du laser : un son qui plonge de très aigu à grave. Rétro, électro, jeux vidéo.", "Son doux (à gauche) ou carré et agressif (à droite)."),
+            row ("sir", "SIRÈNE", Role::Perc, 0.4f, 0.5f, 0.4f, "La sirène des sound systems dub et reggae : un son qui monte et descend en boucle.", "Vitesse de la sirène."),
+            row ("horn", "AIR HORN", Role::Perc, 0.45f, 0.4f, 0.5f, "La corne de brume du dancehall et du reggaeton. Mets des roulements ×3 (clic droit) pour le fameux « pou-pou-pou ».", "Brillance du cuivre."),
+            row ("vin", "VINYLE", Role::Perc, 0.4f, 0.5f, 0.4f, "Craquements et souffle d'un vieux disque. Un seul coup long au début de la séquence suffit : le grain lo-fi parfait.", "Quantité de craquements."),
+            row ("rev", "REVERSE", Role::Perc, 0.45f, 0.5f, 0.5f, "Cymbale à l'envers qui monte et s'arrête net. Place-la pour qu'elle se termine juste avant un temps fort.", "Brillance."),
+        },
+        {} });
+
     return defs;
 }
 } // namespace

@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Language.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <vector>
 
 namespace techno
 {
-inline juce::String utf8 (const char* text) { return juce::String::fromUTF8 (text); }
+// User-facing text: written in French in the code, translated when the interface is in English.
+inline juce::String utf8 (const char* text) { return tr (text); }
 
 struct ScaleDef
 {

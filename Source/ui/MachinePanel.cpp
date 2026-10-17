@@ -30,6 +30,8 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
     addHeaderButton (*muteButton, "machine.mute");
     addHeaderButton (*soloButton, "machine.solo");
 
+    patternButton.onClick = [this] { showPatternMenu(); };
+    if (! patternKindsFor (def).empty()) addHeaderButton (patternButton, "machine.patterns");
     diceButton.onClick = [this] { showDiceMenu(); };
     addHeaderButton (diceButton, "machine.diceMenu");
     moreButton.onClick = [this] { showMoreMenu(); };
@@ -92,7 +94,14 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
             {
                 auto& cell = addCell (c, r, StepCell::Mode::Toggle);
                 cell.isOn = [this, &track, r, c] { return track.hits[(size_t) r][(size_t) stepFor (c)].load(); };
-                cell.setOn = [this, &track, r, c] (bool on) { track.hits[(size_t) r][(size_t) stepFor (c)] = on; };
+                cell.setOn = [this, &track, r, c] (bool on)
+                {
+                    track.hits[(size_t) r][(size_t) stepFor (c)] = on;
+                    if (! on) track.rolls[(size_t) r][(size_t) stepFor (c)] = 0;
+                };
+                cell.getRoll = [this, &track, r, c] { return (int) track.rolls[(size_t) r][(size_t) stepFor (c)].load(); };
+                cell.setRoll = [this, &track, r, c] (int roll) { track.rolls[(size_t) r][(size_t) stepFor (c)] = (std::uint8_t) roll; };
+                cell.setTooltip (utf8 ("Clic : son on / off · Clic droit ou molette : roulement ×2, ×3, ×4"));
             }
         }
 
@@ -284,6 +293,38 @@ void MachinePanel::showDiceMenu()
     });
 }
 
+void MachinePanel::showPatternMenu()
+{
+    juce::PopupMenu menu;
+    std::vector<const Pattern*> items;
+    const char* const kindTitles[] { "RYTHMES CÉLÈBRES", "LIGNES DE BASSE", "ACCORDS", "MÉLODIES ET ARPÈGES" };
+
+    for (auto kind : patternKindsFor (def))
+    {
+        const auto categories = patternCategories (kind);
+        if (kind == PatternKind::Drums) menu.addSectionHeader (utf8 (kindTitles[(int) kind]));
+        for (auto& category : categories)
+        {
+            juce::PopupMenu sub;
+            for (auto& p : patterns())
+            {
+                if (p.kind != kind || p.category != category) continue;
+                items.push_back (&p);
+                const juce::String name = utf8 (p.name);
+                sub.addItem ((int) items.size(), p.bpm > 0 ? name + "   (" + juce::String (p.bpm) + " BPM)" : name);
+            }
+            menu.addSubMenu (utf8 (category), sub);
+        }
+    }
+    menu.addSeparator();
+    menu.addItem (-1, utf8 ("Remplace la partie de cette machine · Ctrl+Z pour annuler"), false, false);
+
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (patternButton), [this, items] (int result)
+    {
+        if (result >= 1 && result <= (int) items.size()) processor.applyPattern (type, *items[(size_t) result - 1]);
+    });
+}
+
 void MachinePanel::showMoreMenu()
 {
     juce::PopupMenu menu;
@@ -426,7 +467,7 @@ void MachinePanel::resized()
     {
         it->second->setBounds (header.removeFromRight (16).withSizeKeepingCentre (15, 15));
         header.removeFromRight (3);
-        const int width = it->first == &moreButton ? 36 : it->first == &diceButton ? 110 : 76;
+        const int width = it->first == &moreButton ? 36 : it->first == &diceButton ? 110 : it->first == &patternButton ? 124 : 76;
         it->first->setBounds (header.removeFromRight (width));
         header.removeFromRight (10);
     }
@@ -557,11 +598,11 @@ void MachinePanel::paint (juce::Graphics& g)
         {
             g.setColour (r == 0 ? skin.text : skin.textDim);
             g.setFont (paint::condensed (r == 0 ? 15.0f : 13.0f));
-            g.drawText (labels[r], labelX, y[(size_t) r], labelW, heights[r], juce::Justification::centredLeft);
+            g.drawText (utf8 (labels[r]), labelX, y[(size_t) r], labelW, heights[r], juce::Justification::centredLeft);
         }
     }
 
-    if (! soundBox.isEmpty()) paint::printedBox (g, soundBox.toFloat(), "SON", skin);
+    if (! soundBox.isEmpty()) paint::printedBox (g, soundBox.toFloat(), utf8 ("SON"), skin);
     if (! stripBox.isEmpty()) paint::printedBox (g, stripBox.toFloat(), utf8 ("EFFETS & MIX"), skin);
 }
 } // namespace techno

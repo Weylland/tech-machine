@@ -29,7 +29,7 @@ struct DelayLine
     {
         float p = (float) pos - delay;
         while (p < 0.0f) p += (float) size;
-        const int i0 = (int) p;
+        const int i0 = std::min ((int) p, size - 1);   // pos - delay + size can round up to size
         const int i1 = i0 + 1 >= size ? 0 : i0 + 1;
         const float frac = p - (float) i0;
         return buffer[(size_t) i0] + frac * (buffer[(size_t) i1] - buffer[(size_t) i0]);
