@@ -47,21 +47,24 @@ void LcdDisplay::setTempo (float bpm)
 
 void LcdDisplay::mouseDown (const juce::MouseEvent&)
 {
+    if (processor.isHosted()) return;
     dragStartTempo = tempo.convertFrom0to1 (tempo.getValue());
     tempo.beginChangeGesture();
 }
 
 void LcdDisplay::mouseDrag (const juce::MouseEvent& e)
 {
+    if (processor.isHosted()) return;
     setTempo (dragStartTempo - (float) e.getDistanceFromDragStartY() * 0.25f);
 }
 
-void LcdDisplay::mouseUp (const juce::MouseEvent&) { tempo.endChangeGesture(); }
+void LcdDisplay::mouseUp (const juce::MouseEvent&) { if (! processor.isHosted()) tempo.endChangeGesture(); }
 
-void LcdDisplay::mouseDoubleClick (const juce::MouseEvent&) { setTempo (130.0f); }
+void LcdDisplay::mouseDoubleClick (const juce::MouseEvent&) { if (! processor.isHosted()) setTempo (130.0f); }
 
 void LcdDisplay::mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails& wheel)
 {
+    if (processor.isHosted()) return;
     setTempo (tempo.convertFrom0to1 (tempo.getValue()) + (wheel.deltaY > 0 ? 1.0f : -1.0f));
 }
 
@@ -74,12 +77,12 @@ void LcdDisplay::paint (juce::Graphics& g)
     g.fillRoundedRectangle (glass, 4.0f);
 
     const auto amber = colours::lcd;
-    const float bpm = tempo.convertFrom0to1 (tempo.getValue());
+    const float bpm = processor.displayBpm.load();
 
     auto left = glass.reduced (12.0f, 8.0f).removeFromLeft (glass.getWidth() * 0.42f);
     g.setColour (amber.withAlpha (0.7f));
     g.setFont (paint::condensed (11.0f));
-    g.drawText ("TEMPO", left.removeFromTop (13.0f), juce::Justification::centredLeft);
+    g.drawText (processor.isHosted() ? "TEMPO DAW (SYNC)" : "TEMPO", left.removeFromTop (13.0f), juce::Justification::centredLeft);
     auto digits = left.removeFromTop (left.getHeight() - 14.0f);
     paint::sevenSegment (g, juce::String (juce::roundToInt (bpm)).paddedLeft (' ', 3), digits.withWidth (digits.getHeight() * 1.9f), amber);
     g.setColour (amber.withAlpha (0.7f));
@@ -280,6 +283,7 @@ void TechMachineEditor::styleButton (juce::Button& button, juce::Colour colour, 
 
 void TechMachineEditor::togglePlay()
 {
+    if (processor.isHosted()) return;
     processor.playing = ! processor.playing.load();
 }
 
@@ -446,6 +450,7 @@ void TechMachineEditor::timerCallback()
     const auto& scale = scales()[(size_t) processor.currentScale()];
     scaleInfo->setHelp (utf8 ("Gamme : ") + utf8 (scale.name), utf8 (scale.help) + "\n\n" + help ("scale").body);
 
+    playButton.setEnabled (! processor.isHosted());
     playButton.setButtonText (playing ? "STOP" : "LECTURE");
     playButton.setIcon (playing ? "stop" : "play");
     playButton.setColour (juce::TextButton::buttonColourId, playing ? juce::Colour (0xff8f2f2f) : juce::Colour (0xff2f8f4a));
@@ -456,6 +461,11 @@ void TechMachineEditor::timerCallback()
                             recording ? (blink ? juce::Colour (0xffd8303f) : juce::Colour (0xff6a1a22)) : juce::Colour (0xff4a2a2e));
     folderButton.setVisible (processor.getLastRecording().existsAsFile() && ! recording);
 
+    if (processor.isHosted())
+    {
+        playButton.setTooltip (utf8 ("En plugin, la lecture et le tempo suivent ton logiciel de musique."));
+        lcd.setTooltip (utf8 ("Tempo synchronisé sur ton logiciel de musique."));
+    }
     lcd.repaint();
     vu.push (processor.outputPeak.exchange (0.0f));
 }

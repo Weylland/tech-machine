@@ -208,7 +208,25 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     bpmValue = bpm->load();
     lengthSteps = numSteps();
 
-    const bool play = playing.load();
+    // As a plugin, tempo, start/stop and position come from the host.
+    bool play = playing.load();
+    juce::Optional<double> hostPpq;
+    if (isHosted())
+    {
+        play = false;
+        if (auto* head = getPlayHead())
+        {
+            if (auto position = head->getPosition())
+            {
+                if (auto hostBpm = position->getBpm()) bpmValue = juce::jlimit (20.0f, 400.0f, (float) *hostBpm);
+                hostPpq = position->getPpqPosition();
+                play = position->getIsPlaying() && hostPpq.hasValue() && *hostPpq >= 0.0;
+            }
+        }
+        playing = play;
+    }
+    displayBpm = bpmValue;
+
     if (play && ! wasPlaying)
     {
         stepIndex = -1;
@@ -220,6 +238,9 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         currentStep = -1;
     }
     wasPlaying = play;
+
+    if (play && hostPpq.hasValue())
+        syncToHost (*hostPpq);
 
     bool anySolo = false;
     for (auto& s : strips)
@@ -370,6 +391,39 @@ void TechMachineProcessor::render (float* left, float* right, int numSamples)
     {
         left[i] += revL[i] * reverbLevelValue;
         right[i] += revR[i] * reverbLevelValue;
+    }
+}
+
+// Aligns the step clock on the host position (in quarter notes) at the start of a block.
+// Steps are sixteenths; with swing the first step of each pair is longer, as in advanceStep().
+void TechMachineProcessor::syncToHost (double ppq)
+{
+    const double sw = swing->load() * 0.33;
+    const double sixteenths = ppq * 4.0;
+    const double pair = std::floor (sixteenths / 2.0);
+    const double inPair = sixteenths - pair * 2.0;
+    const bool secondOfPair = inPair >= 1.0 + sw;
+    const double sinceStart = secondOfPair ? inPair - (1.0 + sw) : inPair;
+    const double untilNext = secondOfPair ? 2.0 - inPair : (1.0 + sw) - inPair;
+    const double samplesPerStep = sampleRate * stepSeconds();
+    const int hostStep = (int) (((long long) pair * 2 + (secondOfPair ? 1 : 0)) % lengthSteps);
+
+    if (hostStep == stepIndex)
+    {
+        samplesToNextStep = untilNext * samplesPerStep;
+    }
+    else if (sinceStart * samplesPerStep < 1.0)
+    {
+        // A step starts right now: let render() trigger it on the first sample.
+        stepIndex = (hostStep + lengthSteps - 1) % lengthSteps;
+        samplesToNextStep = 0.0;
+    }
+    else
+    {
+        // Started or jumped in the middle of a step: wait for the next one instead of playing late.
+        stepIndex = hostStep;
+        currentStep = hostStep;
+        samplesToNextStep = untilNext * samplesPerStep;
     }
 }
 

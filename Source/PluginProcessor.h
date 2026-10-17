@@ -39,6 +39,7 @@ public:
     bool isShown (int type) const { return strips[(size_t) type].show->load() > 0.5f; }
     void setShown (int type, bool shown);
     int numSteps() const { return ((int) bars->load() + 1) * techno::pageSteps; }
+    bool isHosted() const { return wrapperType != wrapperType_Standalone; }
     int currentScale() const { return (int) scaleParam->load(); }
     int currentKey() const { return (int) keyParam->load(); }
 
@@ -61,6 +62,7 @@ public:
     std::atomic<int> currentStep { -1 };
     std::atomic<int> patternVersion { 0 };
     std::atomic<float> outputPeak { 0.0f };
+    std::atomic<float> displayBpm { 130.0f };
     int styleIndex = 0;
 
 private:
@@ -77,6 +79,7 @@ private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     void render (float* left, float* right, int numSamples);
     void advanceStep();
+    void syncToHost (double ppq);
     float stepSeconds() const { return 60.0f / bpmValue / 4.0f; }
 
     std::vector<std::unique_ptr<techno::Machine>> machines;
