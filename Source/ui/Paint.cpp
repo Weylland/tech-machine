@@ -517,6 +517,31 @@ void icon (Graphics& g, const juce::String& name, Rect r, Colour colour)
         else p.addTriangle (b.getX() + s * 0.35f, b.getY() + s * 0.2f, b.getX() + s * 0.35f, b.getBottom() - s * 0.2f, b.getRight() - s * 0.25f, b.getCentreY());
         g.fillPath (p);
     }
+    else if (name == "more")
+    {
+        for (int i = -1; i <= 1; ++i)
+            g.fillEllipse (Rect (s * 0.16f, s * 0.16f).withCentre ({ b.getCentreX() + (float) i * s * 0.28f, b.getCentreY() }));
+    }
+    else if (name == "undo" || name == "redo")
+    {
+        juce::Path arc;
+        const bool undo = name == "undo";
+        arc.addCentredArc (b.getCentreX(), b.getCentreY() + s * 0.08f, s * 0.3f, s * 0.26f, 0.0f,
+                           undo ? -2.2f : 2.2f, undo ? 1.3f : -1.3f, true);
+        g.strokePath (arc, juce::PathStrokeType (juce::jmax (1.4f, s * 0.1f)));
+        juce::Path head;
+        const float hx = undo ? b.getCentreX() - s * 0.26f : b.getCentreX() + s * 0.26f, hy = b.getCentreY() - s * 0.12f;
+        head.addTriangle (hx - s * 0.14f, hy, hx + s * 0.14f, hy, hx, hy - s * 0.2f);
+        head.applyTransform (juce::AffineTransform::rotation (undo ? -0.6f : 0.6f, hx, hy));
+        g.fillPath (head);
+    }
+    else if (name == "folder")
+    {
+        juce::Path p;
+        p.addRoundedRectangle (b.getX() + s * 0.1f, b.getY() + s * 0.3f, s * 0.8f, s * 0.5f, s * 0.06f);
+        p.addRoundedRectangle (b.getX() + s * 0.1f, b.getY() + s * 0.22f, s * 0.32f, s * 0.14f, s * 0.04f);
+        g.fillPath (p);
+    }
     else if (name == "trash")
     {
         const float t = juce::jmax (1.2f, s * 0.09f);

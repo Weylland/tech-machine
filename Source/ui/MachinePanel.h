@@ -30,6 +30,9 @@ private:
     };
 
     StepCell& addCell (int column, int row, StepCell::Mode, bool dimmed = false);
+    void showDiceMenu();
+    void showMoreMenu();
+    void showRowFx (int row);
     InfoButton& addInfo (const HelpText&);
     void addHeaderButton (juce::Button&, const juce::String& helpKey);
     int stepFor (int column) const { return page * pageSteps + column; }
@@ -57,11 +60,12 @@ private:
 
     InfoButton machineInfo;
     std::unique_ptr<ParamLed> muteButton, soloButton;
-    IconButton diceButton { "dice", "HASARD" }, clearButton { "trash", "EFFACER" }, collapseButton { "down" }, removeButton { "close" };
+    IconButton diceButton { "dice", "HASARD" }, moreButton { "more" }, collapseButton { "down" }, removeButton { "close" };
     std::vector<std::pair<juce::Button*, InfoButton*>> headerButtons;
 
     juce::OwnedArray<InfoButton> infos;
     juce::OwnedArray<ParamLed> rowMutes;
+    juce::OwnedArray<FxButton> fxButtons;
     juce::OwnedArray<Knob> rowKnobs;
     std::vector<InfoButton*> rowInfoButtons, columnInfos;
     juce::OwnedArray<StepCell> cells;

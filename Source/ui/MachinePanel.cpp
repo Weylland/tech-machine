@@ -9,7 +9,7 @@ constexpr int labelW = 112;
 constexpr int cellW = 38, cellGap = 4, groupGap = 10;
 constexpr int drumTop = headerH + 30, drumRowH = 30, drumColumnW = 64;
 constexpr int knobW = 64, knobH = 72, faderW = 60, faderH = 126, choiceW = 128;
-constexpr int boxPad = 10, boxTitle = 16;
+constexpr int boxPad = 10, boxTitle = 16, fxW = 44;
 
 const char* const drumColumnKeys[4] { "drum.level", "drum.tune", "drum.decay", "drum.tone" };
 const char* const drumColumnNames[4] { "NIVEAU", "HAUTEUR", "DURÉE", "TIMBRE" };
@@ -30,10 +30,10 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
     addHeaderButton (*muteButton, "machine.mute");
     addHeaderButton (*soloButton, "machine.solo");
 
-    diceButton.onClick = [this] { processor.regenerate (type); };
-    addHeaderButton (diceButton, "machine.dice");
-    clearButton.onClick = [this] { processor.clearMachine (type); };
-    addHeaderButton (clearButton, "machine.clear");
+    diceButton.onClick = [this] { showDiceMenu(); };
+    addHeaderButton (diceButton, "machine.diceMenu");
+    moreButton.onClick = [this] { showMoreMenu(); };
+    addHeaderButton (moreButton, "machine.more");
 
     collapseButton.setTooltip (help ("machine.collapse").title + " : " + help ("machine.collapse").body);
     collapseButton.onClick = [this]
@@ -73,6 +73,11 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
             addAndMakeVisible (mute);
 
             rowInfoButtons.push_back (&addInfo ({ label, utf8 (row.help) + "\n\n" + help ("drum.rowMute").body }));
+
+            auto* fx = fxButtons.add (new FxButton (state, pid::row (type, r, "")));
+            fx->setTooltip (help ("drum.fx").title + " : " + shortHelp (help ("drum.fx").body));
+            fx->onClick = [this, r] { showRowFx (r); };
+            addAndMakeVisible (fx);
 
             const char* suffixes[4] { "level", "tune", "decay", "tone" };
             for (int k = 0; k < 4; ++k)
@@ -190,6 +195,11 @@ MachinePanel::~MachinePanel()
 StepCell& MachinePanel::addCell (int column, int row, StepCell::Mode mode, bool dimmed)
 {
     auto* cell = cells.add (new StepCell (column, row, mode, dimmed));
+    cell->onEditStart = [this]
+    {
+        processor.undoManager.beginNewTransaction();
+        processor.beginPatternEdit();
+    };
     rows[(size_t) row].push_back (cell);
     addAndMakeVisible (cell);
     return *cell;
@@ -201,6 +211,103 @@ InfoButton& MachinePanel::addInfo (const HelpText& h)
     info->setHelp (h);
     addAndMakeVisible (info);
     return *info;
+}
+
+namespace
+{
+// Bubble with the effects of one drum sound.
+class RowFxPanel : public juce::Component
+{
+public:
+    RowFxPanel (juce::AudioProcessorValueTreeState& state, int type, int row, Theme& panelTheme)
+        : theme (panelTheme), title (utf8 (machineDef (type).rows[(size_t) row].label) + utf8 (" · EFFETS"))
+    {
+        setLookAndFeel (&theme);
+        struct Def { const char* suffix; const char* label; const char* helpKey; bool bipolar; };
+        const Def defs[] { { "drive", "DISTO", "strip.drive", false }, { "filter", "FILTRE", "strip.filter", true },
+                           { "pan", "PAN", "strip.pan", true }, { "echo", "ÉCHO", "strip.echo", false },
+                           { "reverb", "REVERB", "strip.reverb", false } };
+        for (auto& d : defs)
+        {
+            auto h = help (d.helpKey);
+            h.title = utf8 (machineDef (type).rows[(size_t) row].label) + " · " + h.title;
+            auto* k = knobs.add (new Knob (state, pid::row (type, row, d.suffix), utf8 (d.label), h));
+            if (d.bipolar) k->setBipolar();
+            addAndMakeVisible (k);
+        }
+        setSize (5 * 70 + 24, 128);
+    }
+
+    ~RowFxPanel() override { setLookAndFeel (nullptr); }
+
+    void paint (juce::Graphics& g) override
+    {
+        const auto& skin = theme.skin;
+        paint::plate (g, getLocalBounds().toFloat(), skin.plateTop, skin.plateBottom, 6.0f, skin.lightPlate);
+        g.setColour (skin.text);
+        g.setFont (paint::font (14.0f));
+        g.drawText (title, 14, 8, getWidth() - 28, 20, juce::Justification::centredLeft);
+    }
+
+    void resized() override
+    {
+        for (int i = 0; i < knobs.size(); ++i)
+            knobs[i]->setBounds (12 + i * 70, 36, 66, 82);
+    }
+
+private:
+    Theme& theme;
+    juce::String title;
+    juce::OwnedArray<Knob> knobs;
+};
+} // namespace
+
+void MachinePanel::showRowFx (int row)
+{
+    juce::CallOutBox::launchAsynchronously (std::make_unique<RowFxPanel> (processor.apvts, type, row, theme),
+                                            fxButtons[row]->getScreenBounds(), nullptr);
+}
+
+void MachinePanel::showDiceMenu()
+{
+    juce::PopupMenu menu;
+    const juce::String genre = utf8 (styles()[(size_t) processor.genre()].name);
+    menu.addSectionHeader (utf8 ("HASARD · GENRE ") + genre.toUpperCase());
+    menu.addItem (1, utf8 ("Nouvelle idée"));
+    menu.addItem (2, utf8 ("Varier un peu"));
+    menu.addItem (3, utf8 ("Plus de notes"));
+    menu.addItem (4, utf8 ("Moins de notes"));
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (diceButton), [this] (int result)
+    {
+        const GenerateMode modes[] { GenerateMode::NewIdea, GenerateMode::Vary, GenerateMode::Denser, GenerateMode::Sparser };
+        if (result >= 1 && result <= 4) processor.generate (type, modes[result - 1]);
+    });
+}
+
+void MachinePanel::showMoreMenu()
+{
+    juce::PopupMenu menu;
+    menu.addItem (1, utf8 ("Copier la partie"));
+    menu.addItem (2, utf8 ("Coller la partie"), processor.canPaste (type));
+    menu.addSeparator();
+    menu.addItem (3, utf8 ("Dupliquer la mesure 1 sur toute la séquence"), processor.numSteps() > pageSteps);
+    menu.addItem (4, utf8 ("Décaler d'un pas vers la gauche ←"));
+    menu.addItem (5, utf8 ("Décaler d'un pas vers la droite →"));
+    menu.addSeparator();
+    menu.addItem (6, utf8 ("Tout effacer"));
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (moreButton), [this] (int result)
+    {
+        switch (result)
+        {
+            case 1: processor.copyMachine (type); break;
+            case 2: processor.pasteMachine (type); break;
+            case 3: processor.duplicateFirstBar (type); break;
+            case 4: processor.shiftMachine (type, -1); break;
+            case 5: processor.shiftMachine (type, 1); break;
+            case 6: processor.clearMachine (type); break;
+            default: break;
+        }
+    });
 }
 
 void MachinePanel::addHeaderButton (juce::Button& button, const juce::String& helpKey)
@@ -291,7 +398,7 @@ int MachinePanel::preferredHeight (int width) const
     int right;
     if (isDrum())
     {
-        const int stripW = available - 4 * drumColumnW - 14;
+        const int stripW = available - 4 * drumColumnW - fxW - 14;
         right = layoutFlow (stripItems, { 0, 0, stripW - 2 * boxPad, 0 }, false);
     }
     else
@@ -319,8 +426,8 @@ void MachinePanel::resized()
     {
         it->second->setBounds (header.removeFromRight (16).withSizeKeepingCentre (15, 15));
         header.removeFromRight (3);
-        const bool small = it->first == muteButton.get() || it->first == soloButton.get();
-        it->first->setBounds (header.removeFromRight (small ? 76 : 104));
+        const int width = it->first == &moreButton ? 36 : it->first == &diceButton ? 110 : 76;
+        it->first->setBounds (header.removeFromRight (width));
         header.removeFromRight (10);
     }
 
@@ -351,6 +458,7 @@ void MachinePanel::resized()
                 rowMutes[r]->setBounds (labelX, y, labelW, drumRowH - 3);
                 for (int k = 0; k < 4; ++k)
                     rowKnobs[r * 4 + k]->setBounds (rightX() + k * drumColumnW + 12, y - 1, 30, 30);
+                fxButtons[r]->setBounds (rightX() + 4 * drumColumnW + 4, y + 2, fxW - 8, drumRowH - 8);
             }
             rowInfoButtons[(size_t) r]->setBounds (labelX + labelW + 4, y + 7, 14, 14);
             layoutRow (r, y, drumRowH - 3);
@@ -358,8 +466,8 @@ void MachinePanel::resized()
         for (int k = 0; k < 4; ++k)
             columnInfos[(size_t) k]->setBounds (rightX() + k * drumColumnW + 48, headerH + 11, 13, 13);
 
-        const int stripX = rightX() + 4 * drumColumnW + 14;
-        stripBox = { stripX, headerH + 18, available - 4 * drumColumnW - 14, getHeight() - headerH - 30 };
+        const int stripX = rightX() + 4 * drumColumnW + fxW + 14;
+        stripBox = { stripX, headerH + 18, available - 4 * drumColumnW - fxW - 14, getHeight() - headerH - 30 };
         layoutFlow (stripItems, stripBox.reduced (boxPad, 0).withTrimmedTop (boxTitle), true);
         soundBox = {};
     }

@@ -5,7 +5,7 @@
 #include "ui/Theme.h"
 #include "ui/Widgets.h"
 
-// Amber display in the middle of the console: tempo (drag to change), style, key, position.
+// Amber display in the middle of the console: tempo (drag to change), project, genre, key, position.
 class LcdDisplay : public juce::Component, public juce::SettableTooltipClient
 {
 public:
@@ -53,9 +53,33 @@ public:
         if (! empty) return;
         g.setColour (techno::colours::dim);
         g.setFont (techno::paint::font (20.0f));
-        g.drawFittedText (techno::utf8 ("Ton rack est vide.\nClique sur « + AJOUTER UNE MACHINE » pour choisir tes instruments."),
+        g.drawFittedText (techno::utf8 ("Ton rack est vide.\nClique sur « + MACHINE » pour ajouter une boîte à rythmes, une basse ou des accords."),
                           getLocalBounds().reduced (40), juce::Justification::centred, 3);
     }
+};
+
+// Shown when the app starts: new project, open, recent projects and examples.
+class StartScreen : public juce::Component
+{
+public:
+    explicit StartScreen (TechMachineProcessor&);
+
+    void refresh();
+    void paint (juce::Graphics&) override;
+    void resized() override;
+
+    std::function<void()> onNew, onOpen, onResume;
+    std::function<void (const juce::File&)> onOpenFile;
+    std::function<void (int)> onExample;
+
+private:
+    TechMachineProcessor& processor;
+    techno::IconButton newButton { "plus", juce::String::fromUTF8 ("NOUVEAU PROJET VIDE") };
+    techno::IconButton openButton { "folder", juce::String::fromUTF8 ("OUVRIR UN PROJET…") };
+    techno::IconButton resumeButton { "play", juce::String::fromUTF8 ("REPRENDRE LA DERNIÈRE SESSION") };
+    juce::OwnedArray<juce::TextButton> recentButtons;
+    juce::OwnedArray<juce::Button> exampleCards;
+    juce::Rectangle<int> panel;
 };
 
 class TechMachineEditor : public juce::AudioProcessorEditor, private juce::Timer
@@ -67,36 +91,52 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     bool keyPressed (const juce::KeyPress&) override;
+    void mouseDown (const juce::MouseEvent&) override;
 
 private:
+    class ExportJob;
+
     void timerCallback() override;
     void togglePlay();
     void toggleRecord();
     void showAddMenu();
+    void showProjectMenu();
+    void showStartScreen (bool show);
     void setPage (int newPage);
     void layoutRack();
     techno::InfoButton& addInfo (const techno::HelpText&);
     void styleButton (juce::Button&, juce::Colour colour, juce::Colour text = techno::colours::text);
     void printLabel (juce::Graphics&, const juce::Component&, const char* text) const;
 
+    // Project actions; askThen first offers to save unsaved changes.
+    void askThen (std::function<void()> action);
+    void newProject();
+    void openProject();
+    void openProjectFile (const juce::File&);
+    void loadExample (int index);
+    void saveProject (std::function<void()> then = {});
+    void saveProjectAs (std::function<void()> then = {});
+    void exportWav (int loops);
+    void projectChanged();
+
     TechMachineProcessor& processor;
     techno::Theme theme;
     juce::TooltipWindow tooltips { this, 450 };
 
-    techno::IconButton playButton { "play", "LECTURE" }, recordButton { "rec", "REC" }, folderButton { "", "FICHIERS" };
-    techno::IconButton surpriseButton { "dice", "SURPRISE !" }, addButton { "plus", "AJOUTER UNE MACHINE" };
-    techno::IconButton recommendedButton { "plus", utf8text ("CONSEILLÉES") }, guideButton { "", "?" };
+    techno::IconButton playButton { "play", "LECTURE" }, recordButton { "rec", "REC" }, folderButton { "folder", "FICHIERS" };
+    techno::IconButton surpriseButton { "dice", "SURPRISE !" }, addButton { "plus", "MACHINE" }, guideButton { "", "?" };
+    techno::IconButton projectButton { "folder", "PROJET" }, undoButton { "undo" }, redoButton { "redo" };
     techno::LedButton barButtons[4] { { "1", techno::colours::lcd }, { "2", techno::colours::lcd }, { "3", techno::colours::lcd }, { "4", techno::colours::lcd } };
     techno::LedButton pageButtons[4] { { "1", techno::colours::info }, { "2", techno::colours::info }, { "3", techno::colours::info }, { "4", techno::colours::info } };
     techno::LedButton followButton { "SUIVRE", techno::colours::info };
 
     LcdDisplay lcd;
     std::unique_ptr<techno::Knob> swingKnob;
-    juce::ComboBox styleBox, keyBox, scaleBox;
+    juce::ComboBox genreBox, keyBox, scaleBox;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> keyAttachment, scaleAttachment;
     juce::OwnedArray<techno::InfoButton> infos;
-    techno::InfoButton* playInfo = nullptr, *lcdInfo = nullptr, *styleInfo = nullptr, *keyInfo = nullptr, *scaleInfo = nullptr;
-    techno::InfoButton* surpriseInfo = nullptr, *recInfo = nullptr, *addInfoButton = nullptr, *recommendedInfo = nullptr;
+    techno::InfoButton* playInfo = nullptr, *lcdInfo = nullptr, *genreInfo = nullptr, *keyInfo = nullptr, *scaleInfo = nullptr;
+    techno::InfoButton* surpriseInfo = nullptr, *recInfo = nullptr, *addInfoButton = nullptr, *projectInfo = nullptr, *undoInfo = nullptr;
     techno::InfoButton* lengthInfo = nullptr, *pageInfo = nullptr, *masterInfo = nullptr, *meterInfo = nullptr;
 
     juce::Viewport rack;
@@ -107,11 +147,14 @@ private:
     VuMeter vu;
     juce::Rectangle<int> consoleArea, masterArea;
 
-    int viewPage = 0, lastStep = -1, lastVersion = -1, lastShownMask = -1, lastBars = -1, lastLabelHash = -1, lastStyle = -1;
+    StartScreen startScreen;
+    std::unique_ptr<juce::FileChooser> chooser;
+    std::unique_ptr<ExportJob> exportJob;
+
+    int viewPage = 0, lastStep = -1, lastVersion = -1, lastShownMask = -1, lastBars = -1, lastLabelHash = -1, lastGenre = -1;
     int scrollToMachine = -1;
     bool follow = true, focusGrabbed = false;
-
-    static juce::String utf8text (const char* t) { return juce::String::fromUTF8 (t); }
+    juce::String lastTitle;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TechMachineEditor)
 };

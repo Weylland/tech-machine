@@ -1,13 +1,15 @@
 #pragma once
 
+#include "core/Examples.h"
 #include "core/Styles.h"
 #include "dsp/Effects.h"
+#include "dsp/Reverb.h"
 #include "machines/Machines.h"
 
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 
-class TechMachineProcessor : public juce::AudioProcessor
+class TechMachineProcessor : public juce::AudioProcessor, private juce::ValueTree::Listener
 {
 public:
     TechMachineProcessor();
@@ -39,18 +41,47 @@ public:
     bool isShown (int type) const { return strips[(size_t) type].show->load() > 0.5f; }
     void setShown (int type, bool shown);
     int numSteps() const { return ((int) bars->load() + 1) * techno::pageSteps; }
-    bool isHosted() const { return wrapperType != wrapperType_Standalone; }
+    bool isHosted() const { return wrapperType != wrapperType_Standalone && wrapperType != wrapperType_Undefined; }
     int currentScale() const { return (int) scaleParam->load(); }
     int currentKey() const { return (int) keyParam->load(); }
 
     void setParam (const juce::String& id, float value);
-    void applyStyle (int styleIndex);
-    void regenerate (int machineType);
-    void regenerateAll();
-    void addRecommendedMachines();
-    void clearMachine (int machineType);
     void setBars (int newBars);
-    void touchPattern() { ++patternVersion; }
+    void touchPattern() { ++patternVersion; dirty = true; }
+
+    // Generation ("hasard") and editing tools. Each one can be undone.
+    int genre() const { return genreIndex; }
+    void setGenre (int index);
+    void generate (int machineType, techno::GenerateMode);
+    void generateAll();
+    void clearMachine (int machineType);
+    void shiftMachine (int machineType, int direction);
+    void duplicateFirstBar (int machineType);
+    void copyMachine (int machineType);
+    void pasteMachine (int machineType);
+    bool canPaste (int machineType) const;
+    bool isProjectEmpty() const;
+
+    // Call before changing notes from the UI so the change can be undone.
+    void beginPatternEdit();
+    juce::UndoManager undoManager;
+
+    // Projects
+    void newProject();
+    bool saveProject (const juce::File&);
+    bool loadProject (const juce::File&);
+    void loadExample (int index);
+    juce::String projectName() const { return name; }
+    juce::File projectFile() const { return file; }
+    bool isDirty() const { return dirty.load(); }
+    static juce::StringArray recentProjects();
+    static juce::File projectsFolder();
+
+    // The whole project as XML (also used for the plugin state).
+    std::unique_ptr<juce::XmlElement> createProjectXml();
+
+    // Offline render of a project to a WAV file. Safe to call from a background thread.
+    static bool exportWav (const juce::XmlElement& project, const juce::File&, int loops, const std::function<bool (float)>& progress);
 
     void startRecording();
     void stopRecording();
@@ -63,7 +94,6 @@ public:
     std::atomic<int> patternVersion { 0 };
     std::atomic<float> outputPeak { 0.0f };
     std::atomic<float> displayBpm { 130.0f };
-    int styleIndex = 0;
 
 private:
     struct Strip
@@ -76,11 +106,23 @@ private:
         float driveAmount = 0, crushAmount = 0, echoSend = 0, reverbSend = 0, target = 0, panLeft = 1, panRight = 1;
     };
 
+    using Snapshot = std::array<techno::TrackData, techno::numMachines>;
+    class PatternAction;
+
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     void render (float* left, float* right, int numSamples);
     void advanceStep();
     void syncToHost (double ppq);
     float stepSeconds() const { return 60.0f / bpmValue / 4.0f; }
+
+    Snapshot snapshot() const;
+    void restore (const Snapshot&);
+    techno::GenerateContext context() const;
+    void chooseProgression();
+    void resetParameters();
+    void restoreProjectXml (const juce::XmlElement&);
+    static void addRecent (const juce::File&);
+    void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override { dirty = true; }
 
     std::vector<std::unique_ptr<techno::Machine>> machines;
     std::array<Strip, techno::numMachines> strips {};
@@ -95,14 +137,21 @@ private:
 
     techno::PingPongDelay delay;
     techno::Pump pump;
-    juce::Reverb reverb;
+    techno::FdnReverb reverb;
     techno::DjFilter masterFilter;
     techno::GlueCompressor compressor;
     techno::PeakLimiter limiter;
-    juce::AudioBuffer<float> reverbBuffer;
     float feedbackValue = 0, echoLevelValue = 0, reverbLevelValue = 0, pumpDepth = 0, distoValue = 0, volumeValue = 1;
     float lastReverbSize = -1.0f;
     juce::Random random;
+
+    int genreIndex = 0;
+    std::vector<int> progression { 0 };
+    std::optional<techno::TrackData> clipboard;
+    int clipboardKind = -1;
+    juce::String name;
+    juce::File file;
+    std::atomic<bool> dirty { false };
 
     juce::TimeSliceThread writerThread { "Tech Machine recorder" };
     std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> threadedWriter;

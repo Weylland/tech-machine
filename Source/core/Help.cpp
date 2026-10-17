@@ -10,29 +10,33 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
 {
     static const std::map<juce::String, std::pair<const char*, const char*>> map {
         { "guide", { "Bien démarrer",
-            "1. Appuie sur LECTURE (ou la barre Espace) : la musique démarre.\n\n"
-            "2. Choisis un STYLE (Techno, House, Drum & Bass…) : le tempo, la gamme, les sons et les rythmes sont réglés pour toi.\n\n"
-            "3. Clique sur SURPRISE ! pour générer de nouveaux rythmes et mélodies dans ce style, autant de fois que tu veux.\n\n"
-            "4. Clique sur les cases pour ajouter ou enlever des sons. Chaque colonne est un « pas » : 16 pas = 1 mesure = 4 temps.\n\n"
-            "5. Tourne les boutons pendant que ça joue : c'est comme ça qu'on fait vivre un morceau. Double-clic sur un bouton = retour à sa valeur d'origine.\n\n"
-            "6. Ajoute ou retire des machines avec « + AJOUTER UNE MACHINE » et le ✕ de chaque machine.\n\n"
-            "7. Appuie sur REC pour enregistrer ce que tu joues en fichier WAV.\n\n"
+            "1. Ouvre un PROJET EXEMPLE (menu PROJET › Exemples, ou l'écran d'accueil) pour entendre ce que la machine sait faire, "
+            "ou pars d'un PROJET VIDE.\n\n"
+            "2. Ajoute des machines avec « + MACHINE » : une boîte à rythmes, une basse, des accords… Elles arrivent vides.\n\n"
+            "3. Clique sur les cases pour placer des sons. Chaque colonne est un « pas » : 16 pas = 1 mesure = 4 temps. "
+            "Sur les notes et les accords, glisse vers le haut ou le bas pour changer la hauteur.\n\n"
+            "4. En panne d'idée ? Choisis un GENRE puis clique sur SURPRISE ! (tout le rack) ou sur le dé d'une machine "
+            "(Nouvelle idée, Varier un peu, Plus de notes, Moins de notes).\n\n"
+            "5. Appuie sur LECTURE (barre Espace) et tourne les boutons pendant que ça joue. Double-clic sur un bouton = valeur d'origine.\n\n"
+            "6. Une erreur ? Ctrl+Z annule, Ctrl+Y rétablit.\n\n"
+            "7. Enregistre ton projet (Ctrl+S) et exporte-le en WAV depuis le menu PROJET.\n\n"
             "Le petit « i » à côté de chaque élément explique à quoi il sert. Survole un bouton pour un résumé rapide." } },
 
         { "play", { "Lecture / Stop",
             "Lance ou arrête la musique. Raccourci : barre Espace.\n\n"
-            "La lecture repart toujours du début de la séquence." } },
+            "La lecture repart toujours du début de la séquence. En plugin (VST3), la lecture suit ton logiciel de musique." } },
         { "tempo", { "Tempo (BPM)",
-            "Vitesse du morceau en battements par minute. Glisse horizontalement pour le changer.\n\n"
+            "Vitesse du morceau en battements par minute. Glisse vers le haut ou le bas sur l'écran (ou molette) pour le changer.\n\n"
             "Repères : house 120-128, techno 125-135, trance 136-140, psytrance 140-148, hard techno 145-160, "
-            "drum & bass 170-176, gabber 170-200." } },
+            "drum & bass 170-176, gabber 170-200. En plugin, le tempo suit ton logiciel de musique." } },
         { "swing", { "Swing",
             "Décale légèrement un pas sur deux pour donner un groove « chaloupé » au lieu d'un rythme robotique.\n\n"
             "0 = parfaitement droit (techno, trance). Un peu = groove house. Beaucoup = UK garage, shuffle." } },
-        { "style", { "Style",
-            "Choisis un genre musical : le tempo, le swing, la gamme et les réglages de son sont adaptés, et de nouveaux rythmes "
-            "typiques du style sont générés pour toutes les machines affichées.\n\n"
-            "Clique sur le « i » du style choisi (sous la barre) pour savoir quelles machines lui vont le mieux." } },
+        { "genre", { "Genre du hasard",
+            "Le genre dont s'inspirent SURPRISE ! et le dé de chaque machine pour écrire des rythmes, des lignes de basse, "
+            "des mélodies et des accords typiques.\n\n"
+            "Ça ne change ni tes sons ni tes notes déjà écrites. Sur un projet encore vide, le tempo, le swing et la gamme "
+            "s'adaptent aussi au genre choisi." } },
         { "key", { "Tonalité",
             "La note de base du morceau : toutes les mélodies et accords tournent autour d'elle.\n\n"
             "Ça change seulement la hauteur générale, pas l'ambiance. La techno est souvent en A (La), F (Fa) ou G (Sol)." } },
@@ -51,19 +55,39 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "Activé : l'affichage passe automatiquement à la mesure en train d'être jouée.\n\n"
             "Désactive-le pour modifier tranquillement une mesure pendant que les autres jouent." } },
         { "surprise", { "Surprise !",
-            "Génère de nouveaux rythmes, mélodies et accords dans le style choisi, pour toutes les machines affichées. "
-            "Les sons et réglages ne changent pas.\n\n"
-            "Clique autant de fois que tu veux jusqu'à trouver une idée qui te plaît, puis modifie-la à ta façon." } },
-        { "rec", { "Enregistrer",
-            "Enregistre tout ce que tu entends dans un fichier WAV (qualité studio) dans ton dossier Musique / Tech Machine.\n\n"
-            "Clique une fois pour commencer (la lecture démarre), une deuxième fois pour arrêter." } },
+            "Écrit une nouvelle idée complète pour toutes les machines du rack, dans le genre choisi : la batterie d'abord, "
+            "puis une basse qui évite le kick, des accords et des mélodies qui vont ensemble.\n\n"
+            "Les sons et réglages ne changent pas. Pas convaincu ? Ctrl+Z revient en arrière." } },
+        { "rec", { "Enregistrer en direct",
+            "Enregistre tout ce que tu entends, en temps réel, dans un fichier WAV (dossier Musique / Tech Machine). "
+            "Pratique pour garder une improvisation où tu tournes les boutons.\n\n"
+            "Pour exporter proprement la boucle, utilise plutôt PROJET › Exporter en WAV." } },
         { "files", { "Fichiers enregistrés",
             "Ouvre le dossier où se trouve ton dernier enregistrement." } },
         { "add", { "Ajouter une machine",
-            "Ouvre la liste des machines disponibles : boîtes à rythmes, basses, synthés. Choisis celles que tu veux voir et jouer.\n\n"
+            "Ouvre la liste des machines disponibles : boîtes à rythmes, basses, synthés. Une machine ajoutée arrive vide et sans effet.\n\n"
             "Tu peux en retirer une à tout moment avec son ✕ : ses réglages et ses notes sont gardés si tu la remets." } },
-        { "recommended", { "Machines conseillées",
-            "Ajoute d'un coup les machines typiques du style choisi et génère leurs parties." } },
+        { "project", { "Projet",
+            "Tout ton morceau : machines, notes, sons, effets, tempo. Depuis ce menu : nouveau projet vide, ouvrir, enregistrer, "
+            "projets exemples, export WAV.\n\n"
+            "Raccourcis : Ctrl+N nouveau, Ctrl+O ouvrir, Ctrl+S enregistrer. Un point « • » à côté du nom = modifications pas encore enregistrées." } },
+        { "undo", { "Annuler / Rétablir",
+            "Annule ta dernière action (notes, hasard, réglages) ou la refait. Raccourcis : Ctrl+Z et Ctrl+Y." } },
+        { "export", { "Exporter en WAV",
+            "Crée un fichier audio WAV de ta boucle, répétée 1 à 8 fois, avec la fin des échos et de la reverb. "
+            "Le rendu se fait hors temps réel : la qualité est parfaite, même si ton ordinateur est lent." } },
+        { "machine.diceMenu", { "Hasard",
+            "Nouvelle idée : écrit une nouvelle partie pour cette machine, dans le genre choisi.\n\n"
+            "Varier un peu : change quelques notes ou coups sans casser l'idée.\n\n"
+            "Plus de notes / Moins de notes : rend la partie plus chargée ou plus aérée.\n\n"
+            "Tout s'annule avec Ctrl+Z." } },
+        { "machine.more", { "Outils",
+            "Copier / coller la partie, dupliquer la 1re mesure sur toute la séquence, décaler toute la partie d'un pas "
+            "vers la gauche ou la droite, ou tout effacer." } },
+        { "drum.fx", { "Effets de ce son",
+            "Des effets rien que pour ce son de batterie : disto, filtre, position gauche/droite, envoi dans l'écho et la reverb.\n\n"
+            "Exemple : de la disto seulement sur le kick, ou de l'écho seulement sur le rimshot. "
+            "Le bouton FX s'allume quand un effet est actif." } },
 
         { "row.accent", { "Accent",
             "Les pas marqués d'un accent jouent plus fort, comme sur la vraie machine.\n\n"
@@ -99,10 +123,6 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "Coupe le son de toute la machine sans effacer ses notes. Idéal pour faire entrer et sortir les instruments pendant un morceau." } },
         { "machine.solo", { "Solo",
             "N'écoute que cette machine (les autres sont coupées). Tu peux mettre plusieurs machines en solo." } },
-        { "machine.dice", { "Hasard",
-            "Génère une nouvelle partie pour cette machine seulement, dans le style choisi. Les sons ne changent pas." } },
-        { "machine.clear", { "Effacer",
-            "Efface toutes les notes de cette machine (sur toute la séquence). Les réglages de son sont gardés." } },
         { "machine.collapse", { "Replier", "Réduit la machine à sa barre de titre pour gagner de la place. Elle continue de jouer." } },
         { "machine.remove", { "Retirer la machine",
             "Retire la machine du rack : elle s'arrête de jouer. Ses notes et réglages sont gardés si tu la remets avec « + AJOUTER UNE MACHINE »." } },

@@ -5,6 +5,7 @@ using namespace techno;
 namespace
 {
 constexpr int consoleH = 118, masterH = 122, railW = 20;
+const char* const projectExtension = ".techmachine";
 
 void disableKeyboardFocus (juce::Component& c)
 {
@@ -30,7 +31,93 @@ void rail (juce::Graphics& g, juce::Rectangle<float> r)
     g.setColour (juce::Colours::black.withAlpha (0.6f));
     g.drawRect (r, 1.0f);
 }
+
+void screws (juce::Graphics& g, juce::Rectangle<int> area)
+{
+    const auto a = area.toFloat();
+    for (auto p : { a.getTopLeft() + juce::Point<float> (10.0f, 10.0f), a.getTopRight() + juce::Point<float> (-10.0f, 10.0f),
+                    a.getBottomLeft() + juce::Point<float> (10.0f, -10.0f), a.getBottomRight() + juce::Point<float> (-10.0f, -10.0f) })
+        paint::screw (g, p, 4.5f, p.x * 0.013f);
+}
+
+juce::Colour genreColour (const juce::String& genre)
+{
+    static const juce::Colour palette[] { juce::Colour (0xffff6a2b), juce::Colour (0xfff5d442), juce::Colour (0xff5ac8fa), juce::Colour (0xffff4d6d),
+                                          juce::Colour (0xffb48cff), juce::Colour (0xff7bd88f), juce::Colour (0xffff7ad9), juce::Colour (0xff4fa3ff),
+                                          juce::Colour (0xffd9a066), juce::Colour (0xff59c3ff) };
+    return palette[(size_t) (genre.hashCode() & 0x7fffffff) % std::size (palette)];
+}
+
+// One example project on the start screen.
+class ExampleCard : public juce::Button
+{
+public:
+    explicit ExampleCard (const ExampleInfo& e) : juce::Button (utf8 (e.name)), info (e)
+    {
+        setTooltip (utf8 (e.description));
+        setMouseCursor (juce::MouseCursor::PointingHandCursor);
+    }
+
+    void paintButton (juce::Graphics& g, bool highlighted, bool down) override
+    {
+        auto b = getLocalBounds().toFloat().reduced (2.0f);
+        if (down) b.translate (0.0f, 1.0f);
+        const auto colour = genreColour (utf8 (info.genre));
+        paint::plate (g, b, juce::Colour (highlighted ? 0xff34353c : 0xff2a2b31), juce::Colour (0xff1c1d21), 6.0f, false);
+        g.setColour (colour);
+        g.fillRoundedRectangle ({ b.getX() + 8.0f, b.getY() + 12.0f, 4.0f, b.getHeight() - 24.0f }, 2.0f);
+
+        g.setColour (colours::text);
+        g.setFont (paint::display (19.0f));
+        g.drawText (utf8 (info.name), (int) b.getX() + 22, (int) b.getY() + 10, (int) b.getWidth() - 120, 24, juce::Justification::centredLeft);
+        g.setColour (colour);
+        g.setFont (paint::font (13.0f));
+        g.drawText (utf8 (info.genre).toUpperCase() + "  ·  " + juce::String (info.bpm) + " BPM",
+                    (int) b.getX() + 22, (int) b.getY() + 34, (int) b.getWidth() - 34, 16, juce::Justification::centredLeft);
+        g.setColour (colours::dim);
+        g.setFont (paint::font (12.5f, false));
+        g.drawFittedText (utf8 (info.description), juce::Rectangle<int> ((int) b.getX() + 22, (int) b.getY() + 52, (int) b.getWidth() - 34,
+                                                                          (int) b.getHeight() - 58), juce::Justification::topLeft, 2, 0.9f);
+        paint::icon (g, "play", { b.getRight() - 40.0f, b.getY() + 12.0f, 22.0f, 22.0f }, colours::text.withAlpha (highlighted ? 0.9f : 0.35f));
+    }
+
+private:
+    ExampleInfo info;
+};
 } // namespace
+
+//==============================================================================
+class TechMachineEditor::ExportJob : public juce::ThreadWithProgressWindow
+{
+public:
+    ExportJob (std::unique_ptr<juce::XmlElement> project, const juce::File& target, int loopCount, std::function<void (bool)> done)
+        : ThreadWithProgressWindow (utf8 ("Export WAV en cours…"), true, true),
+          xml (std::move (project)), file (target), loops (loopCount), onDone (std::move (done))
+    {
+    }
+
+    void run() override
+    {
+        ok = TechMachineProcessor::exportWav (*xml, file, loops, [this] (float p)
+        {
+            setProgress (p);
+            return ! threadShouldExit();
+        });
+    }
+
+    void threadComplete (bool cancelled) override
+    {
+        if (onDone) onDone (ok && ! cancelled);
+    }
+
+    const juce::File file;
+
+private:
+    std::unique_ptr<juce::XmlElement> xml;
+    int loops;
+    std::function<void (bool)> onDone;
+    bool ok = false;
+};
 
 //==============================================================================
 LcdDisplay::LcdDisplay (TechMachineProcessor& p)
@@ -58,9 +145,15 @@ void LcdDisplay::mouseDrag (const juce::MouseEvent& e)
     setTempo (dragStartTempo - (float) e.getDistanceFromDragStartY() * 0.25f);
 }
 
-void LcdDisplay::mouseUp (const juce::MouseEvent&) { if (! processor.isHosted()) tempo.endChangeGesture(); }
+void LcdDisplay::mouseUp (const juce::MouseEvent&)
+{
+    if (! processor.isHosted()) tempo.endChangeGesture();
+}
 
-void LcdDisplay::mouseDoubleClick (const juce::MouseEvent&) { if (! processor.isHosted()) setTempo (130.0f); }
+void LcdDisplay::mouseDoubleClick (const juce::MouseEvent&)
+{
+    if (! processor.isHosted()) setTempo (130.0f);
+}
 
 void LcdDisplay::mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails& wheel)
 {
@@ -77,9 +170,9 @@ void LcdDisplay::paint (juce::Graphics& g)
     g.fillRoundedRectangle (glass, 4.0f);
 
     const auto amber = colours::lcd;
-    const float bpm = processor.displayBpm.load();
+    const float bpm = processor.isHosted() ? processor.displayBpm.load() : tempo.convertFrom0to1 (tempo.getValue());
 
-    auto left = glass.reduced (12.0f, 8.0f).removeFromLeft (glass.getWidth() * 0.42f);
+    auto left = glass.reduced (12.0f, 8.0f).removeFromLeft (glass.getWidth() * 0.4f);
     g.setColour (amber.withAlpha (0.7f));
     g.setFont (paint::condensed (11.0f));
     g.drawText (processor.isHosted() ? "TEMPO DAW (SYNC)" : "TEMPO", left.removeFromTop (13.0f), juce::Justification::centredLeft);
@@ -88,23 +181,22 @@ void LcdDisplay::paint (juce::Graphics& g)
     g.setColour (amber.withAlpha (0.7f));
     g.drawText ("BPM", left, juce::Justification::centredLeft);
 
-    auto right = glass.reduced (12.0f, 8.0f).withTrimmedLeft (glass.getWidth() * 0.45f);
-    const auto& style = styles()[(size_t) processor.styleIndex];
-    g.setColour (amber.withAlpha (0.7f));
-    g.setFont (paint::condensed (11.0f));
-    g.drawText ("STYLE", right.removeFromTop (13.0f), juce::Justification::centredLeft);
+    auto right = glass.reduced (12.0f, 7.0f).withTrimmedLeft (glass.getWidth() * 0.43f);
     g.setColour (amber);
-    g.setFont (paint::display (19.0f));
-    g.drawFittedText (utf8 (style.name).toUpperCase(), right.removeFromTop (22.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.7f);
+    g.setFont (paint::display (17.0f));
+    g.drawFittedText (processor.projectName().toUpperCase() + (processor.isDirty() ? juce::String::fromUTF8 (" •") : juce::String()),
+                      right.removeFromTop (21.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.7f);
 
-    g.setFont (paint::condensed (14.0f));
+    g.setColour (amber.withAlpha (0.85f));
+    g.setFont (paint::condensed (13.0f));
+    g.drawFittedText ("GENRE  " + utf8 (styles()[(size_t) processor.genre()].name).toUpperCase(),
+                      right.removeFromTop (17.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.7f);
     g.drawFittedText (juce::String (keyNames[processor.currentKey()]) + "  " + utf8 (scales()[(size_t) processor.currentScale()].name).toUpperCase(),
-                      right.removeFromTop (18.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.7f);
+                      right.removeFromTop (17.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.7f);
 
     const int step = processor.currentStep.load();
     const int bars = processor.numSteps() / pageSteps;
     auto bottom = right.removeFromTop (18.0f);
-    g.setColour (amber.withAlpha (0.85f));
     g.drawText (step >= 0 ? "MESURE " + juce::String (step / pageSteps + 1) + "/" + juce::String (bars) : juce::String ("STOP"),
                 bottom.removeFromLeft (90.0f), juce::Justification::centredLeft);
     for (int beat = 0; beat < 4; ++beat)
@@ -113,7 +205,6 @@ void LcdDisplay::paint (juce::Graphics& g)
         paint::led (g, { bottom.getX() + 8.0f + (float) beat * 16.0f, bottom.getCentreY() }, 3.5f, amber, on);
     }
 
-    juce::Random rnd (3);
     for (float y = glass.getY(); y < glass.getBottom(); y += 3.0f)
     {
         g.setColour (juce::Colours::black.withAlpha (0.18f));
@@ -125,8 +216,109 @@ void LcdDisplay::paint (juce::Graphics& g)
 }
 
 //==============================================================================
+StartScreen::StartScreen (TechMachineProcessor& p) : processor (p)
+{
+    for (auto* b : { &newButton, &openButton, &resumeButton })
+    {
+        b->setColour (juce::TextButton::buttonColourId, b == &newButton ? juce::Colour (0xffd2551f) : juce::Colour (0xff3a3b40));
+        b->setColour (juce::TextButton::textColourOffId, colours::text);
+        addAndMakeVisible (b);
+    }
+    newButton.onClick = [this] { if (onNew) onNew(); };
+    openButton.onClick = [this] { if (onOpen) onOpen(); };
+    resumeButton.onClick = [this] { if (onResume) onResume(); };
+    newButton.setTooltip (utf8 ("Un projet tout neuf : aucune machine, aucun effet. Ajoute ensuite les machines que tu veux."));
+    resumeButton.setTooltip (utf8 ("Retrouve exactement ce que tu faisais la dernière fois."));
+
+    for (int i = 0; i < (int) examples().size(); ++i)
+    {
+        auto* card = exampleCards.add (new ExampleCard (examples()[(size_t) i]));
+        card->onClick = [this, i] { if (onExample) onExample (i); };
+        addAndMakeVisible (card);
+    }
+}
+
+void StartScreen::refresh()
+{
+    resumeButton.setVisible (! processor.isProjectEmpty());
+    recentButtons.clear();
+    for (auto& path : TechMachineProcessor::recentProjects())
+    {
+        if (recentButtons.size() >= 6) break;
+        const juce::File f (path);
+        auto* b = recentButtons.add (new juce::TextButton (f.getFileNameWithoutExtension()));
+        b->setColour (juce::TextButton::buttonColourId, juce::Colour (0xff26272c));
+        b->setColour (juce::TextButton::textColourOffId, colours::text);
+        b->setTooltip (path);
+        b->onClick = [this, f] { if (onOpenFile) onOpenFile (f); };
+        addAndMakeVisible (b);
+    }
+    resized();
+    repaint();
+}
+
+void StartScreen::paint (juce::Graphics& g)
+{
+    g.fillAll (juce::Colours::black.withAlpha (0.82f));
+    paint::plate (g, panel.toFloat(), juce::Colour (0xff2a2b30), juce::Colour (0xff17181b), 10.0f, true);
+    screws (g, panel);
+
+    const int x = panel.getX() + 40, y = panel.getY() + 34;
+    g.setFont (paint::display (40.0f));
+    g.setColour (colours::text);
+    g.drawText ("TECH", x, y, 120, 46, juce::Justification::centredLeft);
+    g.setColour (colours::accent);
+    g.drawText ("MACHINE", x + 100, y, 220, 46, juce::Justification::centredLeft);
+    g.setColour (colours::dim);
+    g.setFont (paint::font (15.0f, false));
+    g.drawText (utf8 ("Groovebox techno · choisis comment commencer"), x, y + 46, 380, 20, juce::Justification::centredLeft);
+
+    g.setColour (colours::dim);
+    g.setFont (paint::condensed (13.0f));
+    if (! recentButtons.isEmpty())
+        g.drawText (utf8 ("PROJETS RÉCENTS"), x, recentButtons[0]->getY() - 22, 300, 16, juce::Justification::centredLeft);
+    if (! exampleCards.isEmpty())
+    {
+        const auto first = exampleCards[0]->getBounds();
+        g.drawText (utf8 ("PROJETS EXEMPLES — clique pour écouter et modifier"), first.getX(), first.getY() - 24, 500, 16,
+                    juce::Justification::centredLeft);
+    }
+    g.setFont (paint::font (12.0f, false));
+    g.drawText (utf8 ("Tu peux revenir ici à tout moment : menu PROJET › Accueil."), panel.getX() + 40, panel.getBottom() - 34, 600, 16,
+                juce::Justification::centredLeft);
+}
+
+void StartScreen::resized()
+{
+    panel = getLocalBounds().withSizeKeepingCentre (juce::jmin (getWidth() - 60, 1260), juce::jmin (getHeight() - 60, 760));
+    const int x = panel.getX() + 40;
+    int y = panel.getY() + 130;
+    newButton.setBounds (x, y, 340, 58);
+    y += 70;
+    openButton.setBounds (x, y, 340, 46);
+    y += 56;
+    if (resumeButton.isVisible())
+    {
+        resumeButton.setBounds (x, y, 340, 46);
+        y += 56;
+    }
+    y += 34;
+    for (auto* b : recentButtons)
+    {
+        b->setBounds (x, y, 340, 32);
+        y += 36;
+    }
+
+    const int gridX = x + 390, gridY = panel.getY() + 130;
+    const int cardW = (panel.getRight() - 40 - gridX - 14) / 2;
+    const int cardH = juce::jmin (100, (panel.getBottom() - 60 - gridY) / 5);
+    for (int i = 0; i < exampleCards.size(); ++i)
+        exampleCards[i]->setBounds (gridX + (i % 2) * (cardW + 14), gridY + (i / 2) * (cardH + 8), cardW, cardH);
+}
+
+//==============================================================================
 TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
-    : AudioProcessorEditor (p), processor (p), lcd (p)
+    : AudioProcessorEditor (p), processor (p), lcd (p), startScreen (p)
 {
     setLookAndFeel (&theme);
     auto& state = processor.apvts;
@@ -150,11 +342,16 @@ TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
     addAndMakeVisible (*swingKnob);
 
     for (int i = 0; i < (int) styles().size(); ++i)
-        styleBox.addItem (utf8 (styles()[(size_t) i].name), i + 1);
-    styleBox.setSelectedId (processor.styleIndex + 1, juce::dontSendNotification);
-    styleBox.onChange = [this] { processor.applyStyle (styleBox.getSelectedId() - 1); };
-    addAndMakeVisible (styleBox);
-    styleInfo = &addInfo (help ("style"));
+        genreBox.addItem (utf8 (styles()[(size_t) i].name), i + 1);
+    genreBox.onChange = [this]
+    {
+        processor.setGenre (genreBox.getSelectedId() - 1);
+        lastGenre = processor.genre();
+    };
+    genreBox.setTooltip (shortHelp (help ("genre").body));
+    genreBox.setSelectedId (processor.genre() + 1, juce::dontSendNotification);
+    addAndMakeVisible (genreBox);
+    genreInfo = &addInfo (help ("genre"));
 
     for (int k = 0; k < 12; ++k) keyBox.addItem (keyNames[k], k + 1);
     addAndMakeVisible (keyBox);
@@ -168,13 +365,26 @@ TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
     scaleInfo = &addInfo (help ("scale"));
 
     styleButton (surpriseButton, juce::Colour (0xff6b46c1));
-    surpriseButton.onClick = [this] { processor.regenerateAll(); };
+    surpriseButton.onClick = [this] { processor.generateAll(); };
     surpriseButton.setTooltip (shortHelp (help ("surprise").body));
     surpriseInfo = &addInfo (help ("surprise"));
 
     styleButton (guideButton, juce::Colour (0xff2f4fa8));
     guideButton.onClick = [this] { showInfo (help ("guide"), guideButton); };
     guideButton.setTooltip (utf8 ("Bien démarrer : le mode d'emploi en 7 étapes"));
+
+    styleButton (projectButton, juce::Colour (0xff3a3b40));
+    projectButton.onClick = [this] { showProjectMenu(); };
+    projectButton.setTooltip (shortHelp (help ("project").body));
+    projectInfo = &addInfo (help ("project"));
+
+    styleButton (undoButton, juce::Colour (0xff3a3b40));
+    undoButton.onClick = [this] { processor.undoManager.undo(); };
+    undoButton.setTooltip (utf8 ("Annuler (Ctrl+Z)"));
+    styleButton (redoButton, juce::Colour (0xff3a3b40));
+    redoButton.onClick = [this] { processor.undoManager.redo(); };
+    redoButton.setTooltip (utf8 ("Rétablir (Ctrl+Y)"));
+    undoInfo = &addInfo (help ("undo"));
 
     for (int b = 0; b < 4; ++b)
     {
@@ -206,11 +416,9 @@ TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
     followButton.setTooltip (shortHelp (help ("follow").body));
     pageInfo = &addInfo (help ("page"));
 
-    styleButton (recommendedButton, juce::Colour (0xff3a3b40));
-    recommendedButton.onClick = [this] { processor.addRecommendedMachines(); };
-    recommendedInfo = &addInfo (help ("recommended"));
     styleButton (addButton, juce::Colour (0xffd2551f));
     addButton.onClick = [this] { showAddMenu(); };
+    addButton.setTooltip (shortHelp (help ("add").body));
     addInfoButton = &addInfo (help ("add"));
 
     rack.setViewedComponent (&content, false);
@@ -250,17 +458,29 @@ TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
     addAndMakeVisible (vu);
     meterInfo = &addInfo (help ("master.meter"));
 
+    startScreen.onNew = [this] { newProject(); };
+    startScreen.onOpen = [this] { openProject(); };
+    startScreen.onResume = [this] { showStartScreen (false); };
+    startScreen.onOpenFile = [this] (const juce::File& f) { openProjectFile (f); };
+    startScreen.onExample = [this] (int i) { loadExample (i); };
+    addChildComponent (startScreen);
+
     disableKeyboardFocus (*this);
     setWantsKeyboardFocus (true);
+    addMouseListener (this, true);
 
     setResizable (true, true);
     setResizeLimits (1440, 700, 3200, 2400);
     setSize (1600, 880);
     startTimerHz (30);
+
+    // The standalone app always opens on the start screen; the plugin only when its project is empty.
+    showStartScreen (! processor.isHosted() || processor.isProjectEmpty());
 }
 
 TechMachineEditor::~TechMachineEditor()
 {
+    removeMouseListener (this);
     setLookAndFeel (nullptr);
 }
 
@@ -279,6 +499,12 @@ void TechMachineEditor::styleButton (juce::Button& button, juce::Colour colour, 
     button.setColour (juce::TextButton::textColourOffId, text);
     button.setColour (juce::TextButton::textColourOnId, text);
     addAndMakeVisible (button);
+}
+
+void TechMachineEditor::mouseDown (const juce::MouseEvent&)
+{
+    // Every click or drag starts a new undo step (knob moves, menu choices...).
+    processor.undoManager.beginNewTransaction();
 }
 
 void TechMachineEditor::togglePlay()
@@ -300,7 +526,7 @@ void TechMachineEditor::toggleRecord()
     }
 
     processor.startRecording();
-    if (processor.isRecording()) processor.playing = true;
+    if (processor.isRecording() && ! processor.isHosted()) processor.playing = true;
 }
 
 void TechMachineEditor::showAddMenu()
@@ -329,6 +555,199 @@ void TechMachineEditor::showAddMenu()
         processor.setShown (t, show);
         if (show) scrollToMachine = t;
     });
+}
+
+void TechMachineEditor::showProjectMenu()
+{
+    auto item = [] (int id, const juce::String& text, const juce::String& shortcut = {}, bool enabled = true)
+    {
+        juce::PopupMenu::Item i (text);
+        i.itemID = id;
+        i.shortcutKeyDescription = shortcut;
+        i.isEnabled = enabled;
+        return i;
+    };
+
+    juce::PopupMenu recent, examplesMenu, exportMenu;
+    const auto recentFiles = TechMachineProcessor::recentProjects();
+    for (int i = 0; i < recentFiles.size(); ++i)
+        recent.addItem (100 + i, juce::File (recentFiles[i]).getFileNameWithoutExtension());
+    for (int i = 0; i < (int) examples().size(); ++i)
+        examplesMenu.addItem (200 + i, utf8 (examples()[(size_t) i].name) + utf8 ("   —   ") + utf8 (examples()[(size_t) i].genre));
+    for (int loops : { 1, 2, 4, 8 })
+        exportMenu.addItem (300 + loops, juce::String (loops) + (loops == 1 ? " boucle" : " boucles"));
+
+    juce::PopupMenu menu;
+    menu.addItem (item (1, utf8 ("Accueil…")));
+    menu.addSeparator();
+    menu.addItem (item (2, utf8 ("Nouveau projet vide"), "Ctrl+N"));
+    menu.addItem (item (3, utf8 ("Ouvrir…"), "Ctrl+O"));
+    menu.addSubMenu (utf8 ("Projets récents"), recent, ! recentFiles.isEmpty());
+    menu.addSubMenu (utf8 ("Projets exemples"), examplesMenu);
+    menu.addSeparator();
+    menu.addItem (item (4, utf8 ("Enregistrer"), "Ctrl+S"));
+    menu.addItem (item (5, utf8 ("Enregistrer sous…"), "Ctrl+Maj+S"));
+    menu.addSeparator();
+    menu.addSubMenu (utf8 ("Exporter en WAV"), exportMenu);
+
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (projectButton), [this, recentFiles] (int r)
+    {
+        if (r == 1) { startScreen.refresh(); showStartScreen (true); }
+        else if (r == 2) newProject();
+        else if (r == 3) openProject();
+        else if (r == 4) saveProject();
+        else if (r == 5) saveProjectAs();
+        else if (r >= 100 && r < 100 + recentFiles.size()) askThen ([this, f = juce::File (recentFiles[r - 100])] { openProjectFile (f); });
+        else if (r >= 200 && r < 200 + (int) examples().size()) loadExample (r - 200);
+        else if (r > 300 && r <= 308) exportWav (r - 300);
+    });
+}
+
+void TechMachineEditor::showStartScreen (bool show)
+{
+    if (show)
+    {
+        startScreen.refresh();
+        startScreen.setBounds (getLocalBounds());
+        startScreen.toFront (false);
+    }
+    startScreen.setVisible (show);
+    disableKeyboardFocus (startScreen);
+    if (! show) grabKeyboardFocus();
+}
+
+void TechMachineEditor::askThen (std::function<void()> action)
+{
+    if (! processor.isDirty())
+    {
+        action();
+        return;
+    }
+
+    juce::AlertWindow::showYesNoCancelBox (juce::MessageBoxIconType::QuestionIcon, utf8 ("Projet modifié"),
+                                           utf8 ("Enregistrer les modifications de « ") + processor.projectName() + utf8 (" » avant de continuer ?"),
+                                           utf8 ("Enregistrer"), utf8 ("Ne pas enregistrer"), utf8 ("Annuler"), this,
+                                           juce::ModalCallbackFunction::create ([this, action] (int result)
+                                           {
+                                               if (result == 1) saveProject (action);
+                                               else if (result == 2) action();
+                                           }));
+}
+
+void TechMachineEditor::newProject()
+{
+    askThen ([this]
+    {
+        processor.newProject();
+        projectChanged();
+        showStartScreen (false);
+    });
+}
+
+void TechMachineEditor::openProject()
+{
+    askThen ([this]
+    {
+        chooser = std::make_unique<juce::FileChooser> (utf8 ("Ouvrir un projet Tech Machine"), TechMachineProcessor::projectsFolder(),
+                                                       juce::String ("*") + projectExtension);
+        chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+                              [this] (const juce::FileChooser& fc)
+                              {
+                                  const auto f = fc.getResult();
+                                  if (f.existsAsFile()) openProjectFile (f);
+                              });
+    });
+}
+
+void TechMachineEditor::openProjectFile (const juce::File& f)
+{
+    if (! processor.loadProject (f))
+    {
+        juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, utf8 ("Impossible d'ouvrir le projet"),
+                                                utf8 ("Ce fichier n'est pas un projet Tech Machine valide :\n") + f.getFullPathName());
+        return;
+    }
+    projectChanged();
+    showStartScreen (false);
+}
+
+void TechMachineEditor::loadExample (int index)
+{
+    askThen ([this, index]
+    {
+        processor.loadExample (index);
+        projectChanged();
+        showStartScreen (false);
+    });
+}
+
+void TechMachineEditor::saveProject (std::function<void()> then)
+{
+    if (processor.projectFile().existsAsFile())
+    {
+        if (processor.saveProject (processor.projectFile()) && then) then();
+        return;
+    }
+    saveProjectAs (std::move (then));
+}
+
+void TechMachineEditor::saveProjectAs (std::function<void()> then)
+{
+    const auto suggested = TechMachineProcessor::projectsFolder().getChildFile (juce::File::createLegalFileName (processor.projectName()) + projectExtension);
+    chooser = std::make_unique<juce::FileChooser> (utf8 ("Enregistrer le projet"), suggested, juce::String ("*") + projectExtension);
+    chooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles
+                              | juce::FileBrowserComponent::warnAboutOverwriting,
+                          [this, then] (const juce::FileChooser& fc)
+                          {
+                              auto f = fc.getResult();
+                              if (f == juce::File()) return;
+                              f = f.withFileExtension (projectExtension);
+                              if (! processor.saveProject (f))
+                              {
+                                  juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, utf8 ("Enregistrement impossible"),
+                                                                          utf8 ("Impossible d'écrire le fichier :\n") + f.getFullPathName());
+                                  return;
+                              }
+                              if (then) then();
+                          });
+}
+
+void TechMachineEditor::exportWav (int loops)
+{
+    const auto suggested = juce::File::getSpecialLocation (juce::File::userMusicDirectory).getChildFile ("Tech Machine")
+                               .getChildFile (juce::File::createLegalFileName (processor.projectName()) + ".wav");
+    chooser = std::make_unique<juce::FileChooser> (utf8 ("Exporter en WAV"), suggested, "*.wav");
+    chooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles
+                              | juce::FileBrowserComponent::warnAboutOverwriting,
+                          [this, loops] (const juce::FileChooser& fc)
+                          {
+                              auto f = fc.getResult();
+                              if (f == juce::File()) return;
+                              f = f.withFileExtension (".wav");
+                              f.getParentDirectory().createDirectory();
+                              exportJob = std::make_unique<ExportJob> (processor.createProjectXml(), f, loops, [this] (bool ok)
+                              {
+                                  juce::MessageManager::callAsync ([this, ok]
+                                  {
+                                      if (exportJob == nullptr) return;
+                                      const auto file = exportJob->file;
+                                      exportJob.reset();
+                                      if (ok) file.revealToUser();
+                                      else juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, utf8 ("Export interrompu"),
+                                                                                   utf8 ("Le fichier WAV n'a pas été créé."));
+                                  });
+                              });
+                              exportJob->launchThread();
+                          });
+}
+
+void TechMachineEditor::projectChanged()
+{
+    lastGenre = -1;
+    lastShownMask = -1;
+    lastBars = -1;
+    setPage (0);
+    layoutRack();
 }
 
 void TechMachineEditor::setPage (int newPage)
@@ -372,11 +791,19 @@ void TechMachineEditor::layoutRack()
 
 bool TechMachineEditor::keyPressed (const juce::KeyPress& key)
 {
-    if (key == juce::KeyPress::spaceKey)
-    {
-        togglePlay();
-        return true;
-    }
+    const auto mods = key.getModifiers();
+    const int code = key.getKeyCode();
+
+    if (key == juce::KeyPress::spaceKey) { togglePlay(); return true; }
+    if (! mods.isCommandDown()) return false;
+
+    if (code == 'Z' && mods.isShiftDown()) { processor.undoManager.redo(); return true; }
+    if (code == 'Z') { processor.undoManager.undo(); return true; }
+    if (code == 'Y') { processor.undoManager.redo(); return true; }
+    if (code == 'S' && mods.isShiftDown()) { saveProjectAs(); return true; }
+    if (code == 'S') { saveProject(); return true; }
+    if (code == 'O') { openProject(); return true; }
+    if (code == 'N') { newProject(); return true; }
     return false;
 }
 
@@ -435,25 +862,29 @@ void TechMachineEditor::timerCallback()
             if (panel->isVisible()) panel->refreshCells();
     }
 
-    if (processor.styleIndex != lastStyle)
+    if (processor.genre() != lastGenre)
     {
-        lastStyle = processor.styleIndex;
-        styleBox.setSelectedId (lastStyle + 1, juce::dontSendNotification);
-        const auto& style = styles()[(size_t) lastStyle];
-        juce::String machines;
-        for (int t : style.recommended) machines << (machines.isEmpty() ? "" : ", ") << utf8 (machineDef (t).name);
-        styleInfo->setHelp (utf8 ("Style : ") + utf8 (style.name), utf8 (style.help) + "\n\n" + help ("style").body);
-        styleBox.setTooltip (utf8 (style.name) + " : " + shortHelp (utf8 (style.help)));
-        recommendedButton.setTooltip (utf8 ("Ajoute : ") + machines);
+        lastGenre = processor.genre();
+        genreBox.setSelectedId (lastGenre + 1, juce::dontSendNotification);
+        const auto& style = styles()[(size_t) lastGenre];
+        genreInfo->setHelp (utf8 ("Genre : ") + utf8 (style.name), utf8 (style.help) + "\n\n" + help ("genre").body);
     }
 
     const auto& scale = scales()[(size_t) processor.currentScale()];
     scaleInfo->setHelp (utf8 ("Gamme : ") + utf8 (scale.name), utf8 (scale.help) + "\n\n" + help ("scale").body);
 
+    undoButton.setEnabled (processor.undoManager.canUndo());
+    redoButton.setEnabled (processor.undoManager.canRedo());
+
     playButton.setEnabled (! processor.isHosted());
     playButton.setButtonText (playing ? "STOP" : "LECTURE");
     playButton.setIcon (playing ? "stop" : "play");
     playButton.setColour (juce::TextButton::buttonColourId, playing ? juce::Colour (0xff8f2f2f) : juce::Colour (0xff2f8f4a));
+    if (processor.isHosted())
+    {
+        playButton.setTooltip (utf8 ("En plugin, la lecture et le tempo suivent ton logiciel de musique."));
+        lcd.setTooltip (utf8 ("Tempo synchronisé sur ton logiciel de musique."));
+    }
 
     const bool recording = processor.isRecording();
     const bool blink = (juce::Time::getMillisecondCounter() / 500) % 2 == 0;
@@ -461,11 +892,13 @@ void TechMachineEditor::timerCallback()
                             recording ? (blink ? juce::Colour (0xffd8303f) : juce::Colour (0xff6a1a22)) : juce::Colour (0xff4a2a2e));
     folderButton.setVisible (processor.getLastRecording().existsAsFile() && ! recording);
 
-    if (processor.isHosted())
+    const auto title = utf8 ("Tech Machine  —  ") + processor.projectName() + (processor.isDirty() ? juce::String::fromUTF8 ("  •") : juce::String());
+    if (title != lastTitle)
     {
-        playButton.setTooltip (utf8 ("En plugin, la lecture et le tempo suivent ton logiciel de musique."));
-        lcd.setTooltip (utf8 ("Tempo synchronisé sur ton logiciel de musique."));
+        lastTitle = title;
+        if (auto* window = findParentComponentOfClass<juce::DocumentWindow>()) window->setName (title);
     }
+
     lcd.repaint();
     vu.push (processor.outputPeak.exchange (0.0f));
 }
@@ -489,38 +922,30 @@ void TechMachineEditor::paint (juce::Graphics& g)
     rail (g, { rackArea.getX() - railW - 6.0f, rackArea.getY() - 6.0f, (float) railW, rackArea.getHeight() + 12.0f });
     rail (g, { rackArea.getRight() + 6.0f, rackArea.getY() - 6.0f, (float) railW, rackArea.getHeight() + 12.0f });
 
-    // Console
     paint::plate (g, consoleArea.toFloat(), juce::Colour (0xff2e2f35), juce::Colour (0xff1c1d21), 6.0f, true);
-    for (auto p : { juce::Point<float> (10.0f, 10.0f), juce::Point<float> ((float) consoleArea.getWidth() - 10.0f, 10.0f),
-                    juce::Point<float> (10.0f, (float) consoleArea.getHeight() - 10.0f),
-                    juce::Point<float> ((float) consoleArea.getWidth() - 10.0f, (float) consoleArea.getHeight() - 10.0f) })
-        paint::screw (g, p + consoleArea.getPosition().toFloat(), 4.5f, p.x * 0.01f);
+    screws (g, consoleArea);
 
     g.setColour (colours::text);
     g.setFont (paint::display (28.0f));
-    g.drawText ("TECH", consoleArea.getX() + 26, consoleArea.getY() + 14, 80, 30, juce::Justification::centredLeft);
+    g.drawText ("TECH", consoleArea.getX() + 26, consoleArea.getY() + 12, 80, 30, juce::Justification::centredLeft);
     g.setColour (colours::accent);
-    g.drawText ("MACHINE", consoleArea.getX() + 26 + 70, consoleArea.getY() + 14, 140, 30, juce::Justification::centredLeft);
+    g.drawText ("MACHINE", consoleArea.getX() + 26 + 70, consoleArea.getY() + 12, 140, 30, juce::Justification::centredLeft);
     g.setColour (colours::dim);
     g.setFont (paint::condensed (12.0f));
-    g.drawText (utf8 ("GROOVEBOX  ·  v0.3"), consoleArea.getX() + 27, consoleArea.getY() + 42, 200, 14, juce::Justification::centredLeft);
+    g.drawText (utf8 ("GROOVEBOX  ·  v0.4"), consoleArea.getX() + 27, consoleArea.getY() + 40, 200, 14, juce::Justification::centredLeft);
     g.setColour (colours::accent);
-    g.fillRect (consoleArea.getX() + 27, consoleArea.getY() + 58, 150, 2);
+    g.fillRect (consoleArea.getX() + 27, consoleArea.getY() + 56, 150, 2);
 
-    printLabel (g, styleBox, "STYLE");
+    printLabel (g, genreBox, "GENRE DU HASARD");
     printLabel (g, keyBox, "TONALITÉ");
     printLabel (g, scaleBox, "GAMME");
     g.setColour (colours::dim);
     g.setFont (paint::condensed (12.0f));
-    g.drawText ("MESURES", barButtons[0].getX() - 70, barButtons[0].getY(), 64, barButtons[0].getHeight(), juce::Justification::centredRight);
-    g.drawText ("PAGE", pageButtons[0].getX() - 50, pageButtons[0].getY(), 44, pageButtons[0].getHeight(), juce::Justification::centredRight);
+    g.drawText ("MESURES", barButtons[0].getX() - 60, barButtons[0].getY(), 56, barButtons[0].getHeight(), juce::Justification::centredRight);
+    g.drawText ("PAGE", pageButtons[0].getX() - 46, pageButtons[0].getY(), 42, pageButtons[0].getHeight(), juce::Justification::centredRight);
 
-    // Master
     paint::plate (g, masterArea.toFloat(), juce::Colour (0xff2e2f35), juce::Colour (0xff1c1d21), 6.0f, true);
-    for (auto p : { juce::Point<float> (10.0f, 10.0f), juce::Point<float> ((float) masterArea.getWidth() - 10.0f, 10.0f),
-                    juce::Point<float> (10.0f, (float) masterArea.getHeight() - 10.0f),
-                    juce::Point<float> ((float) masterArea.getWidth() - 10.0f, (float) masterArea.getHeight() - 10.0f) })
-        paint::screw (g, p + masterArea.getPosition().toFloat(), 4.5f, p.y * 0.02f);
+    screws (g, masterArea);
     g.setColour (colours::master);
     g.fillRect (masterArea.getX() + 26, masterArea.getY() + 16, 3, masterArea.getHeight() - 32);
     g.setColour (colours::text);
@@ -537,7 +962,7 @@ void TechMachineEditor::resized()
     consoleArea = { 10, 8, w - 20, consoleH };
     const int cy = consoleArea.getY();
 
-    // Row 1: transport, display, harmony.
+    // Row 1: transport, display, harmony, generation.
     playButton.setBounds (236, cy + 14, 120, 48);
     playInfo->setBounds (playButton.getRight() + 2, cy + 14, 15, 15);
     recordButton.setBounds (376, cy + 14, 84, 48);
@@ -547,9 +972,9 @@ void TechMachineEditor::resized()
     lcdInfo->setBounds (lcd.getRight() + 2, cy + 12, 15, 15);
 
     int x = lcd.getRight() + 26;
-    styleBox.setBounds (x, cy + 32, 170, 32);
-    styleInfo->setBounds (styleBox.getRight() - 15, cy + 13, 15, 15);
-    x = styleBox.getRight() + 12;
+    genreBox.setBounds (x, cy + 32, 170, 32);
+    genreInfo->setBounds (genreBox.getRight() - 15, cy + 13, 15, 15);
+    x = genreBox.getRight() + 12;
     keyBox.setBounds (x, cy + 32, 72, 32);
     keyInfo->setBounds (keyBox.getRight() - 15, cy + 13, 15, 15);
     x = keyBox.getRight() + 12;
@@ -562,22 +987,25 @@ void TechMachineEditor::resized()
     surpriseButton.setBounds (x, cy + 14, juce::jmin (170, guideButton.getX() - 26 - x), 48);
     surpriseInfo->setBounds (surpriseButton.getRight() + 2, cy + 14, 15, 15);
 
-    // Row 2: pattern length and pages, recordings, rack.
+    // Row 2: project, undo, pattern length and pages, rack.
     const int y2 = cy + 80;
-    x = 100;
-    for (auto& b : barButtons) { b.setBounds (x, y2, 42, 28); x += 45; }
-    lengthInfo->setBounds (x + 2, y2 + 7, 15, 15);
-    folderButton.setBounds (lengthInfo->getRight() + 12, y2, 100, 28);
+    projectButton.setBounds (26, y2, 100, 28);
+    projectInfo->setBounds (projectButton.getRight() + 2, y2 + 7, 15, 15);
+    undoButton.setBounds (150, y2, 34, 28);
+    redoButton.setBounds (188, y2, 34, 28);
+    undoInfo->setBounds (redoButton.getRight() + 2, y2 + 7, 15, 15);
+    x = 308;
+    for (auto& bar : barButtons) { bar.setBounds (x, y2, 34, 28); x += 37; }
+    lengthInfo->setBounds (x - 2, y2 + 7, 15, 15);
 
-    x = lcd.getRight() + 70;
-    for (auto& b : pageButtons) { b.setBounds (x, y2, 40, 28); x += 43; }
-    followButton.setBounds (x + 4, y2, 86, 28);
+    x = lcd.getRight() + 72;
+    for (auto& page : pageButtons) { page.setBounds (x, y2, 36, 28); x += 39; }
+    followButton.setBounds (x + 2, y2, 82, 28);
     pageInfo->setBounds (followButton.getRight() + 2, y2 + 7, 15, 15);
+    folderButton.setBounds (pageInfo->getRight() + 14, y2, 110, 28);
 
     addInfoButton->setBounds (consoleArea.getRight() - 16 - 15, y2 + 7, 15, 15);
-    addButton.setBounds (addInfoButton->getX() - 4 - 210, y2, 210, 28);
-    recommendedInfo->setBounds (addButton.getX() - 20, y2 + 7, 15, 15);
-    recommendedButton.setBounds (recommendedInfo->getX() - 4 - 150, y2, 150, 28);
+    addButton.setBounds (addInfoButton->getX() - 4 - 150, y2, 150, 28);
 
     // Master strip.
     masterArea = { 10, getHeight() - masterH - 6, w - 20, masterH };
@@ -595,4 +1023,6 @@ void TechMachineEditor::resized()
     const int rackTop = consoleArea.getBottom() + 16;
     rack.setBounds (10 + railW + 12, rackTop, w - 2 * (10 + railW + 12), masterArea.getY() - rackTop - 16);
     layoutRack();
+
+    startScreen.setBounds (getLocalBounds());
 }

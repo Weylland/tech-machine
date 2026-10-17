@@ -58,7 +58,7 @@ void decodeBools (const juce::String& s, std::array<std::atomic<bool>, N>& cells
 
 TechMachineProcessor::TechMachineProcessor()
     : AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, nullptr, "TechMachine", createLayout())
+      apvts (*this, &undoManager, "TechMachine", createLayout())
 {
     auto raw = [this] (const juce::String& id) { return apvts.getRawParameterValue (id); };
 
@@ -96,11 +96,13 @@ TechMachineProcessor::TechMachineProcessor()
         s.pan = raw (pid::machine (t, "pan"));
     }
 
-    applyStyle (0);
+    name = utf8 ("Sans titre");
+    apvts.state.addListener (this);
 }
 
 TechMachineProcessor::~TechMachineProcessor()
 {
+    apvts.state.removeListener (this);
     stopRecording();
 }
 
@@ -124,9 +126,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout TechMachineProcessor::create
     layout.add (knob (pid::echoLevel, "Echo level", 0.7f));
     layout.add (knob (pid::reverbSize, "Reverb size", 0.6f));
     layout.add (knob (pid::reverbLevel, "Reverb level", 0.6f));
-    layout.add (knob (pid::pump, "Pump", 0.3f));
+    layout.add (knob (pid::pump, "Pump", 0.0f));
     layout.add (knob (pid::djFilter, "Master filter", 0.5f, filterText));
-    layout.add (knob (pid::comp, "Compressor", 0.25f));
+    layout.add (knob (pid::comp, "Compressor", 0.0f));
     layout.add (knob (pid::disto, "Distortion", 0.0f));
     layout.add (knob (pid::volume, "Volume", 0.8f));
 
@@ -136,14 +138,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout TechMachineProcessor::create
         const juce::String name = utf8 (def.name);
         const bool drum = def.kind == MachineKind::Drum;
 
-        layout.add (toggle (pid::machine (t, "show"), name + " visible", t == TR909 || t == TB303 || t == Juno106));
+        layout.add (toggle (pid::machine (t, "show"), name + " visible"));
         layout.add (toggle (pid::machine (t, "mute"), name + " mute"));
         layout.add (toggle (pid::machine (t, "solo"), name + " solo"));
         layout.add (knob (pid::machine (t, "drive"), name + " drive", 0.0f));
-        layout.add (knob (pid::machine (t, "crush"), name + " crush", t == BreakKit ? 0.25f : 0.0f));
+        layout.add (knob (pid::machine (t, "crush"), name + " crush", 0.0f));
         layout.add (knob (pid::machine (t, "filter"), name + " filter", 0.5f, filterText));
-        layout.add (knob (pid::machine (t, "echo"), name + " echo", drum ? 0.0f : 0.15f));
-        layout.add (knob (pid::machine (t, "reverb"), name + " reverb", drum ? 0.08f : 0.15f));
+        layout.add (knob (pid::machine (t, "echo"), name + " echo", 0.0f));
+        layout.add (knob (pid::machine (t, "reverb"), name + " reverb", 0.0f));
         layout.add (knob (pid::machine (t, "volume"), name + " volume", 0.75f));
         layout.add (knob (pid::machine (t, "pan"), name + " pan", 0.5f, panText));
 
@@ -159,6 +161,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout TechMachineProcessor::create
                 layout.add (knob (pid::row (t, r, "decay"), rowName + " decay", row.decay));
                 layout.add (knob (pid::row (t, r, "tone"), rowName + " tone", row.tone));
                 layout.add (toggle (pid::row (t, r, "mute"), rowName + " mute"));
+                layout.add (knob (pid::row (t, r, "drive"), rowName + " drive", 0.0f));
+                layout.add (knob (pid::row (t, r, "filter"), rowName + " filter", 0.5f, filterText));
+                layout.add (knob (pid::row (t, r, "pan"), rowName + " pan", 0.5f, panText));
+                layout.add (knob (pid::row (t, r, "echo"), rowName + " echo", 0.0f));
+                layout.add (knob (pid::row (t, r, "reverb"), rowName + " reverb", 0.0f));
             }
         }
         else
@@ -193,10 +200,9 @@ void TechMachineProcessor::prepareToPlay (double newSampleRate, int samplesPerBl
     compressor.prepare (sampleRate);
     limiter.prepare (sampleRate);
 
-    reverbBuffer.setSize (2, juce::jmax (samplesPerBlock, 512));
-    reverb.setSampleRate (newSampleRate);
-    reverb.reset();
+    reverb.prepare (sampleRate);
     lastReverbSize = -1.0f;
+    juce::ignoreUnused (samplesPerBlock);
 
     muteCoef = 1.0f - decayCoef (0.006f, sampleRate);
 }
@@ -282,13 +288,7 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
     if (const float size = reverbSize->load(); std::abs (size - lastReverbSize) > 0.001f)
     {
-        juce::Reverb::Parameters rp;
-        rp.roomSize = 0.3f + size * 0.68f;
-        rp.damping = 0.5f - size * 0.2f;
-        rp.wetLevel = 1.0f;
-        rp.dryLevel = 0.0f;
-        rp.width = 1.0f;
-        reverb.setParameters (rp);
+        reverb.setSize (size);
         lastReverbSize = size;
     }
 
@@ -298,9 +298,7 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
     auto* left = buffer.getWritePointer (0);
     auto* right = buffer.getWritePointer (1);
-    const int chunk = reverbBuffer.getNumSamples();
-    for (int pos = 0; pos < numSamples; pos += chunk)
-        render (left + pos, right + pos, juce::jmin (chunk, numSamples - pos));
+    render (left, right, numSamples);
 
     float peak = 0.0f;
     for (int i = 0; i < numSamples; ++i)
@@ -326,9 +324,6 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
 void TechMachineProcessor::render (float* left, float* right, int numSamples)
 {
-    auto* revL = reverbBuffer.getWritePointer (0);
-    auto* revR = reverbBuffer.getWritePointer (1);
-
     for (int i = 0; i < numSamples; ++i)
     {
         if (wasPlaying)
@@ -348,8 +343,9 @@ void TechMachineProcessor::render (float* left, float* right, int numSamples)
             if (! s.shown) continue;
 
             auto& m = *machines[(size_t) t];
-            float l, r;
-            m.render (l, r);
+            Frame frame;
+            m.render (frame);
+            float l = frame.left, r = frame.right;
 
             if (s.driveAmount > 0.001f)
             {
@@ -372,8 +368,8 @@ void TechMachineProcessor::render (float* left, float* right, int numSamples)
             sumL += l;
             sumR += r;
             const float mono = 0.5f * (l + r);
-            echoIn += mono * s.echoSend;
-            reverbIn += mono * s.reverbSend;
+            echoIn += mono * s.echoSend + frame.echo * s.gain;
+            reverbIn += mono * s.reverbSend + frame.reverb * s.gain;
         }
 
         float dl, dr;
@@ -381,16 +377,10 @@ void TechMachineProcessor::render (float* left, float* right, int numSamples)
         dl *= echoLevelValue;
         dr *= echoLevelValue;
 
-        revL[i] = revR[i] = reverbIn + 0.15f * (dl + dr);
-        left[i] = sumL + dl;
-        right[i] = sumR + dr;
-    }
-
-    reverb.processStereo (revL, revR, numSamples);
-    for (int i = 0; i < numSamples; ++i)
-    {
-        left[i] += revL[i] * reverbLevelValue;
-        right[i] += revR[i] * reverbLevelValue;
+        float rl, rr;
+        reverb.process (reverbIn + 0.15f * (dl + dr), rl, rr);
+        left[i] = sumL + dl + rl * reverbLevelValue;
+        right[i] = sumR + dr + rr * reverbLevelValue;
     }
 }
 
@@ -458,72 +448,190 @@ void TechMachineProcessor::setParam (const juce::String& id, float value)
 void TechMachineProcessor::setShown (int type, bool shown)
 {
     setParam (pid::machine (type, "show"), shown ? 1.0f : 0.0f);
-    if (! shown) return;
-
-    auto& track = machines[(size_t) type]->track;
-    bool empty = true;
-    for (int s = 0; s < maxSteps && empty; ++s)
-    {
-        empty = ! track.on[(size_t) s];
-        for (auto& row : track.hits) empty = empty && ! row[(size_t) s];
-    }
-    if (empty) regenerate (type);
 }
 
-void TechMachineProcessor::applyStyle (int newStyle)
-{
-    styleIndex = juce::jlimit (0, (int) styles().size() - 1, newStyle);
-    const auto& style = styles()[(size_t) styleIndex];
+//==============================================================================
+// Undo of note edits: a snapshot of every part, taken just before the change.
 
-    for (auto* param : getParameters())
+class TechMachineProcessor::PatternAction : public juce::UndoableAction
+{
+public:
+    explicit PatternAction (TechMachineProcessor& p) : processor (p), before (p.snapshot()) {}
+
+    bool perform() override
     {
-        auto* p = dynamic_cast<juce::RangedAudioParameter*> (param);
-        if (p == nullptr) continue;
-        const auto& id = p->paramID;
-        if (id.endsWith ("_show") || id.endsWith ("_mute") || id.endsWith ("_solo") || id == pid::key || id == pid::bars
-            || id == pid::volume)
-            continue;
-        p->setValueNotifyingHost (p->getDefaultValue());
+        if (! performed)
+        {
+            performed = true;
+            return true;
+        }
+        processor.restore (after);
+        return true;
     }
 
-    setParam (pid::bpm, style.bpm);
-    setParam (pid::swing, style.swing);
-    setParam (pid::scale, (float) style.scale);
-    for (auto& [id, value] : style.presets)
-        setParam (utf8 (id), value);
+    bool undo() override
+    {
+        after = processor.snapshot();
+        processor.restore (before);
+        return true;
+    }
 
-    regenerateAll();
+    int getSizeInUnits() override { return 100; }
+
+private:
+    TechMachineProcessor& processor;
+    Snapshot before, after;
+    bool performed = false;
+};
+
+TechMachineProcessor::Snapshot TechMachineProcessor::snapshot() const
+{
+    Snapshot s;
+    for (size_t t = 0; t < machines.size(); ++t) s[t] = machines[t]->track.snapshot();
+    return s;
 }
 
-void TechMachineProcessor::regenerate (int type)
+void TechMachineProcessor::restore (const Snapshot& s)
 {
-    auto& m = *machines[(size_t) type];
-    const int steps = numSteps();
-    generate (m.track, m.def, styles()[(size_t) styleIndex], steps, currentScale(), random);
-    m.track.tile (steps);
+    for (size_t t = 0; t < machines.size(); ++t) machines[t]->track.restore (s[t]);
     touchPattern();
 }
 
-void TechMachineProcessor::regenerateAll()
+void TechMachineProcessor::beginPatternEdit()
 {
-    for (int t = 0; t < numMachines; ++t)
-        if (isShown (t)) regenerate (t);
+    undoManager.perform (new PatternAction (*this));
+    dirty = true;
 }
 
-void TechMachineProcessor::addRecommendedMachines()
+//==============================================================================
+// Generation
+
+GenerateContext TechMachineProcessor::context() const
 {
-    for (int t : styles()[(size_t) styleIndex].recommended)
+    GenerateContext ctx { styles()[(size_t) genreIndex], numSteps(), currentScale(), progression, {} };
+
+    // Where the kick plays: taken from the drum machines in the rack, otherwise four on the floor.
+    bool anyKick = false;
+    for (int t : { TR909, TR808, BreakKit })
     {
-        if (isShown (t)) continue;
-        setParam (pid::machine (t, "show"), 1.0f);
-        regenerate (t);
+        if (! isShown (t)) continue;
+        const auto& def = machineDef (t);
+        for (size_t r = 0; r < def.rows.size(); ++r)
+        {
+            if (def.rows[r].role != Role::Kick) continue;
+            for (int s = 0; s < ctx.steps; ++s)
+            {
+                if (machines[(size_t) t]->track.hits[r][(size_t) s])
+                {
+                    ctx.kick[(size_t) s] = true;
+                    anyKick = true;
+                }
+            }
+        }
     }
+    if (! anyKick)
+        for (int s = 0; s < ctx.steps; s += 4) ctx.kick[(size_t) s] = true;
+    return ctx;
+}
+
+void TechMachineProcessor::chooseProgression()
+{
+    const auto& options = styles()[(size_t) genreIndex].progressions;
+    progression = options[(size_t) random.nextInt ((int) options.size())];
+}
+
+void TechMachineProcessor::setGenre (int index)
+{
+    genreIndex = juce::jlimit (0, (int) styles().size() - 1, index);
+    chooseProgression();
+
+    // On an empty project, the genre also brings its usual tempo, swing and scale.
+    if (isProjectEmpty())
+    {
+        const auto& style = styles()[(size_t) genreIndex];
+        setParam (pid::bpm, style.bpm);
+        setParam (pid::swing, style.swing);
+        setParam (pid::scale, (float) style.scale);
+    }
+    dirty = true;
+}
+
+void TechMachineProcessor::generate (int type, GenerateMode mode)
+{
+    undoManager.beginNewTransaction();
+    beginPatternEdit();
+    techno::generate (machines[(size_t) type]->track, machineDef (type), context(), mode, random);
+    touchPattern();
+}
+
+void TechMachineProcessor::generateAll()
+{
+    undoManager.beginNewTransaction();
+    beginPatternEdit();
+    chooseProgression();
+
+    // Drums first, so the bass lines know where the kicks are.
+    for (int pass = 0; pass < 2; ++pass)
+    {
+        for (int t = 0; t < numMachines; ++t)
+        {
+            const bool drum = machineDef (t).kind == MachineKind::Drum;
+            if (isShown (t) && drum == (pass == 0))
+                techno::generate (machines[(size_t) t]->track, machineDef (t), context(), GenerateMode::NewIdea, random);
+        }
+    }
+    touchPattern();
 }
 
 void TechMachineProcessor::clearMachine (int type)
 {
+    undoManager.beginNewTransaction();
+    beginPatternEdit();
     machines[(size_t) type]->track.clear();
     touchPattern();
+}
+
+void TechMachineProcessor::shiftMachine (int type, int direction)
+{
+    undoManager.beginNewTransaction();
+    beginPatternEdit();
+    shiftTrack (machines[(size_t) type]->track, numSteps(), direction);
+    touchPattern();
+}
+
+void TechMachineProcessor::duplicateFirstBar (int type)
+{
+    undoManager.beginNewTransaction();
+    beginPatternEdit();
+    machines[(size_t) type]->track.tile (pageSteps);
+    touchPattern();
+}
+
+void TechMachineProcessor::copyMachine (int type)
+{
+    clipboard = machines[(size_t) type]->track.snapshot();
+    clipboardKind = type;
+}
+
+bool TechMachineProcessor::canPaste (int type) const
+{
+    return clipboard.has_value() && clipboardKind == type;
+}
+
+void TechMachineProcessor::pasteMachine (int type)
+{
+    if (! canPaste (type)) return;
+    undoManager.beginNewTransaction();
+    beginPatternEdit();
+    machines[(size_t) type]->track.restore (*clipboard);
+    touchPattern();
+}
+
+bool TechMachineProcessor::isProjectEmpty() const
+{
+    for (auto& m : machines)
+        if (! m->track.isEmpty()) return false;
+    return true;
 }
 
 void TechMachineProcessor::setBars (int newBars)
@@ -536,15 +644,244 @@ void TechMachineProcessor::setBars (int newBars)
     touchPattern();
 }
 
+//==============================================================================
+// Projects
+
+void TechMachineProcessor::resetParameters()
+{
+    for (auto* param : getParameters())
+        if (auto* p = dynamic_cast<juce::RangedAudioParameter*> (param))
+            p->setValueNotifyingHost (p->getDefaultValue());
+}
+
+void TechMachineProcessor::newProject()
+{
+    playing = false;
+    resetParameters();
+    for (auto& m : machines) m->track.clear();
+    genreIndex = 0;
+    progression = { 0 };
+    name = utf8 ("Sans titre");
+    file = juce::File();
+    touchPattern();
+    undoManager.clearUndoHistory();
+    dirty = false;
+}
+
+void TechMachineProcessor::loadExample (int index)
+{
+    newProject();
+
+    struct Writer : ExampleWriter
+    {
+        TechMachineProcessor& p;
+        explicit Writer (TechMachineProcessor& owner) : p (owner) {}
+        void setParam (const juce::String& id, float value) override { p.setParam (id, value); }
+        void show (int type) override { p.setShown (type, true); }
+        Track& track (int type) override { return p.machine (type).track; }
+        int baseNote (int type) override
+        {
+            const auto& def = machineDef (type);
+            const int octave = def.params.empty() ? 2 : (int) p.apvts.getRawParameterValue (pid::synth (type, 0))->load();
+            return machineBaseNote (def, p.currentKey(), octave);
+        }
+    } writer (*this);
+
+    buildExample (index, writer);
+    const auto& info = examples()[(size_t) index];
+    for (int g = 0; g < (int) styles().size(); ++g)
+        if (utf8 (styles()[(size_t) g].name) == utf8 (info.genre)) genreIndex = g;
+    chooseProgression();
+    name = utf8 (info.name);
+    touchPattern();
+    undoManager.clearUndoHistory();
+    dirty = false;
+}
+
+std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
+{
+    auto xml = apvts.copyState().createXml();
+    auto* patterns = xml->createNewChildElement ("Patterns");
+    patterns->setAttribute ("genre", genreIndex);
+    patterns->setAttribute ("name", name);
+    juce::StringArray prog;
+    for (int d : progression) prog.add (juce::String (d));
+    patterns->setAttribute ("progression", prog.joinIntoString (","));
+
+    for (auto& m : machines)
+    {
+        auto* e = patterns->createNewChildElement ("Machine");
+        e->setAttribute ("id", m->def.id);
+        for (size_t r = 0; r < m->def.rows.size(); ++r)
+            e->setAttribute ("hits" + juce::String ((int) r), encodeBools (m->track.hits[r]));
+        e->setAttribute ("accent", encodeBools (m->track.accent));
+        e->setAttribute ("on", encodeBools (m->track.on));
+        e->setAttribute ("slide", encodeBools (m->track.slide));
+
+        juce::StringArray notes;
+        for (auto& n : m->track.note) notes.add (juce::String (n.load()));
+        e->setAttribute ("note", notes.joinIntoString (","));
+    }
+    return xml;
+}
+
+void TechMachineProcessor::restoreProjectXml (const juce::XmlElement& source)
+{
+    juce::XmlElement xml (source);
+    auto* patterns = xml.getChildByName ("Patterns");
+    if (patterns == nullptr) return;
+
+    genreIndex = juce::jlimit (0, (int) styles().size() - 1, patterns->getIntAttribute ("genre"));
+    name = patterns->getStringAttribute ("name", utf8 ("Sans titre"));
+    progression.clear();
+    for (auto& d : juce::StringArray::fromTokens (patterns->getStringAttribute ("progression", "0"), ",", {}))
+        progression.push_back (juce::jlimit (0, 13, d.getIntValue()));
+    if (progression.empty()) progression = { 0 };
+
+    for (auto* e : patterns->getChildIterator())
+    {
+        for (auto& m : machines)
+        {
+            if (e->getStringAttribute ("id") != m->def.id) continue;
+            m->track.clear();
+            for (size_t r = 0; r < m->def.rows.size(); ++r)
+                decodeBools (e->getStringAttribute ("hits" + juce::String ((int) r)), m->track.hits[r]);
+            decodeBools (e->getStringAttribute ("accent"), m->track.accent);
+            decodeBools (e->getStringAttribute ("on"), m->track.on);
+            decodeBools (e->getStringAttribute ("slide"), m->track.slide);
+            auto notes = juce::StringArray::fromTokens (e->getStringAttribute ("note"), ",", {});
+            for (int i = 0; i < maxSteps; ++i)
+                m->track.note[(size_t) i] = juce::jlimit (0, noteRange - 1, notes[i].getIntValue());
+        }
+    }
+    xml.removeChildElement (patterns, true);
+    xml.removeAttribute ("app");
+    xml.removeAttribute ("version");
+
+    // Parameters missing from the file (older versions) go back to their default.
+    resetParameters();
+    apvts.replaceState (juce::ValueTree::fromXml (xml));
+    touchPattern();
+}
+
+juce::File TechMachineProcessor::projectsFolder()
+{
+    auto folder = juce::File::getSpecialLocation (juce::File::userMusicDirectory).getChildFile ("Tech Machine").getChildFile ("Projets");
+    folder.createDirectory();
+    return folder;
+}
+
+namespace
+{
+juce::PropertiesFile& settings()
+{
+    static juce::PropertiesFile props ([]
+    {
+        juce::PropertiesFile::Options o;
+        o.applicationName = "Tech Machine";
+        o.filenameSuffix = "settings";
+        o.folderName = "Tech Machine";
+        o.osxLibrarySubFolder = "Application Support";
+        return o;
+    }());
+    return props;
+}
+} // namespace
+
+juce::StringArray TechMachineProcessor::recentProjects()
+{
+    const auto list = juce::StringArray::fromLines (settings().getValue ("recent"));
+    juce::StringArray existing;
+    for (auto& path : list)
+        if (path.isNotEmpty() && juce::File (path).existsAsFile()) existing.add (path);
+    return existing;
+}
+
+void TechMachineProcessor::addRecent (const juce::File& f)
+{
+    auto list = recentProjects();
+    list.removeString (f.getFullPathName());
+    list.insert (0, f.getFullPathName());
+    while (list.size() > 8) list.remove (list.size() - 1);
+    settings().setValue ("recent", list.joinIntoString ("\n"));
+    settings().saveIfNeeded();
+}
+
+bool TechMachineProcessor::saveProject (const juce::File& target)
+{
+    name = target.getFileNameWithoutExtension();
+    auto xml = createProjectXml();
+    xml->setAttribute ("app", "Tech Machine");
+    xml->setAttribute ("version", JucePlugin_VersionString);
+    if (! xml->writeTo (target)) return false;
+    file = target;
+    dirty = false;
+    addRecent (target);
+    return true;
+}
+
+bool TechMachineProcessor::loadProject (const juce::File& source)
+{
+    auto xml = juce::XmlDocument::parse (source);
+    if (xml == nullptr || ! xml->hasTagName (apvts.state.getType()) || xml->getChildByName ("Patterns") == nullptr)
+        return false;
+
+    playing = false;
+    restoreProjectXml (*xml);
+    name = source.getFileNameWithoutExtension();
+    file = source;
+    undoManager.clearUndoHistory();
+    dirty = false;
+    addRecent (source);
+    return true;
+}
+
+bool TechMachineProcessor::exportWav (const juce::XmlElement& project, const juce::File& target, int loops,
+                                      const std::function<bool (float)>& progress)
+{
+    constexpr double rate = 48000.0;
+    constexpr int block = 512;
+
+    TechMachineProcessor offline;
+    offline.restoreProjectXml (project);
+    offline.setPlayConfigDetails (0, 2, rate, block);
+    offline.prepareToPlay (rate, block);
+    offline.playing = true;
+
+    const double loopSeconds = offline.numSteps() * 15.0 / (double) offline.bpm->load();
+    const int total = (int) ((loopSeconds * loops + 2.5) * rate);
+    const int musicEnd = (int) (loopSeconds * loops * rate);
+
+    target.deleteFile();
+    std::unique_ptr<juce::OutputStream> stream = target.createOutputStream();
+    if (stream == nullptr) return false;
+    juce::WavAudioFormat wav;
+    auto writer = wav.createWriterFor (stream, juce::AudioFormatWriterOptions {}.withSampleRate (rate).withNumChannels (2).withBitsPerSample (24));
+    if (writer == nullptr) return false;
+
+    juce::AudioBuffer<float> buffer (2, block);
+    juce::MidiBuffer midi;
+    for (int pos = 0; pos < total; pos += block)
+    {
+        const int n = juce::jmin (block, total - pos);
+        buffer.setSize (2, n, false, false, true);
+        if (pos >= musicEnd) offline.playing = false;   // let echoes and reverb ring out
+        offline.processBlock (buffer, midi);
+        writer->writeFromAudioSampleBuffer (buffer, 0, n);
+        if (progress && ! progress ((float) pos / (float) total)) return false;
+    }
+    return true;
+}
+
 void TechMachineProcessor::startRecording()
 {
     stopRecording();
 
     auto folder = juce::File::getSpecialLocation (juce::File::userMusicDirectory).getChildFile ("Tech Machine");
     folder.createDirectory();
-    auto file = folder.getNonexistentChildFile ("TechMachine_" + juce::Time::getCurrentTime().formatted ("%Y-%m-%d_%H-%M-%S"), ".wav");
+    auto target = folder.getNonexistentChildFile ("TechMachine_" + juce::Time::getCurrentTime().formatted ("%Y-%m-%d_%H-%M-%S"), ".wav");
 
-    std::unique_ptr<juce::OutputStream> stream = file.createOutputStream();
+    std::unique_ptr<juce::OutputStream> stream = target.createOutputStream();
     if (stream == nullptr) return;
 
     juce::WavAudioFormat wav;
@@ -556,7 +893,7 @@ void TechMachineProcessor::startRecording()
 
     writerThread.startThread();
     threadedWriter = std::make_unique<juce::AudioFormatWriter::ThreadedWriter> (writer.release(), writerThread, 32768);
-    lastRecording = file;
+    lastRecording = target;
 
     const juce::ScopedLock sl (writerLock);
     activeWriter = threadedWriter.get();
@@ -573,26 +910,7 @@ void TechMachineProcessor::stopRecording()
 
 void TechMachineProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    auto xml = apvts.copyState().createXml();
-    auto* patterns = xml->createNewChildElement ("Patterns");
-    patterns->setAttribute ("style", styleIndex);
-
-    for (auto& m : machines)
-    {
-        auto* e = patterns->createNewChildElement ("Machine");
-        e->setAttribute ("id", m->def.id);
-        for (size_t r = 0; r < m->def.rows.size(); ++r)
-            e->setAttribute ("hits" + juce::String ((int) r), encodeBools (m->track.hits[r]));
-        e->setAttribute ("accent", encodeBools (m->track.accent));
-        e->setAttribute ("on", encodeBools (m->track.on));
-        e->setAttribute ("slide", encodeBools (m->track.slide));
-
-        juce::StringArray notes;
-        for (auto& n : m->track.note) notes.add (juce::String (n.load()));
-        e->setAttribute ("note", notes.joinIntoString (","));
-    }
-
-    copyXmlToBinary (*xml, destData);
+    copyXmlToBinary (*createProjectXml(), destData);
 }
 
 void TechMachineProcessor::setStateInformation (const void* data, int sizeInBytes)
@@ -603,30 +921,9 @@ void TechMachineProcessor::setStateInformation (const void* data, int sizeInByte
     // States saved by v0.1 (no "Patterns" element) use other parameter meanings: start fresh instead.
     if (xml->getChildByName ("Patterns") == nullptr) return;
 
-    if (auto* patterns = xml->getChildByName ("Patterns"))
-    {
-        styleIndex = juce::jlimit (0, (int) styles().size() - 1, patterns->getIntAttribute ("style"));
-        for (auto* e : patterns->getChildIterator())
-        {
-            for (auto& m : machines)
-            {
-                if (e->getStringAttribute ("id") != m->def.id) continue;
-                m->track.clear();
-                for (size_t r = 0; r < m->def.rows.size(); ++r)
-                    decodeBools (e->getStringAttribute ("hits" + juce::String ((int) r)), m->track.hits[r]);
-                decodeBools (e->getStringAttribute ("accent"), m->track.accent);
-                decodeBools (e->getStringAttribute ("on"), m->track.on);
-                decodeBools (e->getStringAttribute ("slide"), m->track.slide);
-                auto notes = juce::StringArray::fromTokens (e->getStringAttribute ("note"), ",", {});
-                for (int i = 0; i < maxSteps; ++i)
-                    m->track.note[(size_t) i] = juce::jlimit (0, noteRange - 1, notes[i].getIntValue());
-            }
-        }
-        xml->removeChildElement (patterns, true);
-        touchPattern();
-    }
-
-    apvts.replaceState (juce::ValueTree::fromXml (*xml));
+    restoreProjectXml (*xml);
+    undoManager.clearUndoHistory();
+    dirty = false;
 }
 
 juce::AudioProcessorEditor* TechMachineProcessor::createEditor()

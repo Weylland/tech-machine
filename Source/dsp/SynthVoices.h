@@ -133,7 +133,7 @@ public:
         }
 
         y *= amp * (0.75f + 0.6f * (accentOn ? accentAmount : 0.0f) * accentEnv);
-        return dcBlock.highpass (y) * 1.45f;
+        return dcBlock.highpass (y) * 2.6f;
     }
 
 private:
@@ -207,7 +207,7 @@ public:
         ladder.set (std::min (20.0f * std::exp2 (octaves), 18000.0f), reso * 1.04f, fs);
 
         const float y = ladder.process (osc * 0.4f) * env * (accent ? 1.25f : 1.0f);
-        return dcBlock.highpass (y) * 1.8f;
+        return dcBlock.highpass (y) * 2.0f;
     }
 
 private:
@@ -277,7 +277,7 @@ public:
         ladder.set (std::min (20.0f * std::exp2 (octaves), 18000.0f), emphasis, fs);
 
         const float y = ladder.process (mix * (0.5f + drive * 2.5f));
-        return dcBlock.highpass (y) * ampEnv.next() * (accent ? 1.2f : 1.0f) * (2.7f - 0.9f * drive);
+        return dcBlock.highpass (y) * ampEnv.next() * (accent ? 1.2f : 1.0f) * (3.5f - 1.2f * drive);
     }
 
 private:

@@ -212,6 +212,44 @@ struct Adsr
     }
 };
 
+// Halves the sample rate of a 2x oversampled signal with a 31-tap windowed-sinc half-band filter.
+class Decimator2x
+{
+public:
+    Decimator2x()
+    {
+        for (int n = 0; n < taps; ++n)
+        {
+            const int k = n - centre;
+            const float window = 0.42f - 0.5f * std::cos (2.0f * pi * (float) n / (float) (taps - 1))
+                               + 0.08f * std::cos (4.0f * pi * (float) n / (float) (taps - 1));
+            coefs[n] = k == 0 ? 0.5f : (k % 2 == 0 ? 0.0f : std::sin (pi * (float) k / 2.0f) / (pi * (float) k) * window);
+        }
+    }
+
+    float process (float a, float b)
+    {
+        push (a);
+        push (b);
+        float y = 0.0f;
+        for (int n = 0; n < taps; ++n)
+            if (coefs[n] != 0.0f) y += coefs[n] * history[pos + n];
+        return y;
+    }
+
+private:
+    void push (float x)
+    {
+        pos = pos == 0 ? taps - 1 : pos - 1;
+        history[pos] = history[pos + taps] = x;
+    }
+
+    static constexpr int taps = 31, centre = 15;
+    float coefs[taps] {};
+    float history[2 * taps] {};
+    int pos = 0;
+};
+
 // Six square oscillators at inharmonic ratios: the metallic source of the analog hats and cymbals.
 struct MetalBank
 {
@@ -222,8 +260,9 @@ struct MetalBank
         float sum = 0.0f;
         for (int i = 0; i < 6; ++i)
         {
-            advance (phases[i], freqs[i] * ratio / sampleRate);
-            sum += phases[i] < 0.5f ? 1.0f : -1.0f;
+            const float dt = freqs[i] * ratio / sampleRate;
+            advance (phases[i], dt);
+            sum += blepPulse (phases[i], dt, 0.5f);
         }
         return sum * (1.0f / 6.0f);
     }

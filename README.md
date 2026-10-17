@@ -37,18 +37,24 @@ Ce projet n'est ni affilié ni approuvé par Roland ou Moog.
 
 ## Ce qu'on peut faire
 
-- **Choisir ses machines** : n'affiche que ce que tu veux (une 909 seule, ou tout le studio).
-- **16 styles** : Techno, Detroit, Berlin, Minimal, Acid, Hard Techno, Dub Techno, House, Trance, Psytrance,
-  Drum & Bass, Jungle, Breakbeat, Électro, UK Garage, Gabber. Chaque style règle le tempo, la gamme, les sons
-  et génère des rythmes typiques. **SURPRISE !** en génère de nouveaux à l'infini.
+- **Projets** : nouveau projet vide, ouvrir, enregistrer (`.techmachine`), projets récents, écran d'accueil.
+- **10 projets exemples** écrits à la main : Techno, Acid, Detroit, House, Berlin, Trance, Psytrance,
+  Drum & Bass, Dub Techno, Électro.
+- **Choisir ses machines** : n'affiche que ce que tu veux (une 909 seule, ou tout le studio). Une machine ajoutée arrive vide.
+- **Hasard musical** dans 16 genres : la basse évite le kick et suit les accords, les mélodies répondent à un motif,
+  les percussions sont réparties en rythmes euclidiens. Par machine : nouvelle idée, varier un peu, plus ou moins de notes.
 - **21 gammes + mode chromatique** : impossible de faire une fausse note tant qu'une gamme est choisie.
-- **Séquences de 1 à 4 mesures** avec variations, grilles d'accords et roulements.
-- **Effets** par machine (disto, crush, filtre DJ, écho, reverb, volume, pan) et sur le master
-  (écho synchronisé, reverb, pompe sidechain, filtre, compresseur, disto, limiteur).
-- **Enregistrement WAV** de ce que tu joues.
+- **Séquences de 1 à 4 mesures**, avec copier / coller, dupliquer la mesure 1, décaler d'un pas.
+- **Effets par son de batterie** (disto, filtre, pan, écho, reverb : de la disto rien que sur le kick, par exemple),
+  **par machine** (disto, crush, filtre DJ, écho, reverb, volume, pan) et **sur le master**
+  (écho façon bande, reverb FDN, pompe sidechain, filtre DJ, compresseur, disto, limiteur).
+- **Annuler / rétablir** sur tout (notes, hasard, réglages).
+- **Export WAV** hors temps réel (1 à 8 boucles) et enregistrement en direct.
+- **En VST3**, la lecture, le tempo et la position suivent ton logiciel de musique.
 - **Un « i » partout** : clique dessus (ou clic droit sur un bouton) pour savoir à quoi sert chaque élément.
 
-Raccourci : **Espace** = lecture / stop.
+Raccourcis : **Espace** lecture / stop · **Ctrl+Z / Ctrl+Y** annuler / rétablir · **Ctrl+S** enregistrer ·
+**Ctrl+O** ouvrir · **Ctrl+N** nouveau projet.
 
 ## Compiler soi-même
 

@@ -5,7 +5,8 @@
 
 namespace techno
 {
-// Tempo-synced ping-pong echo with filtered feedback (dub style).
+// Tempo-synced ping-pong echo with the character of a tape unit: filtered, saturating
+// feedback and a slow wow on the read head.
 class PingPongDelay
 {
 public:
@@ -28,22 +29,24 @@ public:
     void process (float input, float feedback, float& outL, float& outR)
     {
         currentDelay += (targetDelay - currentDelay) * smoothCoef;
+        advance (wow, 0.55f / fs);
+        const float wobble = 1.0f + 0.0012f * std::sin (2.0f * pi * wow);
 
-        outL = read (bufferL);
-        outR = read (bufferR);
+        outL = read (bufferL, currentDelay * wobble);
+        outR = read (bufferR, currentDelay * (2.0f - wobble));
 
         const float fbL = highpassL.highpass (lowpassL.lowpass (outR)) * feedback;
         const float fbR = highpassR.highpass (lowpassR.lowpass (outL)) * feedback;
 
-        bufferL[(size_t) writePos] = fastTanh (input + fbL);
-        bufferR[(size_t) writePos] = fbR;
+        bufferL[(size_t) writePos] = fastTanh ((input + fbL) * 1.1f) * 0.91f;
+        bufferR[(size_t) writePos] = fastTanh (fbR * 1.1f) * 0.91f;
         if (++writePos >= size) writePos = 0;
     }
 
 private:
-    float read (const std::vector<float>& buffer) const
+    float read (const std::vector<float>& buffer, float delay) const
     {
-        float pos = (float) writePos - currentDelay;
+        float pos = (float) writePos - delay;
         if (pos < 0.0f) pos += (float) size;
         const int i0 = (int) pos;
         const int i1 = (i0 + 1) % size;
@@ -53,7 +56,7 @@ private:
 
     std::vector<float> bufferL, bufferR;
     int size = 0, writePos = 0;
-    float fs = 44100.0f, currentDelay = 1000.0f, targetDelay = 1000.0f, smoothCoef = 0.0f;
+    float fs = 44100.0f, currentDelay = 1000.0f, targetDelay = 1000.0f, smoothCoef = 0.0f, wow = 0.0f;
     OnePole lowpassL, lowpassR, highpassL, highpassR;
 };
 
@@ -161,37 +164,72 @@ private:
     Svf filterL, filterR;
 };
 
+// Mono version of the DJ filter, used on single drum sounds.
+class MonoDjFilter
+{
+public:
+    void set (float position, float sampleRate)
+    {
+        bypass = std::abs (position - 0.5f) < 0.02f;
+        if (bypass) return;
+        lowpassMode = position < 0.5f;
+        const float depth = std::abs (position - 0.5f) * 2.0f;
+        filter.set (lowpassMode ? 20000.0f * std::exp2 (-depth * 7.0f) : 20.0f * std::exp2 (depth * 8.0f), 0.9f, sampleRate);
+    }
+
+    float process (float x)
+    {
+        if (bypass) return x;
+        filter.process (x);
+        return lowpassMode ? filter.lp : filter.hp;
+    }
+
+private:
+    bool bypass = true, lowpassMode = true;
+    Svf filter;
+};
+
 // Stereo-linked feed-forward compressor; "amount" lowers the threshold and adds make-up gain.
 class GlueCompressor
 {
 public:
     void prepare (float sampleRate)
     {
-        attack = 1.0f - decayCoef (0.008f, sampleRate);
-        release = 1.0f - decayCoef (0.15f, sampleRate);
-        env = 0.0f;
+        rmsCoef = 1.0f - decayCoef (0.006f, sampleRate);
+        attack = 1.0f - decayCoef (0.01f, sampleRate);
+        release = 1.0f - decayCoef (0.14f, sampleRate);
+        power = 0.0f;
+        gainDb = 0.0f;
     }
 
     void setAmount (float amount)
     {
         active = amount > 0.001f;
-        threshold = std::pow (10.0f, (-4.0f - amount * 22.0f) / 20.0f);
-        makeup = 1.0f + amount * 1.6f;
+        thresholdDb = -6.0f - amount * 20.0f;
+        makeupDb = amount * 9.0f;
     }
 
+    // RMS detection, 3:1 ratio with a 6 dB soft knee, smoothed gain.
     void process (float& left, float& right)
     {
         if (! active) return;
-        const float level = std::max (std::abs (left), std::abs (right));
-        env += (level - env) * (level > env ? attack : release);
-        const float gain = (env > threshold ? std::pow (env / threshold, -0.75f) : 1.0f) * makeup;
+        power += (0.5f * (left * left + right * right) - power) * rmsCoef;
+        const float levelDb = 10.0f * std::log10 (power + 1.0e-9f);
+        const float over = levelDb - thresholdDb;
+        float reduction = 0.0f;
+        if (over > 3.0f) reduction = over * (1.0f - 1.0f / 3.0f);
+        else if (over > -3.0f) reduction = (1.0f - 1.0f / 3.0f) * (over + 3.0f) * (over + 3.0f) / 12.0f;
+
+        const float target = -reduction;
+        gainDb += (target - gainDb) * (target < gainDb ? attack : release);
+        const float gain = std::pow (10.0f, (gainDb + makeupDb) / 20.0f);
         left *= gain;
         right *= gain;
     }
 
 private:
     bool active = false;
-    float env = 0, attack = 0, release = 0, threshold = 1, makeup = 1;
+    float power = 0, gainDb = 0, rmsCoef = 0, attack = 0, release = 0, thresholdDb = -6.0f, makeupDb = 0;
 };
 
 // Sidechain-style ducking triggered by the kick.

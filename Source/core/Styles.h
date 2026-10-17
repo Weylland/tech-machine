@@ -7,9 +7,9 @@
 
 namespace techno
 {
-// Pattern strings are 16 steps long (one bar):
-//   'X' = hit + accent, 'x' = hit, 'o' = 50% chance, 'r' = 20% chance, '.' = nothing,
-//   '-' = (melodies) continue the previous note: glide for mono synths, hold for chords.
+// Drum pattern strings are 16 steps long (one bar):
+//   'X' = hit + accent, 'x' = hit, 'o' = 50% chance, 'r' = 20% chance, '.' = nothing.
+// Percussion written only with 'r' / '.' is replaced by a Euclidean rhythm (evenly spread hits).
 struct DrumPart
 {
     Role role;
@@ -17,39 +17,42 @@ struct DrumPart
     bool firstBarOnly = false;
 };
 
-struct MelodyPart
-{
-    std::vector<const char*> rhythms;
-    std::vector<std::pair<int, int>> notes;    // scale degree, weight
-    float accent = 0.2f, slide = 0.1f, octaveJump = 0.1f;
-    int motif = 16;                            // steps before the motif repeats
-    bool followChords = true;                  // transpose with the chord progression
-};
+enum class BassMode { Offbeat, Rolling, Groove, Long, Psy };
+enum class LeadMode { Motif, Arp, Riff, Sparse };
+enum class ChordMode { Stabs, Pad, Sparse };
 
-struct ChordPart
-{
-    std::vector<const char*> rhythms;
-    bool pad = false;                          // long held chords instead of stabs
-};
-
+// A genre: what the dice and SURPRISE ! write for each machine.
 struct StyleDef
 {
     const char* name;
     const char* help;
-    float bpm, swing;
-    int scale;
-    std::vector<int> progression;              // chord root degrees, one per bar
+    float bpm, swing;                              // suggested tempo and swing
+    int scale;                                     // suggested scale
+    std::vector<std::vector<int>> progressions;    // chord root degrees, one per bar
     std::vector<DrumPart> drums;
-    std::vector<DrumPart> fill;                // added on the last bar of multi-bar patterns
-    MelodyPart acid, bass, lead;
-    ChordPart chords;
-    bool leadOn101, leadOn8000;
-    std::vector<int> recommended;
-    std::vector<std::pair<const char*, float>> presets;   // parameter id, value
+    std::vector<DrumPart> fill;                    // added on the last bar of multi-bar patterns
+    std::vector<BassMode> bassModes;
+    std::vector<LeadMode> leadModes;
+    std::vector<ChordMode> chordModes;
+    std::vector<const char*> chordRhythms;         // used by stabs
+    bool leadOn101, leadOn8000;                    // otherwise the 101 plays bass and the 8000 chords
 };
 
 const std::vector<StyleDef>& styles();
 
-// Writes a new part for one machine in the given style.
-void generate (Track&, const MachineDef&, const StyleDef&, int steps, int scale, juce::Random&);
+enum class GenerateMode { NewIdea, Vary, Denser, Sparser };
+
+struct GenerateContext
+{
+    const StyleDef& style;
+    int steps, scale;
+    const std::vector<int>& progression;           // chord root degree per bar
+    std::array<bool, maxSteps> kick {};            // where the kick plays, so bass lines can avoid it
+};
+
+// Writes or transforms the part of one machine.
+void generate (Track&, const MachineDef&, const GenerateContext&, GenerateMode, juce::Random&);
+
+// Rotates a whole part by one step (direction = +1 or -1) over the pattern length.
+void shiftTrack (Track&, int steps, int direction);
 } // namespace techno

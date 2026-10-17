@@ -10,6 +10,12 @@
 
 namespace techno
 {
+// One sample of a machine's output: stereo dry signal plus what its sounds send to the effects.
+struct Frame
+{
+    float left = 0, right = 0, echo = 0, reverb = 0;
+};
+
 struct StepInfo
 {
     int step, prevStep, key, scale;
@@ -28,7 +34,7 @@ public:
     virtual void readParams() = 0;
     virtual void onStep (const StepInfo&) = 0;
     virtual void tick() {}
-    virtual void render (float& left, float& right) = 0;
+    virtual void render (Frame&) = 0;
     virtual void stop() {}
 
     bool takeKick()

@@ -1,4 +1,5 @@
 #include "Machines.h"
+#include "../dsp/Effects.h"
 
 namespace techno
 {
@@ -15,6 +16,7 @@ public:
         for (int i = 0; i < numRows; ++i)
         {
             voices.push_back (createDrumVoice (def.id, def.rows[(size_t) i].id));
+            trims[i] = drumVoiceTrim (def.id, def.rows[(size_t) i].id);
             if (def.rows[(size_t) i].role == Role::OpenHat) openHatRow = i;
         }
     }
@@ -28,12 +30,19 @@ public:
             decayParam[i] = state.getRawParameterValue (pid::row (type, i, "decay"));
             toneParam[i] = state.getRawParameterValue (pid::row (type, i, "tone"));
             muteParam[i] = state.getRawParameterValue (pid::row (type, i, "mute"));
+            auto& fx = rowFx[i];
+            fx.drive = state.getRawParameterValue (pid::row (type, i, "drive"));
+            fx.filter = state.getRawParameterValue (pid::row (type, i, "filter"));
+            fx.pan = state.getRawParameterValue (pid::row (type, i, "pan"));
+            fx.echo = state.getRawParameterValue (pid::row (type, i, "echo"));
+            fx.reverb = state.getRawParameterValue (pid::row (type, i, "reverb"));
         }
         accentParam = state.getRawParameterValue (pid::machine (type, "accent"));
     }
 
     void prepare (float sampleRate) override
     {
+        fs = sampleRate;
         for (auto& v : voices) v->prepare (sampleRate);
     }
 
@@ -42,8 +51,18 @@ public:
         for (int i = 0; i < numRows; ++i)
         {
             settings[i] = { tuneParam[i]->load(), decayParam[i]->load(), toneParam[i]->load() };
-            levels[i] = levelParam[i]->load();
+            const float level = levelParam[i]->load();
+            levels[i] = level * 1.25f * trims[i];
             mutes[i] = muteParam[i]->load() > 0.5f;
+
+            auto& fx = rowFx[i];
+            fx.driveAmount = fx.drive->load();
+            fx.echoSend = fx.echo->load();
+            fx.reverbSend = fx.reverb->load();
+            const float angle = fx.pan->load() * juce::MathConstants<float>::halfPi;
+            fx.panLeft = std::cos (angle) * juce::MathConstants<float>::sqrt2;
+            fx.panRight = std::sin (angle) * juce::MathConstants<float>::sqrt2;
+            fx.dsp.set (fx.filter->load(), fs);
         }
         accentAmount = accentParam->load();
     }
@@ -69,12 +88,23 @@ public:
         }
     }
 
-    void render (float& left, float& right) override
+    void render (Frame& f) override
     {
-        float sum = 0.0f;
         for (int i = 0; i < numRows; ++i)
-            sum += voices[(size_t) i]->process() * levels[i];
-        left = right = sum;
+        {
+            auto& fx = rowFx[i];
+            float v = voices[(size_t) i]->process() * levels[i];
+            if (fx.driveAmount > 0.001f)
+            {
+                const float g = 1.0f + fx.driveAmount * 12.0f;
+                v += fx.driveAmount * (fastTanh (v * g) * 0.85f - v);
+            }
+            v = fx.dsp.process (v);
+            f.left += v * fx.panLeft;
+            f.right += v * fx.panRight;
+            f.echo += v * fx.echoSend;
+            f.reverb += v * fx.reverbSend;
+        }
     }
 
 private:
@@ -86,8 +116,17 @@ private:
     std::atomic<float>* toneParam[maxDrumRows] {};
     std::atomic<float>* muteParam[maxDrumRows] {};
     std::atomic<float>* accentParam = nullptr;
+
+    struct RowFx
+    {
+        std::atomic<float>* drive = nullptr, *filter = nullptr, *pan = nullptr, *echo = nullptr, *reverb = nullptr;
+        float driveAmount = 0, echoSend = 0, reverbSend = 0, panLeft = 1, panRight = 1;
+        MonoDjFilter dsp;
+    };
+    RowFx rowFx[maxDrumRows];
+    float fs = 44100.0f;
     DrumSettings settings[maxDrumRows];
-    float levels[maxDrumRows] {};
+    float levels[maxDrumRows] {}, trims[maxDrumRows] {};
     bool mutes[maxDrumRows] {};
     float accentAmount = 0.5f;
     juce::Random random;
@@ -134,7 +173,7 @@ class MonoMachine : public SynthMachine
 public:
     MonoMachine (int machineType, std::unique_ptr<MonoVoice> v) : SynthMachine (machineType), voice (std::move (v)) {}
 
-    void prepare (float sampleRate) override { voice->prepare (sampleRate); }
+    void prepare (float sampleRate) override { voice->prepare (sampleRate * 2.0f); }
 
     void onStep (const StepInfo& s) override
     {
@@ -152,7 +191,13 @@ public:
         if (gateCountdown > 0 && --gateCountdown == 0) voice->gateOff();
     }
 
-    void render (float& left, float& right) override { left = right = voice->process(); }
+    // The voice runs at twice the sample rate to keep the resonant filter and oscillators clean.
+    void render (Frame& f) override
+    {
+        const float a = voice->process();
+        const float b = voice->process();
+        f.left = f.right = decimator.process (a, b);
+    }
 
     void stop() override
     {
@@ -164,6 +209,7 @@ private:
     void applyParams() override { voice->setParams (values.data()); }
 
     std::unique_ptr<MonoVoice> voice;
+    Decimator2x decimator;
 };
 
 class PolyMachine : public SynthMachine
@@ -174,7 +220,8 @@ public:
     void prepare (float sampleRate) override
     {
         fs = sampleRate;
-        for (auto& v : voices) v->prepare (sampleRate);
+        for (auto& v : voices) v->prepare (sampleRate * 2.0f);
+        previousChord = {};
     }
 
     void onStep (const StepInfo& s) override
@@ -194,8 +241,16 @@ public:
         int intervals[5];
         const int count = chordIntervals (s.scale, root, (int) values[1], intervals);
         const int base = machineBaseNote (def, s.key, octave) + root;
-        for (int k = 0; k < count; ++k)
-            startVoice (base + intervals[k], track.accent[st] ? 1.0f : 0.8f);
+
+        Chord chord;
+        chord.count = count;
+        for (int k = 0; k < count; ++k) chord.notes[k] = base + intervals[k];
+        if (count >= 3) chord = closestVoicing (chord);
+        previousChord = chord;
+
+        // Same loudness whether one note or a five-note chord is played.
+        const float velocity = (track.accent[st] ? 1.0f : 0.8f) * 1.6f / std::sqrt ((float) count);
+        for (int k = 0; k < chord.count; ++k) startVoice (chord.notes[k], velocity);
 
         gateOpen = true;
         gateCountdown = gateSamples (s);
@@ -217,12 +272,18 @@ public:
         gateCountdown = 0;
     }
 
-    void render (float& left, float& right) override
+    void render (Frame& f) override
     {
-        left = right = 0.0f;
+        float l0 = 0, r0 = 0, l1 = 0, r1 = 0;
         for (auto& v : voices)
-            if (v->isActive()) v->process (left, right);
-        postProcess (left, right);
+        {
+            if (! v->isActive()) continue;
+            v->process (l0, r0);
+            v->process (l1, r1);
+        }
+        f.left = decimatorL.process (l0, l1);
+        f.right = decimatorR.process (r0, r1);
+        postProcess (f.left, f.right);
     }
 
 protected:
@@ -232,6 +293,50 @@ protected:
     float fs = 44100.0f;
 
 private:
+    struct Chord
+    {
+        int notes[5] {};
+        int count = 0;
+
+        float mean() const
+        {
+            float m = 0;
+            for (int i = 0; i < count; ++i) m += (float) notes[i];
+            return count > 0 ? m / (float) count : 0.0f;
+        }
+    };
+
+    // Picks the inversion of the chord that moves the least from the previous one (smooth voice leading),
+    // without drifting away from the register of the root position. No allocation: runs on the audio thread.
+    Chord closestVoicing (const Chord& rootPosition) const
+    {
+        if (previousChord.count == 0) return rootPosition;
+
+        const float centre = rootPosition.mean();
+        Chord best = rootPosition;
+        float bestCost = 1.0e9f;
+
+        for (int shift : { -12, 0, 12 })
+        {
+            Chord candidate = rootPosition;
+            for (int i = 0; i < candidate.count; ++i) candidate.notes[i] += shift;
+            for (int rotation = 0; rotation < candidate.count; ++rotation)
+            {
+                std::sort (candidate.notes, candidate.notes + candidate.count);
+                float cost = std::abs (candidate.mean() - centre) * 0.6f;
+                for (int i = 0; i < candidate.count; ++i)
+                    cost += (float) std::abs (candidate.notes[i] - previousChord.notes[juce::jmin (i, previousChord.count - 1)]);
+                if (cost < bestCost)
+                {
+                    bestCost = cost;
+                    best = candidate;
+                }
+                candidate.notes[0] += 12;
+            }
+        }
+        return best;
+    }
+
     void startVoice (int note, float velocity)
     {
         PolyVoice* chosen = nullptr;
@@ -253,6 +358,8 @@ private:
 
     bool gateOpen = false;
     unsigned int ageCounter = 0;
+    Chord previousChord;
+    Decimator2x decimatorL, decimatorR;
 };
 
 class JunoMachine : public PolyMachine

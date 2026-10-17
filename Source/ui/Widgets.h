@@ -312,6 +312,7 @@ public:
     std::function<void (bool)> setOn;
     std::function<juce::String()> getLabel;
     std::function<void (int)> nudge;
+    std::function<void()> onEditStart;   // called once at the start of each edit gesture (for undo)
 
     const int column;
 
@@ -352,6 +353,7 @@ public:
 
     void mouseDown (const juce::MouseEvent& e) override
     {
+        if (onEditStart) onEditStart();
         if (mode == Mode::Toggle)
         {
             paintState = ! isOn();
@@ -410,6 +412,9 @@ public:
             Component::mouseWheelMove (e, wheel);
             return;
         }
+        const auto now = juce::Time::getMillisecondCounter();
+        if (onEditStart && now - lastWheelEdit > 600) onEditStart();
+        lastWheelEdit = now;
         nudge (wheel.deltaY > 0.0f ? 1 : -1);
         repaint();
     }
@@ -422,6 +427,47 @@ private:
     const bool dimmed;
     bool playhead = false, wasOnAtDown = false, dragged = false;
     int dragStartY = 0, dragSteps = 0;
+    juce::uint32 lastWheelEdit = 0;
+};
+
+// Small "FX" button of a drum sound: lit when one of its effects is active.
+class FxButton : public juce::TextButton, private juce::Timer
+{
+public:
+    FxButton (juce::AudioProcessorValueTreeState& state, const juce::String& rowPrefix) : juce::TextButton ("FX")
+    {
+        for (auto* suffix : { "drive", "filter", "pan", "echo", "reverb" })
+            params.push_back (state.getRawParameterValue (rowPrefix + suffix));
+        startTimerHz (4);
+    }
+
+    bool isActive() const
+    {
+        return params[0]->load() > 0.001f || std::abs (params[1]->load() - 0.5f) > 0.02f || std::abs (params[2]->load() - 0.5f) > 0.02f
+            || params[3]->load() > 0.001f || params[4]->load() > 0.001f;
+    }
+
+    void paintButton (juce::Graphics& g, bool highlighted, bool down) override
+    {
+        const auto& skin = skinOf (*this);
+        const bool active = isActive();
+        getLookAndFeel().drawButtonBackground (g, *this, active ? skin.accent.withMultipliedBrightness (0.8f) : juce::Colour (0xff3a3b40),
+                                               highlighted, down);
+        g.setColour (active ? juce::Colours::white : colours::text.withAlpha (0.75f));
+        g.setFont (paint::condensed (12.0f));
+        g.drawText ("FX", getLocalBounds().translated (0, down ? 1 : 0), juce::Justification::centred);
+    }
+
+private:
+    void timerCallback() override
+    {
+        const bool active = isActive();
+        if (active != wasActive) repaint();
+        wasActive = active;
+    }
+
+    std::vector<std::atomic<float>*> params;
+    bool wasActive = false;
 };
 
 // Row of running LEDs above the steps: shows which step is playing.

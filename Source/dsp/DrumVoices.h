@@ -695,4 +695,7 @@ inline constexpr float acoustic[6] { 435.2f, 645.3f, 783.6f, 1108.0f, 1144.8f, 1
 
 // Builds the voice for a row of a drum machine (identified by machine id and row id).
 std::unique_ptr<DrumVoice> createDrumVoice (const juce::String& machineId, const juce::String& rowId);
+
+// Output gain of each voice, measured so that every sound sits at a sensible level next to the kick.
+float drumVoiceTrim (const juce::String& machineId, const juce::String& rowId);
 } // namespace techno

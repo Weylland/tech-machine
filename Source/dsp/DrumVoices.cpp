@@ -55,4 +55,21 @@ std::unique_ptr<DrumVoice> createDrumVoice (const juce::String& machine, const j
     jassertfalse;
     return std::make_unique<Claves>();
 }
+
+float drumVoiceTrim (const juce::String& machine, const juce::String& row)
+{
+    struct Trim { const char* machine; const char* row; float gain; };
+    static constexpr Trim trims[] {
+        { "tr909", "sd", 1.4f }, { "tr909", "lt", 1.8f }, { "tr909", "mt", 1.8f }, { "tr909", "ht", 1.8f },
+        { "tr909", "rs", 1.35f }, { "tr909", "cp", 1.5f }, { "tr909", "ch", 1.3f }, { "tr909", "oh", 1.35f },
+        { "tr909", "cr", 1.35f }, { "tr909", "rd", 1.4f },
+        { "tr808", "sd", 1.4f }, { "tr808", "lt", 1.8f }, { "tr808", "mt", 1.8f }, { "tr808", "ht", 1.8f },
+        { "tr808", "rs", 1.35f }, { "tr808", "cp", 1.5f }, { "tr808", "cy", 1.7f }, { "tr808", "ch", 1.3f },
+        { "tr808", "oh", 1.4f }, { "tr808", "cl", 1.3f },
+        { "breaks", "bd", 1.4f }, { "breaks", "sd", 1.5f }, { "breaks", "oh", 1.15f }, { "breaks", "rd", 1.6f }, { "breaks", "cr", 1.6f },
+    };
+    for (auto& t : trims)
+        if (machine == t.machine && row == t.row) return t.gain;
+    return 1.0f;
+}
 } // namespace techno

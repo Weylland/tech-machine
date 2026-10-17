@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(TechMachine VERSION 0.3.0)
+project(TechMachine VERSION 0.4.0)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_CXX_STANDARD 17)
@@ -23,6 +23,7 @@ juce_add_plugin(TechMachine
 target_sources(TechMachine PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
+    Source/core/Examples.cpp
     Source/core/Help.cpp
     Source/core/MachineDefs.cpp
     Source/core/Music.cpp
