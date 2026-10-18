@@ -136,6 +136,70 @@ inline const Skin& skinFor (int machineType)
           C (0xff9cff57), C (0xff9cff57), { C (0xff2f3532), C (0xff29302c), C (0xff2f3532), C (0xff29302c) },
           C (0xffb8ff7a), C (0xff0e1a06), KnobStyle::Modern, C (0xff2a302c), false, false, true, false,
           "SOUND EFFECTS", "FX" },
+        // Electric bass: sunburst.
+        { C (0xff8a3b14), C (0xff4a1d0a), C (0xff1a0d06), C (0xfff6dcb0), C (0xfff6dcb0), C (0xffd2b48c), C (0xff8a6a4c),
+          C (0xffe8a33d), C (0xffff9a1f), { C (0xff2a1a10), C (0xff24160d), C (0xff2a1a10), C (0xff24160d) },
+          C (0xffffb84d), C (0xff1a0e04), KnobStyle::Cap, C (0xffeedcbc), false, true, false, false, "ELECTRIC BASS", "BASS" },
+        // Wobble: acid green on black.
+        { C (0xff141814), C (0xff0b0e0b), C (0xff050705), C (0xffc8ffb0), C (0xffdcffd0), C (0xff9cc090), C (0xff4c644c),
+          C (0xff7cff4f), C (0xff7cff4f), { C (0xff253025), C (0xff1f281f), C (0xff253025), C (0xff1f281f) },
+          C (0xff9cff6f), C (0xff081a04), KnobStyle::Modern, C (0xff263026), false, false, false, false, "BASS MONSTER", "WOBBLE" },
+        // Hoover: Alpha Juno grey-blue.
+        { C (0xff3a3f4a), C (0xff2a2e36), C (0xff181b20), C (0xffdfe6f2), C (0xffe6ecf6), C (0xffaab4c4), C (0xff5c6676),
+          C (0xff9fb4ff), C (0xffff3b1f), { C (0xff5a6070), C (0xff4e5462), C (0xff5a6070), C (0xff4e5462) },
+          C (0xffb8c8ff), C (0xff10141c), KnobStyle::Classic, C (0xff2a2e36), false, false, false, false, "RAVE SYNTHESIZER", "HOOVER" },
+        // Poly 80s: black with wood and gold.
+        { C (0xff1e1c1a), C (0xff121110), C (0xff0a0908), C (0xffe8d8b0), C (0xffe8d8b0), C (0xffb8a888), C (0xff6a5e48),
+          C (0xffd8b25a), C (0xffff3b1f), { C (0xff3a3630), C (0xff32302a), C (0xff3a3630), C (0xff32302a) },
+          C (0xffe8c46a), C (0xff1a1406), KnobStyle::Classic, C (0xff2a2826), false, true, false, false, "POLYPHONIC SYNTHESIZER", "POLY 80s" },
+        // M1: dark grey, cyan display.
+        { C (0xff2c2e33), C (0xff1e2024), C (0xff121316), C (0xffd8e6f6), C (0xffe0e8f2), C (0xffa0aec0), C (0xff58606e),
+          C (0xff4f9fff), C (0xff4fc8ff), { C (0xff3c4048), C (0xff353840), C (0xff3c4048), C (0xff353840) },
+          C (0xff6fb8ff), C (0xff0a1420), KnobStyle::Modern, C (0xff2a2c30), false, false, false, false, "MUSIC WORKSTATION", "M1" },
+        // EDM: neon pink.
+        { C (0xff1a1020), C (0xff100a16), C (0xff08050c), C (0xffffd0f4), C (0xffffe0f8), C (0xffc8a0c0), C (0xff6a4a68),
+          C (0xffff4fd8), C (0xffff4fd8), { C (0xff2e2034), C (0xff281c2e), C (0xff2e2034), C (0xff281c2e) },
+          C (0xffff7ae4), C (0xff20061a), KnobStyle::Modern, C (0xff261a2c), false, false, true, false, "FESTIVAL SYNTH", "EDM" },
+        // Talkbox: orange and chrome.
+        { C (0xffd8d4cc), C (0xffb8b4ac), C (0xff2a2622), C (0xfffff0e0), C (0xff221e1a), C (0xff4e4840), C (0xff7a746a),
+          C (0xffff8a3d), C (0xffff5a1f), { C (0xffeeeae2), C (0xffdedad2), C (0xffeeeae2), C (0xffdedad2) },
+          C (0xffffa05c), C (0xff201206), KnobStyle::Chicken, C (0xff3a3632), false, false, false, true, "VOICE BOX", "TALKBOX" },
+        // Mellotron: wood and cream.
+        { C (0xff6a4a2a), C (0xff4a321c), C (0xff2a1c10), C (0xfff4e6c8), C (0xfff4e6c8), C (0xffd8c4a0), C (0xff9a8060),
+          C (0xffd8a05a), C (0xffff3b1f), { C (0xfff0e6d0), C (0xffe2d6be), C (0xfff0e6d0), C (0xffe2d6be) },
+          C (0xffffc078), C (0xff2a1a08), KnobStyle::Cap, C (0xffeadcc0), false, true, false, false, "TAPE REPLAY KEYBOARD", "MELLOTRON" },
+        // E.Piano: Rhodes black with red.
+        { C (0xff1c1c1e), C (0xff111112), C (0xff0a0a0b), C (0xffeeeeee), C (0xfff0f0f0), C (0xffb4b4b8), C (0xff606064),
+          C (0xffd94a3a), C (0xffff3b1f), { C (0xffe8e6e0), C (0xffd8d6d0), C (0xffe8e6e0), C (0xffd8d6d0) },
+          C (0xffff6a5a), C (0xff200806), KnobStyle::Classic, C (0xff2a2a2c), false, false, false, false, "ELECTRIC PIANO", "E.PIANO" },
+        // Brass: polished brass.
+        { C (0xffd8b048), C (0xffb08a2a), C (0xff3a2a0a), C (0xfffff4d0), C (0xff2a1e06), C (0xff5a4618), C (0xff8a7030),
+          C (0xff7a4a0a), C (0xffff3b1f), { C (0xff3a2a10), C (0xff32240c), C (0xff3a2a10), C (0xff32240c) },
+          C (0xffffd060), C (0xff1a1004), KnobStyle::Cap, C (0xfff0dca0), false, false, false, true, "HORN SECTION", "BRASS" },
+        // Winds: light wood and green.
+        { C (0xffd8c8a0), C (0xffc0ae84), C (0xff3a4a2a), C (0xffeef8e0), C (0xff22301a), C (0xff4a5a3a), C (0xff7a8a64),
+          C (0xff4a8a3a), C (0xff6fd14f), { C (0xff5a6a40), C (0xff4e5e38), C (0xff5a6a40), C (0xff4e5e38) },
+          C (0xff9fe17a), C (0xff0e1a06), KnobStyle::Cap, C (0xffeee4cc), false, true, false, true, "WOODWINDS", "WINDS" },
+        // Orchestra: dark red velvet and gold.
+        { C (0xff4a1a1e), C (0xff320f12), C (0xff1a0608), C (0xfff4e2b0), C (0xfff4e2b0), C (0xffd4bc88), C (0xff8a6a4a),
+          C (0xffd8b060), C (0xffffcf5a), { C (0xff5a2a2e), C (0xff4e2428), C (0xff5a2a2e), C (0xff4e2428) },
+          C (0xffffd878), C (0xff200a06), KnobStyle::Classic, C (0xff3a1a1e), false, true, false, false, "SYMPHONY ORCHESTRA", "ORCHESTRA" },
+        // Drum kit: sparkle red wrap, chrome.
+        { C (0xffa82a2a), C (0xff7a1a1a), C (0xff2a0a0a), C (0xfffff0f0), C (0xfffff0f0), C (0xffe0c0c0), C (0xff9a6060),
+          C (0xffffd0a0), C (0xffff3b1f), { C (0xffd8d8dc), C (0xffc8c8cc), C (0xffd8d8dc), C (0xffc8c8cc) },
+          C (0xffffb070), C (0xff201010), KnobStyle::Classic, C (0xffd8d8dc), false, false, false, false, "ACOUSTIC DRUM KIT", "DRUM KIT" },
+        // 707: blue-grey with orange keys.
+        { C (0xff4a5466), C (0xff3a4252), C (0xff1e232c), C (0xffe8eef6), C (0xffe8eef6), C (0xffb0bac8), C (0xff6a7484),
+          C (0xffff8a2a), C (0xffff3b1f), { C (0xffff8a2a), C (0xffe87a22), C (0xffd8d8dc), C (0xffc8c8cc) },
+          C (0xffffb060), C (0xff1a1006), KnobStyle::Classic, C (0xff2e3440), false, false, false, false, "RHYTHM COMPOSER", "707" },
+        // Simmons: black hexagons, red.
+        { C (0xff141416), C (0xff0a0a0c), C (0xff050506), C (0xffffe0e6), C (0xfff0f0f2), C (0xffb0a8ac), C (0xff5a5458),
+          C (0xffff3d6e), C (0xffff3d6e), { C (0xff2a2228), C (0xff241c22), C (0xff2a2228), C (0xff241c22) },
+          C (0xffff6a8e), C (0xff20060e), KnobStyle::Modern, C (0xff241e22), false, false, true, false, "ELECTRONIC DRUMS", "SIMMONS" },
+        // World percussion: terracotta.
+        { C (0xffb0603a), C (0xff8a4626), C (0xff3a1a0a), C (0xfffff0dc), C (0xfffff0dc), C (0xffe8c8a8), C (0xffa07050),
+          C (0xffffc078), C (0xffff7a1f), { C (0xffd8b48c), C (0xffc8a47c), C (0xffd8b48c), C (0xffc8a47c) },
+          C (0xffffd090), C (0xff2a1408), KnobStyle::Cap, C (0xfff0dcc0), false, true, false, false, "WORLD PERCUSSION", "WORLD" },
     }};
     return skins[(size_t) machineType];
 }

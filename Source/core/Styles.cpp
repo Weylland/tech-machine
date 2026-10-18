@@ -1394,28 +1394,28 @@ std::vector<BandMember> defaultBand (const StyleDef& style)
         { "Acid", { { TR909, nullptr }, { TB303, "Acid classique" }, { Juno106, "Stab house" } } },
         { "Hard Techno", { { TR909, "Hard techno (kick saturé)" }, { ModelD, "Basse Minimoog" }, { JP8000, "Lead hardstyle" } } },
         { "Dub Techno", { { TR909, "Dub (écho sur les percussions)" }, { ModelD, "Sub profonde" }, { Juno106, "Accord deep house" } } },
-        { "House", { { TR909, nullptr }, { ModelD, "Basse funk" }, { Piano, "Piano house (stabs)" }, { Choir, "Grand chœur" } } },
+        { "House", { { TR707, nullptr }, { ModelD, "Basse funk" }, { M1, "Piano M1 (house)" }, { Choir, "Grand chœur" } } },
         { "Trance", { { TR909, nullptr }, { ModelD, "Basse Minimoog" }, { JP8000, "Supersaw trance" }, { SH101, "Lead 101" } } },
         { "Psytrance", { { TR909, nullptr }, { ModelD, "Basse pluck" }, { SH101, "Lead 101" }, { JP8000, "Nappe" } } },
-        { "Drum & Bass", { { BreakKit, nullptr }, { ModelD, "Reese (drum & bass)" }, { Strings, "Nappe lente (ambient)" }, { DX7, "Rhodes doux" } } },
+        { "Drum & Bass", { { BreakKit, nullptr }, { Wobble, "Reese (drum & bass)" }, { Strings, "Nappe lente (ambient)" }, { EPiano, "Rhodes" } } },
         { "Jungle", { { BreakKit, nullptr }, { ModelD, "Sub profonde" }, { Strings, "Cordes sombres" }, { SoundFx, nullptr } } },
         { "Breakbeat", { { BreakKit, nullptr }, { ModelD, "Basse funk" }, { SH101, "Lead 101" }, { Juno106, "Stab house" } } },
         { "Électro", { { TR808, nullptr }, { SH101, "Basse caoutchouc" }, { DX7, "Lead synthé" } } },
         { "UK Garage", { { TR909, nullptr }, { ModelD, "Basse funk" }, { Organ, "Orgue house (M1)" }, { Choir, "Chœur « ooh »" } } },
-        { "Gabber", { { TR909, "Hard techno (kick saturé)" }, { JP8000, "Hoover" } } },
-        { "Hip-Hop", { { MPC, nullptr }, { ModelD, "Basse funk" }, { Piano, "Piano feutré (lo-fi)" }, { Mallets, "Vibraphone" } } },
-        { "Trap", { { TR808, "Trap (kick long, charlestons secs)" }, { Sub808, "808 trap" }, { Mallets, "Boîte à musique (trap)" }, { Strings, "Cordes sombres" } } },
+        { "Gabber", { { TR909, "Hard techno (kick saturé)" }, { Hoover, "Hoover gabber" } } },
+        { "Hip-Hop", { { MPC, nullptr }, { EBass, "Contrebasse" }, { Piano, "Piano feutré (lo-fi)" }, { Mallets, "Vibraphone" } } },
+        { "Trap", { { TR808, "Trap (kick long, charlestons secs)" }, { Sub808, "808 trap" }, { Winds, "Flûte trap" }, { Strings, "Cordes sombres" } } },
         { "Drill", { { TR808, "Trap (kick long, charlestons secs)" }, { Sub808, "808 drill (longs glissés)" }, { Mallets, "Cloches tubulaires" }, { Choir, "Chant grégorien" } } },
-        { "Lo-fi", { { CR78, "Lo-fi poussiéreux" }, { ModelD, "Sub profonde" }, { DX7, "Rhodes doux" }, { Mallets, "Vibraphone" }, { SoundFx, nullptr } } },
-        { "R&B", { { LinnDrum, nullptr }, { Sub808, "808 propre" }, { DX7, "Piano électrique (E.Piano 1)" }, { Strings, nullptr } } },
-        { "Funk", { { LinnDrum, nullptr }, { ModelD, "Basse funk" }, { Organ, "Jazz B3" }, { Pluck, "Guitare funk (étouffée)" } } },
-        { "Disco", { { LinnDrum, nullptr }, { ModelD, "Basse funk" }, { Strings, "Disco" }, { Piano, "Piano pop brillant" } } },
-        { "Synthwave", { { LinnDrum, "Grande salle (reverb sur la caisse claire)" }, { ModelD, "Basse pluck" }, { Juno106, "Nappe Juno" }, { JP8000, "Lead trance" } } },
-        { "Pop", { { LinnDrum, nullptr }, { ModelD, "Basse Minimoog" }, { Piano, "Piano pop brillant" }, { SH101, "Lead 101" } } },
+        { "Lo-fi", { { CR78, "Lo-fi poussiéreux" }, { EBass, "Basse dub (ronde)" }, { EPiano, "Rhodes lo-fi" }, { Mallets, "Vibraphone" }, { SoundFx, nullptr } } },
+        { "R&B", { { LinnDrum, nullptr }, { Sub808, "808 propre" }, { EPiano, "Rhodes" }, { Strings, nullptr } } },
+        { "Funk", { { AcousticKit, nullptr }, { EBass, "Basse slap" }, { EPiano, "Clavinet" }, { Pluck, "Guitare funk (étouffée)" }, { Brass, "Section funk" } } },
+        { "Disco", { { LinnDrum, nullptr }, { EBass, "Basse aux doigts" }, { Strings, "Disco" }, { Piano, "Piano pop brillant" }, { Brass, "Stab cuivres" } } },
+        { "Synthwave", { { Simmons, "Grande salle (reverb sur la caisse claire)" }, { ModelD, "Basse pluck" }, { Poly80, "Nappe synthwave" }, { JP8000, "Lead trance" } } },
+        { "Pop", { { AcousticKit, nullptr }, { EBass, "Basse au médiator" }, { Piano, "Piano pop brillant" }, { SH101, "Lead 101" } } },
         { "Reggaeton", { { TR808, nullptr }, { Percussion, nullptr }, { Sub808, "808 courte (reggaeton)" }, { Pluck, "Guitare reggaeton" }, { Mallets, "Marimba" } } },
         { "Afro House", { { TR909, nullptr }, { Percussion, nullptr }, { ModelD, "Sub profonde" }, { Mallets, "Kalimba" } } },
-        { "Reggae", { { LinnDrum, "Dub (écho sur les percussions)" }, { ModelD, "Sub profonde" }, { Organ, "Reggae (bubble)" }, { Pluck, "Guitare funk (étouffée)" } } },
-        { "Ambient", { { Strings, "Nappe lente (ambient)" }, { Choir, "Grand chœur" }, { Mallets, "Cloches tubulaires" }, { Piano, "Ballade (avec pédale)" } } },
+        { "Reggae", { { AcousticKit, "Dub (écho sur les percussions)" }, { EBass, "Basse dub (ronde)" }, { Organ, "Reggae (bubble)" }, { Pluck, "Guitare funk (étouffée)" } } },
+        { "Ambient", { { Strings, "Nappe lente (ambient)" }, { Choir, "Grand chœur" }, { Mallets, "Cloches tubulaires" }, { Mellotron, "Flûtes" } } },
     };
     for (auto& e : bands)
         if (name == juce::String::fromUTF8 (e.genre)) return e.band;
@@ -1477,7 +1477,19 @@ void generate (Track& track, const MachineDef& def, const GenerateContext& ctx, 
         case Organ:
         case Piano:   chordLine (line, ctx, pickOne (style.chordModes, r), r); break;
         case Strings:
-        case Choir:   chordLine (line, ctx, ChordMode::Pad, r); break;
+        case Choir:
+        case Mellotron:
+        case Orchestra: chordLine (line, ctx, ChordMode::Pad, r); break;
+        case EBass:
+        case Wobble:  bassLine (line, ctx, pickOne (style.bassModes, r), r); break;
+        case Hoover:
+        case Talkbox:
+        case Winds:   singableMelody (line, ctx, r); break;
+        case Poly80:
+        case M1:
+        case Edm:
+        case EPiano:  chordLine (line, ctx, pickOne (style.chordModes, r), r); break;
+        case Brass:   chordLine (line, ctx, style.chordRhythms.empty() ? ChordMode::Pad : ChordMode::Stabs, r); break;
         case Mallets: singableMelody (line, ctx, r); break;
         case Pluck:
         {

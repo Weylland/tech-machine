@@ -216,6 +216,77 @@ std::map<int, std::vector<SoundPreset>> build()
         { "Chant grégorien", { { "vowel", 4 }, { "octave", 1 }, { "chord", 0 }, { "ensemble", 0.6f }, { "@reverb", 0.6f } } },
     };
 
+
+    m[EBass] = {
+        { "Basse aux doigts", { { "type", 0 } } }, { "Basse slap", { { "type", 1 } } }, { "Basse au médiator", { { "type", 2 } } },
+        { "Fretless", { { "type", 3 }, { "glide", 0.5f } } }, { "Contrebasse", { { "type", 4 } } },
+        { "Basse dub (ronde)", { { "type", 0 }, { "tone", 0.2f }, { "decay", 0.8f } } },
+    };
+    m[Wobble] = {
+        { "Wobble dubstep", { { "wave", 0 }, { "rate", 2 }, { "depth", 0.7f } } },
+        { "Reese (drum & bass)", { { "wave", 1 }, { "depth", 0.1f }, { "detune", 0.7f }, { "cutoff", 0.45f } } },
+        { "Growl", { { "wave", 2 }, { "rate", 4 }, { "depth", 0.6f }, { "reso", 0.6f } } },
+        { "Wobble lent", { { "wave", 0 }, { "rate", 1 }, { "depth", 0.8f } } },
+        { "Wobble en triolets", { { "wave", 0 }, { "rate", 3 }, { "depth", 0.7f } } },
+        { "Riddim", { { "wave", 0 }, { "rate", 4 }, { "depth", 0.8f }, { "overdrive", 0.7f } } },
+    };
+    m[Hoover] = {
+        { "Hoover rave", {} },
+        { "Hoover gabber", { { "dip", 0.8f }, { "cutoff", 0.9f }, { "@drive", 0.4f } } },
+        { "Nappe hoover", { { "attack", 0.5f }, { "dip", 0.2f }, { "chord", 1 } } },
+    };
+    m[Poly80] = {
+        { "Cuivres années 80 (« Jump »)", { { "saw", 1 }, { "pulse", 0 }, { "cutoff", 0.45f }, { "env", 0.6f }, { "attack", 0.08f }, { "decay", 0.5f }, { "sustain", 0.7f } } },
+        { "Nappe synthwave", { { "attack", 0.6f }, { "release", 0.7f }, { "cutoff", 0.4f }, { "env", 0.2f }, { "@reverb", 0.3f } } },
+        { "Stab années 80", { { "decay", 0.25f }, { "sustain", 0 }, { "env", 0.5f } } },
+        { "Basse poly", { { "octave", 1 }, { "chord", 0 }, { "cutoff", 0.3f }, { "env", 0.5f }, { "decay", 0.3f }, { "sustain", 0.3f } } },
+        { "Lead synchro", { { "chord", 0 }, { "octave", 3 }, { "pulse", 0.8f }, { "saw", 0.3f }, { "cutoff", 0.7f } } },
+    };
+    {
+        static const char* const names[] { "Piano M1 (house)", "Orgue M1", "Nappe « Lore »", "Nappe « Universe »", "Basse fretless", "Basse slap", "Cordes M1", "Cloche / kalimba" };
+        for (int i = 0; i < 8; ++i)
+        {
+            V v { { "preset", (float) i } };
+            if (i == 4 || i == 5) { v.push_back ({ "octave", 1 }); v.push_back ({ "chord", 0 }); }
+            if (i == 7) v.push_back ({ "chord", 0 });
+            m[M1].push_back ({ names[i], v });
+        }
+    }
+    m[Edm] = {
+        { "Accords future bass", { { "detune", 0.5f }, { "mix", 0.6f }, { "cutoff", 0.55f }, { "attack", 0.05f }, { "pump", 0.7f } } },
+        { "Pluck EDM", { { "cutoff", 0.35f }, { "env", 0.6f }, { "decay", 0.2f }, { "sustain", 0 }, { "pump", 0.3f } } },
+        { "Lead saw", { { "chord", 0 }, { "octave", 3 }, { "detune", 0.35f }, { "cutoff", 0.75f }, { "pump", 0 } } },
+        { "Nappe qui pompe", { { "attack", 0.4f }, { "release", 0.6f }, { "pump", 0.9f } } },
+    };
+    m[Talkbox] = {
+        { "Talkbox G-funk (ouah)", { { "from", 1 }, { "to", 0 } } },
+        { "Robot (French touch)", { { "from", 5 }, { "to", 4 }, { "speed", 0.2f } } },
+        { "Wah", { { "from", 3 }, { "to", 0 }, { "speed", 0.5f } } },
+    };
+    m[Mellotron] = {
+        { "Flûtes", { { "type", 0 } } }, { "Cordes", { { "type", 1 } } }, { "Chœur", { { "type", 2 } } },
+        { "Violoncelle", { { "type", 3 } } }, { "Cuivres", { { "type", 4 } } },
+        { "Flûtes psychédéliques", { { "type", 0 }, { "wow", 0.85f }, { "@echo", 0.3f } } },
+    };
+    m[EPiano] = {
+        { "Rhodes", { { "type", 0 } } }, { "Rhodes brillant", { { "type", 0 }, { "bark", 0.8f }, { "tone", 0.7f } } },
+        { "Wurlitzer", { { "type", 1 } } }, { "Clavinet", { { "type", 2 } } }, { "Clavecin", { { "type", 3 } } },
+        { "Rhodes lo-fi", { { "type", 0 }, { "tone", 0.3f }, { "tremolo", 0.5f }, { "@crush", 0.2f } } },
+    };
+    m[Brass] = {
+        { "Trompette", { { "type", 0 } } }, { "Trombone", { { "type", 1 }, { "octave", 1 } } }, { "Saxophone", { { "type", 2 } } },
+        { "Section funk", { { "type", 3 }, { "chord", 1 } } }, { "Stab cuivres", { { "type", 4 }, { "chord", 1 } } }, { "Cor", { { "type", 5 } } },
+    };
+    m[Winds] = {
+        { "Flûte", { { "type", 0 } } }, { "Flûte de pan", { { "type", 1 } } }, { "Clarinette", { { "type", 2 }, { "octave", 2 } } },
+        { "Shakuhachi", { { "type", 3 }, { "@reverb", 0.35f } } }, { "Ocarina", { { "type", 4 } } }, { "Flûte trap", { { "type", 5 } } },
+    };
+    m[Orchestra] = {
+        { "Cordes d'orchestre", { { "type", 0 } } }, { "Pizzicato", { { "type", 1 } } }, { "Orch hit", { { "type", 2 } } },
+        { "Timbales", { { "type", 3 }, { "chord", 0 }, { "octave", 1 } } }, { "Harpe", { { "type", 4 } } },
+        { "Cordes épiques", { { "type", 0 }, { "ensemble", 1 }, { "attack", 0.55f }, { "@reverb", 0.45f } } },
+    };
+
     for (int t = 0; t < numMachines; ++t)
         if (machineDef (t).kind == MachineKind::Drum && t != SoundFx)
             m[t] = drumKits (machineDef (t));

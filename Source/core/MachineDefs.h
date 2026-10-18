@@ -10,14 +10,18 @@ enum MachineType
     TR909, TR808, BreakKit, TB303, SH101, ModelD, Juno106, JP8000,
     LinnDrum, CR78, MPC, Percussion, DX7, Strings, Organ, Sub808,
     Piano, Mallets, Pluck, Choir, SoundFx,
+    EBass, Wobble, Hoover, Poly80, M1, Edm, Talkbox, Mellotron, EPiano, Brass, Winds, Orchestra,
+    AcousticKit, TR707, Simmons, WorldPerc,
     numMachines
 };
 
 // Order of the machines in the rack and in the "add" menu.
 inline constexpr int rackOrder[numMachines] {
-    TR909, TR808, LinnDrum, CR78, MPC, BreakKit, Percussion, SoundFx,
-    TB303, SH101, ModelD, Sub808,
-    Juno106, JP8000, DX7, Strings, Organ, Piano, Mallets, Pluck, Choir
+    TR909, TR808, LinnDrum, TR707, CR78, MPC, AcousticKit, Simmons, BreakKit, Percussion, WorldPerc, SoundFx,
+    TB303, SH101, ModelD, Sub808, EBass, Wobble,
+    Hoover, Juno106, JP8000, Poly80, Edm, DX7, M1, Talkbox,
+    Piano, EPiano, Organ, Mallets,
+    Strings, Mellotron, Orchestra, Brass, Winds, Choir, Pluck
 };
 
 enum class MachineKind { Drum, Mono, Poly };
@@ -79,6 +83,17 @@ namespace pPiano { enum { Octave, Chord, Type, Brightness, Decay, Release, Hamme
 namespace pMallets { enum { Octave, Chord, Type, Brightness, Decay, Release, Mallet, Vibrato, count }; }
 namespace pPluck { enum { Octave, Chord, Type, Brightness, Decay, Release, Strum, Body, count }; }
 namespace pChoir { enum { Octave, Chord, Vowel, Attack, Release, Ensemble, Brightness, Breath, count }; }
+namespace pBass { enum { Octave, Type, Tone, Decay, Muting, Glide, count }; }
+namespace pWob { enum { Octave, Wave, Rate, Depth, Cutoff, Reso, Detune, Drive, Glide, count }; }
+namespace pHoov { enum { Octave, Chord, Detune, Dip, Cutoff, Attack, Release, Chorus, count }; }
+namespace pP80 { enum { Octave, Chord, Saw, Pulse, Detune, Cutoff, Reso, Env, Attack, Decay, Sustain, Release, count }; }
+namespace pEdm { enum { Octave, Chord, Detune, Mix, Cutoff, Reso, Env, Attack, Decay, Sustain, Release, Pump, count }; }
+namespace pTalk { enum { Octave, Chord, From, To, Speed, Brightness, Release, count }; }
+namespace pMello { enum { Octave, Chord, Type, Tone, Attack, Release, Wow, Noise, count }; }
+namespace pEP { enum { Octave, Chord, Type, Tone, Decay, Release, Tremolo, Bark, count }; }
+namespace pBrass { enum { Octave, Chord, Type, Brightness, Attack, Release, Vibrato, Growl, count }; }
+namespace pWind { enum { Octave, Chord, Type, Breath, Vibrato, Attack, Release, Brightness, count }; }
+namespace pOrch { enum { Octave, Chord, Type, Attack, Release, Brightness, Ensemble, count }; }
 
 // Parameter IDs.
 namespace pid

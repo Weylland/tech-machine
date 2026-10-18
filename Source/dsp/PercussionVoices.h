@@ -363,4 +363,45 @@ private:
     bool active = false;
     Svf crack, room;
 };
+// Simmons SDS-V: a triangle-like tone with a long pitch sweep down, mixed with filtered noise ("pew").
+class SimmonsDrum : public DrumVoice
+{
+public:
+    SimmonsDrum (float baseHz, float bendAmount, float sweepSeconds, float noiseLevel, float minDecaySeconds, float maxDecaySeconds)
+        : base (baseHz), bend (bendAmount), sweep (sweepSeconds), noiseMix (noiseLevel), minDecay (minDecaySeconds), maxDecay (maxDecaySeconds)
+    {
+    }
+
+    void trigger (float velocity, const DrumSettings& s) override
+    {
+        gain = velocity;
+        phase = 0.0f;
+        amp = pitchEnv = 1.0f;
+        freq = base * tuneRatio (s.tune, 7.0f);
+        ampCoef = decayCoef (knobTime (s.decay, minDecay, maxDecay), fs);
+        pitchCoef = decayCoef (sweep, fs);
+        noiseFilter.set (800.0f + s.tone * 6000.0f, 0.8f, fs);
+        active = true;
+    }
+
+    float process() override
+    {
+        if (! active) return 0.0f;
+        const float f = freq * (1.0f + bend * pitchEnv);
+        advance (phase, f / fs);
+        const float tri = 1.0f - 4.0f * std::abs (phase - 0.5f);
+        noiseFilter.process (noise.next());
+        const float out = fastTanh ((tri * (1.0f - noiseMix) + noiseFilter.bp * noiseMix * 2.5f) * amp * 1.4f) * gain;
+        amp *= ampCoef;
+        pitchEnv *= pitchCoef;
+        if (amp < 0.0001f) active = false;
+        return out;
+    }
+
+private:
+    float base, bend, sweep, noiseMix, minDecay, maxDecay;
+    float phase = 0, freq = 100, gain = 1, amp = 0, pitchEnv = 0, ampCoef = 0, pitchCoef = 0;
+    bool active = false;
+    Svf noiseFilter;
+};
 } // namespace techno

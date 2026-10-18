@@ -210,4 +210,74 @@ class ReverseCymbal : public FxVoice
     MetalBank bank;
     Svf hp;
 };
+// DJ scratch: a voice-like sound pushed back and forth under the hand.
+class Scratch : public FxVoice
+{
+    float seconds (float d) const override { return knobTime (d, 0.15f, 1.5f); }
+    void start() override { phase = 0; band.reset(); band.set (900.0f, 2.0f, fs); }
+    float render (float x) override
+    {
+        const float cycles = 2.0f + settings.tone * 6.0f;
+        const float speed = std::sin (2.0f * pi * x * cycles);
+        const float f = 180.0f * tuneRatio (settings.tune, 12.0f) * (0.2f + 1.8f * std::abs (speed)), dt = f / fs;
+        advance (phase, dt);
+        band.process (blepSaw (phase, dt) + noise.next() * 0.3f);
+        return band.bp * std::abs (speed) * 1.8f;
+    }
+    float phase = 0;
+    Svf band;
+};
+
+// Rewind (jungle, dub, sound systems): the tape spun back very fast.
+class Rewind : public FxVoice
+{
+    float seconds (float d) const override { return knobTime (d, 0.4f, 3.0f); }
+    void start() override { phase = 0; band.reset(); }
+    float render (float x) override
+    {
+        const float f = 120.0f * tuneRatio (settings.tune, 12.0f) * std::pow (25.0f, x) * (1.0f + 0.3f * std::sin (2.0f * pi * x * 18.0f)), dt = f / fs;
+        advance (phase, dt);
+        if (update()) band.set (juce::jmin (f * 3.0f, 12000.0f), 1.0f, fs);
+        band.process (blepSaw (phase, dt) * 0.5f + noise.next() * (0.3f + settings.tone * 0.5f));
+        return band.bp * (0.3f + 0.7f * x) * 1.6f;
+    }
+    float phase = 0;
+    Svf band;
+};
+
+// Gunshot sound effect of dancehall and jungle: a crack, a boom and a fading echo of noise.
+class Gunshot : public FxVoice
+{
+    float seconds (float d) const override { return knobTime (d, 0.3f, 2.5f); }
+    void start() override { phase = 0; tail.reset(); crack.reset(); crack.set (3000.0f, 0.8f, fs); }
+    float render (float x) override
+    {
+        const float time = x * (float) length / fs;
+        advance (phase, (60.0f * tuneRatio (settings.tune, 12.0f) + 80.0f * std::exp (-time * 30.0f)) / fs);
+        const float boom = std::sin (2.0f * pi * phase) * std::exp (-time * 9.0f);
+        crack.process (noise.next());
+        if (update()) tail.set (2500.0f * std::exp (-time * 3.0f) + 200.0f, 0.7f, fs);
+        tail.process (noise.next());
+        return crack.bp * std::exp (-time * 120.0f) * 3.0f + boom * 0.9f + tail.lp * std::exp (-x * 4.0f) * (0.3f + settings.tone * 0.6f);
+    }
+    float phase = 0;
+    Svf crack, tail;
+};
+
+// Rain: soft noise and drops, for ambient and lo-fi.
+class Rain : public FxVoice
+{
+    float seconds (float d) const override { return knobTime (d, 1.0f, 16.0f); }
+    void start() override { wash.reset(); drops.reset(); wash.set (1800.0f, 0.5f, fs); drops.set (4000.0f, 2.0f, fs); }
+    float render (float) override
+    {
+        wash.process (noise.next());
+        float drop = 0.0f;
+        if (random.nextFloat() < (40.0f + settings.tone * 300.0f) / fs) drop = (random.nextFloat() * 2.0f - 1.0f) * 3.0f;
+        drops.process (drop);
+        return wash.lp * 0.18f + drops.bp * 0.5f;
+    }
+    Svf wash, drops;
+    juce::Random random;
+};
 } // namespace techno

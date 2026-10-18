@@ -16,6 +16,7 @@ public:
     virtual void gateOff() = 0;
     virtual float process() = 0;
     virtual void reset() = 0;
+    virtual void syncStep (int /*step*/, double /*stepSamples*/) {}   // tempo-locked LFOs
 };
 
 // Note/glide/gate bookkeeping shared by the mono synths.

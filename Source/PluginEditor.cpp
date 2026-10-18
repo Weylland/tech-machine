@@ -591,16 +591,21 @@ void MainView::showAddMenu()
     juce::PopupMenu menu;
     auto section = [&] (const char* title, std::initializer_list<int> types)
     {
-        menu.addSectionHeader (utf8 (title));
+        juce::PopupMenu sub;
+        int shown = 0;
         for (int t : types)
         {
             const auto& def = machineDef (t);
-            menu.addItem (t + 1, utf8 (def.name) + utf8 ("   —   ") + utf8 (def.subtitle), true, processor.isShown (t));
+            sub.addItem (t + 1, utf8 (def.name) + utf8 ("   —   ") + utf8 (def.subtitle), true, processor.isShown (t));
+            shown += processor.isShown (t) ? 1 : 0;
         }
+        menu.addSubMenu (utf8 (title) + (shown > 0 ? "  (" + juce::String (shown) + ")" : juce::String()), sub);
     };
-    section ("BOÎTES À RYTHMES ET PERCUSSIONS", { TR909, TR808, LinnDrum, CR78, MPC, BreakKit, Percussion, SoundFx });
-    section ("BASSES ET SYNTHÉS MONOPHONIQUES (une note à la fois)", { TB303, SH101, ModelD, Sub808 });
-    section ("SYNTHÉS POLYPHONIQUES, CLAVIERS ET CORDES (accords et nappes)", { Juno106, JP8000, DX7, Strings, Organ, Piano, Mallets, Pluck, Choir });
+    section ("Batteries et percussions", { TR909, TR808, LinnDrum, TR707, CR78, MPC, AcousticKit, Simmons, BreakKit, Percussion, WorldPerc, SoundFx });
+    section ("Basses", { TB303, SH101, ModelD, Sub808, EBass, Wobble });
+    section ("Synthés", { Hoover, Juno106, JP8000, Poly80, Edm, DX7, M1, Talkbox });
+    section ("Claviers et cloches", { Piano, EPiano, Organ, Mallets });
+    section ("Orchestre, voix et instruments", { Strings, Mellotron, Orchestra, Brass, Winds, Choir, Pluck });
     menu.addSeparator();
     menu.addItem (100, utf8 ("Une coche = machine déjà dans le rack (clique pour la retirer)"), false, false);
 
@@ -803,7 +808,7 @@ void MainView::exportWav (int loops)
 void MainView::projectChanged()
 {
     lastGenre = -1;
-    lastShownMask = -1;
+    lastShownMask = ~0ull;
     lastBars = -1;
     setPage (0);
     layoutRack();
@@ -888,9 +893,9 @@ void MainView::timerCallback()
         focusGrabbed = true;
     }
 
-    int mask = 0;
+    std::uint64_t mask = 0;
     for (int t = 0; t < numMachines; ++t)
-        if (processor.isShown (t)) mask |= 1 << t;
+        if (processor.isShown (t)) mask |= 1ull << t;
     if (mask != lastShownMask || scrollToMachine >= 0)
     {
         lastShownMask = mask;

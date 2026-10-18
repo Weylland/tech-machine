@@ -137,6 +137,7 @@ private:
     techno::IconButton audioButton { "gear", techno::utf8 ("AUDIO / MIDI") };
     techno::LedButton midiRecordButton { techno::utf8 ("ENREG. MIDI"), juce::Colour (0xffff3b1f) };
     int lastMidiMapVersion = 0, lastMidiTarget = -2;
+    std::uint64_t lastShownMask = ~0ull;
     techno::LedButton barButtons[4] { { "1", techno::colours::lcd }, { "2", techno::colours::lcd }, { "3", techno::colours::lcd }, { "4", techno::colours::lcd } };
     techno::LedButton pageButtons[4] { { "1", techno::colours::info }, { "2", techno::colours::info }, { "3", techno::colours::info }, { "4", techno::colours::info } };
     techno::LedButton followButton { techno::utf8 ("SUIVRE"), techno::colours::info };
@@ -162,7 +163,7 @@ private:
     std::unique_ptr<juce::FileChooser> chooser;
     std::unique_ptr<ExportJob> exportJob;
 
-    int viewPage = 0, lastStep = -1, lastVersion = -1, lastShownMask = -1, lastBars = -1, lastLabelHash = -1, lastGenre = -1;
+    int viewPage = 0, lastStep = -1, lastVersion = -1, lastBars = -1, lastLabelHash = -1, lastGenre = -1;
     int scrollToMachine = -1;
     bool follow = true, focusGrabbed = false;
     juce::String lastTitle;

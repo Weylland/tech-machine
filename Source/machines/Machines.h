@@ -5,6 +5,7 @@
 #include "../core/Track.h"
 #include "../dsp/DrumVoices.h"
 #include "../dsp/AcousticVoices.h"
+#include "../dsp/BandVoices.h"
 #include "../dsp/KeysVoices.h"
 #include "../dsp/SynthVoices.h"
 

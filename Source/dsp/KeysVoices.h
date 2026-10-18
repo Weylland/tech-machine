@@ -50,6 +50,15 @@ inline const FmPreset& fmPreset (int index)
         { 1.41f, 3.0f, 1.5f, 3.5f, 1.0f, 1.0f, 1.0f, 0.5f, 0.001f, 3.0f, 0.0f, false },     // orchestra chime
         { 5.0f, 1.0f, 3.0f, 1.0f, 1.0f, 0.3f, 3.0f, 0.7f, 0.4f, 2.0f, 0.7f, false },        // glass pad
         { 1.0f, 0.6f, 0.3f, 0.5f, 0.5f, 0.2f, 0.3f, 0.5f, 0.001f, 0.8f, 0.7f, false },      // FM sub bass
+        // M1 rompler sounds (30+).
+        { 1.0f, 2.0f, 0.6f, 2.0f, 1.0f, 1.0f, 0.3f, 0.5f, 0.001f, 1.4f, 0.0f, false },      // M1 piano
+        { 1.0f, 1.2f, 10.0f, 2.0f, 1.0f, 0.6f, 0.4f, 0.6f, 0.002f, 0.4f, 0.5f, false },     // M1 organ
+        { 3.5f, 1.2f, 1.5f, 1.0f, 1.0f, 0.4f, 3.0f, 0.8f, 0.3f, 2.0f, 0.8f, true },         // "Lore" pad
+        { 2.0f, 0.8f, 3.0f, 1.003f, 3.0f, 0.6f, 3.0f, 0.8f, 0.5f, 2.0f, 0.85f, true },      // "Universe" pad
+        { 1.0f, 0.9f, 0.5f, 1.0f, 2.0f, 0.4f, 0.3f, 0.3f, 0.02f, 1.0f, 0.6f, false },       // fretless bass
+        { 2.0f, 3.0f, 0.05f, 1.0f, 1.0f, 1.5f, 0.15f, 0.5f, 0.001f, 0.3f, 0.35f, false },   // M1 slap bass
+        { 1.0f, 1.4f, 1.0f, 1.004f, 1.0f, 1.2f, 1.0f, 0.9f, 0.2f, 1.0f, 0.9f, true },       // M1 strings
+        { 5.0f, 1.5f, 0.3f, 2.0f, 7.0f, 0.6f, 0.2f, 0.4f, 0.001f, 0.7f, 0.0f, false },      // bell / kalimba
     };
     return presets[(size_t) juce::jlimit (0, (int) std::size (presets) - 1, index)];
 }
