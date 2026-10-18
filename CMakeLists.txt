@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(TechMachine VERSION 0.6.1)
+project(TechMachine VERSION 0.6.2)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_CXX_STANDARD 17)
