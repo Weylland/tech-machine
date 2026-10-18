@@ -510,10 +510,11 @@ void icon (Graphics& g, const juce::String& name, Rect r, Colour colour)
         g.drawLine (b.getX() + m, b.getY() + m, b.getRight() - m, b.getBottom() - m, t);
         g.drawLine (b.getRight() - m, b.getY() + m, b.getX() + m, b.getBottom() - m, t);
     }
-    else if (name == "down" || name == "right")
+    else if (name == "down" || name == "up" || name == "right")
     {
         juce::Path p;
-        if (name == "down") p.addTriangle (b.getX() + s * 0.2f, b.getY() + s * 0.35f, b.getRight() - s * 0.2f, b.getY() + s * 0.35f, b.getCentreX(), b.getBottom() - s * 0.25f);
+        if (name == "up") p.addTriangle (b.getX() + s * 0.2f, b.getBottom() - s * 0.35f, b.getRight() - s * 0.2f, b.getBottom() - s * 0.35f, b.getCentreX(), b.getY() + s * 0.25f);
+        else if (name == "down") p.addTriangle (b.getX() + s * 0.2f, b.getY() + s * 0.35f, b.getRight() - s * 0.2f, b.getY() + s * 0.35f, b.getCentreX(), b.getBottom() - s * 0.25f);
         else p.addTriangle (b.getX() + s * 0.35f, b.getY() + s * 0.2f, b.getX() + s * 0.35f, b.getBottom() - s * 0.2f, b.getRight() - s * 0.25f, b.getCentreY());
         g.fillPath (p);
     }

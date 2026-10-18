@@ -212,7 +212,7 @@ float drumVoiceTrim (const juce::String& machine, const juce::String& row)
         { "linn", "bd", 1.45f }, { "linn", "ch", 1.15f }, { "linn", "cr", 1.3f }, { "linn", "rd", 1.3f }, { "linn", "ss", 1.2f },
         { "cr78", "sd", 1.3f }, { "cr78", "ch", 2.4f }, { "cr78", "cy", 1.5f }, { "cr78", "gu", 0.5f },
         { "mpc", "ch", 1.1f }, { "mpc", "cr", 1.3f }, { "perc", "gu", 0.5f },
-        { "fx", "zap", 2.5f }, { "fx", "gun", 1.8f }, { "fx", "rwd", 1.6f }, { "fx", "rain", 1.5f }, { "kit", "bd", 1.4f }, { "kit", "rb", 1.3f }, { "fx", "sir", 3.0f }, { "fx", "horn", 2.8f }, { "fx", "vin", 1.5f }, { "fx", "rev", 1.4f },
+        { "fx", "zap", 2.5f }, { "fx", "gun", 1.8f }, { "fx", "rwd", 1.6f }, { "fx", "rain", 1.5f }, { "kit", "bd", 1.4f }, { "kit", "rb", 1.3f }, { "fx", "sir", 2.0f }, { "fx", "horn", 2.8f }, { "fx", "vin", 1.5f }, { "fx", "rev", 1.4f },
     };
     for (auto& t : trims)
         if (machine == t.machine && row == t.row) return t.gain;

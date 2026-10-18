@@ -450,8 +450,8 @@ MainView::MainView (TechMachineProcessor& p)
 
         struct MasterKnob { const char* id; const char* label; const char* helpKey; bool bipolar; };
         const MasterKnob knobs[] {
-            { pid::echoFeedback, "RÉPÉTITIONS", "master.echoFeedback", false }, { pid::echoLevel, "NIVEAU ÉCHO", "master.echoLevel", false },
-            { pid::reverbSize, "TAILLE REVERB", "master.reverbSize", false }, { pid::reverbLevel, "NIVEAU REVERB", "master.reverbLevel", false },
+            { pid::echoFeedback, "RÉPÉTITIONS", "master.echoFeedback", false }, { pid::echoLevel, "ÉCHO", "master.echoLevel", false },
+            { pid::reverbSize, "ESPACE", "master.reverbSize", false }, { pid::reverbLevel, "REVERB", "master.reverbLevel", false },
             { pid::pump, "POMPE", "master.pump", false }, { pid::djFilter, "FILTRE DJ", "master.filter", true },
             { pid::comp, "COMPRESSION", "master.comp", false }, { pid::disto, "DISTO", "master.disto", false },
             { pid::volume, "VOLUME", "master.volume", false },
@@ -1083,6 +1083,7 @@ void MainView::paint (juce::Graphics& g)
 void MainView::resized()
 {
     const int w = getWidth();
+    const bool narrow = w < 1560;   // down to the minimum width (1440), a few things get smaller
     consoleArea = { 10, 8, w - 20, consoleH };
     const int cy = consoleArea.getY();
 
@@ -1092,19 +1093,20 @@ void MainView::resized()
     recordButton.setBounds (376, cy + 14, 84, 48);
     recInfo->setBounds (recordButton.getRight() + 2, cy + 14, 15, 15);
 
-    lcd.setBounds (482, cy + 10, 300, consoleH - 20);
+    lcd.setBounds (482, cy + 10, narrow ? 270 : 300, consoleH - 20);
     lcdInfo->setBounds (lcd.getRight() + 2, cy + 12, 15, 15);
 
-    int x = lcd.getRight() + 26;
-    genreBox.setBounds (x, cy + 32, 150, 32);
+    const int gap = narrow ? 10 : 12;
+    int x = lcd.getRight() + (narrow ? 18 : 26);
+    genreBox.setBounds (x, cy + 32, narrow ? 140 : 150, 32);
     genreInfo->setBounds (genreBox.getRight() - 15, cy + 13, 15, 15);
-    x = genreBox.getRight() + 12;
+    x = genreBox.getRight() + gap;
     keyBox.setBounds (x, cy + 32, 74, 32);
     keyInfo->setBounds (keyBox.getRight() - 15, cy + 13, 15, 15);
-    x = keyBox.getRight() + 12;
-    scaleBox.setBounds (x, cy + 32, 158, 32);
+    x = keyBox.getRight() + gap;
+    scaleBox.setBounds (x, cy + 32, 180, 32);
     scaleInfo->setBounds (scaleBox.getRight() - 15, cy + 13, 15, 15);
-    x = scaleBox.getRight() + 12;
+    x = scaleBox.getRight() + gap;
     swingKnob->setBounds (x, cy + 10, 60, 62);
     x = swingKnob->getRight() + 10;
     surpriseButton.setBounds (x, cy + 14, juce::jmin (190, consoleArea.getRight() - 34 - x), 48);
@@ -1133,22 +1135,27 @@ void MainView::resized()
     // Master strip.
     masterArea = { 10, getHeight() - masterH - 6, w - 20, masterH };
     masterInfo->setBounds (masterArea.getX() + 142, masterArea.getY() + 20, 15, 15);
-    vu.setBounds (masterArea.getX() + 168, masterArea.getY() + 12, 170, masterArea.getHeight() - 24);
+    vu.setBounds (masterArea.getX() + 168, masterArea.getY() + 12, narrow ? 124 : 170, masterArea.getHeight() - 24);
     meterInfo->setBounds (vu.getRight() + 3, masterArea.getY() + 12, 15, 15);
+
     // Settings column at the right of the master strip.
+    auto column = juce::Rectangle<int> (masterArea.getRight() - 16 - 248, masterArea.getY() + 14, 248, masterArea.getHeight() - 28);
+    const int columnX = column.getX();
     {
-        auto column = juce::Rectangle<int> (masterArea.getRight() - 16 - 236, masterArea.getY() + 14, 236, masterArea.getHeight() - 28);
         auto top = column.removeFromTop ((column.getHeight() - 6) / 2);
         column.removeFromTop (6);
-        audioButton.setBounds (top.removeFromLeft (116));
+        audioButton.setBounds (top.removeFromLeft (122));
         midiRecordButton.setBounds (top.withTrimmedLeft (4));
-        fullScreenButton.setBounds (column.removeFromLeft (116));
+        fullScreenButton.setBounds (column.removeFromLeft (122));
         languageButton.setBounds (column.withTrimmedLeft (4));
     }
-    int mx = vu.getRight() + 30;
+
+    // Master controls share the space left between the meter and the settings.
+    int mx = vu.getRight() + (narrow ? 18 : 30);
+    const int knobStep = juce::jlimit (76, 96, (columnX - 12 - mx - 130) / juce::jmax (1, masterControls.size() - 1));
     for (int i = 0; i < masterControls.size(); ++i)
     {
-        const int width = i == 0 ? 130 : 84;
+        const int width = i == 0 ? 130 : knobStep;
         masterControls[i]->setBounds (mx, masterArea.getY() + (i == 0 ? 30 : 14), width - 6, i == 0 ? 52 : 86);
         mx += width;
     }

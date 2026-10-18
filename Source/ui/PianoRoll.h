@@ -913,39 +913,44 @@ public:
         g.setColour (colours::text);
         g.setFont (paint::display (22.0f));
         g.drawText ("PIANO ROLL", 16, 8, 160, 30, juce::Justification::centredLeft);
+        // How to use it, along the bottom.
         g.setColour (colours::dim);
         g.setFont (paint::font (12.5f, false));
-        g.drawText (utf8 ("Clic = poser · glisser = déplacer · bord droit = allonger · clic droit ou double-clic = effacer · "
-                          "Ctrl+glisser = sélectionner · Alt+glisser = copier · flèches = déplacer / transposer (Maj = mesure / octave) · "
-                          "Ctrl+molette = zoom · Maj+molette = défiler"),
-                    16, 40, getWidth() - 32, 16, juce::Justification::centredLeft);
+        g.drawFittedText (utf8 ("Clic = poser · glisser = déplacer · bord droit = allonger · clic droit ou double-clic = effacer · "
+                                "Ctrl+glisser = sélectionner · Alt+glisser = copier · flèches = déplacer / transposer (Maj = mesure / octave) · "
+                                "Ctrl+molette = zoom · Maj+molette = défiler"),
+                          getLocalBounds().reduced (16, 0).removeFromBottom (24), juce::Justification::centredLeft, 1, 0.8f);
     }
 
     void resized() override
     {
-        auto bar = getLocalBounds().reduced (12, 8).removeFromTop (30);
-        bar.removeFromLeft (160);
-        close.setBounds (bar.removeFromRight (110));
-        bar.removeFromRight (10);
-        machineBox.setBounds (bar.removeFromLeft (170));
-        bar.removeFromLeft (14);
-        lengthBox.setBounds (bar.removeFromLeft (90));
-        bar.removeFromLeft (10);
-        stackBox.setBounds (bar.removeFromLeft (170));
-        bar.removeFromLeft (14);
-        for (auto* b : { &octaveDown, &octaveUp, &duplicate, &selectAll, &fit, &erase })
+        // Row 1: what is written (machine, length, single note or chord), then the view.
+        auto row = getLocalBounds().reduced (12, 0).withTrimmedTop (8).removeFromTop (30);
+        row.removeFromLeft (160);
+        close.setBounds (row.removeFromRight (110));
+        row.removeFromRight (8);
+        fit.setBounds (row.removeFromRight (110));
+        machineBox.setBounds (row.removeFromLeft (170));
+        row.removeFromLeft (12);
+        lengthBox.setBounds (row.removeFromLeft (100));
+        row.removeFromLeft (12);
+        stackBox.setBounds (row.removeFromLeft (200));
+
+        // Row 2: the editing tools.
+        row = getLocalBounds().reduced (12, 0).withTrimmedTop (46).removeFromTop (28);
+        for (auto* b : { &octaveDown, &octaveUp, &duplicate, &selectAll, &erase })
         {
-            b->setBounds (bar.removeFromLeft (b == &selectAll ? 140 : b == &fit || b == &erase ? 94 : 102));
-            bar.removeFromLeft (6);
+            b->setBounds (row.removeFromLeft (b == &selectAll ? 160 : 112));
+            row.removeFromLeft (8);
         }
-        grid.setBounds (getLocalBounds().reduced (10).withTrimmedTop (54));
+        grid.setBounds (getLocalBounds().reduced (10, 0).withTrimmedTop (82).withTrimmedBottom (26));
     }
 
 private:
     TechMachineProcessor& processor;
     PianoRollGrid grid;
     juce::ComboBox machineBox, lengthBox, stackBox;
-    IconButton octaveDown { "down", utf8 ("OCTAVE −") }, octaveUp { "plus", utf8 ("OCTAVE +") }, duplicate { "patterns", utf8 ("DUPLIQUER") },
+    IconButton octaveDown { "down", utf8 ("OCTAVE −") }, octaveUp { "up", utf8 ("OCTAVE +") }, duplicate { "patterns", utf8 ("DUPLIQUER") },
                selectAll { "", utf8 ("TOUT SÉLECTIONNER") }, fit { "fullscreen", utf8 ("TOUT VOIR") }, erase { "trash", utf8 ("EFFACER") },
                close { "close", utf8 ("FERMER") };
 };

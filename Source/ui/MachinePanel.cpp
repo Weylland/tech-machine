@@ -8,7 +8,7 @@ constexpr int headerH = 54;
 constexpr int labelW = 112;
 constexpr int cellW = 38, cellGap = 4, groupGap = 10;
 constexpr int drumTop = headerH + 30, drumRowH = 30, drumColumnW = 64;
-constexpr int knobW = 64, knobH = 72, faderW = 60, faderH = 126, choiceW = 128;
+constexpr int knobW = 64, knobH = 72, faderW = 60, faderH = 126, choiceW = 136;
 constexpr int boxPad = 10, boxTitle = 16, fxW = 44;
 
 const char* const drumColumnKeys[4] { "drum.level", "drum.tune", "drum.decay", "drum.tone" };
@@ -174,13 +174,15 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
                 juce::Component* control;
                 if (isChoice)
                 {
-                    control = soundControls.add (new ChoiceControl (state, pid::synth (type, i), utf8 (param.label), param.choices, h));
-                    soundItems.push_back ({ control, choiceW, 50 });
+                    auto* choice = new ChoiceControl (state, pid::synth (type, i), utf8 (param.label), param.choices, h);
+                    control = soundControls.add (choice);
+                    soundItems.push_back ({ control, juce::jlimit (choiceW, 230, choice->preferredWidth() + 4), 50 });
                 }
                 else
                 {
                     control = soundControls.add (new Knob (state, pid::synth (type, i), utf8 (param.label), h, true, skin.faders));
-                    soundItems.push_back ({ control, skin.faders ? faderW : knobW, skin.faders ? faderH : knobH });
+                    const int width = juce::jmax (skin.faders ? faderW : knobW, ControlLabel::widthFor (utf8 (param.label)) + 4);
+                    soundItems.push_back ({ control, width, skin.faders ? faderH : knobH });
                 }
                 addAndMakeVisible (control);
             }
@@ -200,7 +202,7 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
         auto* k = new Knob (state, pid::machine (type, s.suffix), utf8 (s.label), help (s.helpKey));
         if (s.bipolar) k->setBipolar();
         stripControls.add (k);
-        stripItems.push_back ({ k, knobW, knobH });
+        stripItems.push_back ({ k, juce::jmax (knobW, ControlLabel::widthFor (utf8 (s.label)) + 4), knobH });
         addAndMakeVisible (k);
     }
 }
@@ -614,7 +616,8 @@ void MachinePanel::resized()
         soundBox = { rightX(), headerH + 18, available, getHeight() - headerH - 30 };
         stripBox = { side() + 10, stripTop, cellX (15) + cellW - (side() + 10), getHeight() - stripTop - 12 };
         layoutFlow (soundItems, soundBox.reduced (boxPad, 0).withTrimmedTop (boxTitle), true);
-        layoutFlow (stripItems, stripBox.reduced (boxPad, 0).withTrimmedTop (boxTitle), true);
+        // The box fits its knobs, even when the sound section on the right makes the panel taller.
+        stripBox.setHeight (juce::jmin (stripBox.getHeight(), boxTitle + layoutFlow (stripItems, stripBox.reduced (boxPad, 0).withTrimmedTop (boxTitle), true) + 8));
     }
 }
 
