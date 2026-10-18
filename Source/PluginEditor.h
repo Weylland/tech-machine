@@ -79,6 +79,8 @@ private:
     techno::IconButton resumeButton { "play", techno::utf8 ("REPRENDRE LA DERNIÈRE SESSION") };
     juce::OwnedArray<juce::TextButton> recentButtons;
     juce::OwnedArray<juce::Button> exampleCards;
+    juce::Viewport cardsView;
+    juce::Component cardsContent;
     juce::Rectangle<int> panel;
 };
 

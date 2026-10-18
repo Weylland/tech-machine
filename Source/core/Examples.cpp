@@ -410,10 +410,14 @@ void boomBap (ExampleWriter& w)
     p ("dx7_release", 0.35f); p ("dx7_tremolo", 0.3f); p ("dx7_reverb", 0.3f); p ("dx7_volume", 0.6f);
     line (w, DX7, bars ({ "D3 - - - - - . . . . D3 - - . . .", "G3 - - - - - . . . . A3 - - . . ." }));
 
-    w.show (ModelD);
-    p ("modeld_wave", 2); p ("modeld_cutoff", 0.3f); p ("modeld_sub", 0.5f); p ("modeld_contour", 0.2f); p ("modeld_decay", 0.5f);
-    p ("modeld_sustain", 0.6f); p ("modeld_volume", 0.7f);
-    line (w, ModelD, bars ({ "D2 - - . . . . D2 . . F2 - . . . .", "G2 - - . . . . G2 . . A2 . C3 . . ." }));
+    w.show (EBass);
+    p ("ebass_octave", 2); p ("ebass_type", 4); p ("ebass_tone", 0.35f); p ("ebass_volume", 0.75f);
+    line (w, EBass, bars ({ "D2 - - . . . . D2 . . F2 - . . . .", "G2 - - . . . . G2 . . A2 . C3 . . ." }));
+
+    w.show (SoundFx);
+    p ("fx_vin_level", 0.35f); p ("fx_vin_decay", 0.75f); p ("fx_scr_level", 0.4f);
+    drums (w, SoundFx, "vin", "x...............................");
+    drums (w, SoundFx, "scr", "................" "............x...");
 }
 
 void trap (ExampleWriter& w)
@@ -496,10 +500,9 @@ void disco (ExampleWriter& w)
     drums (w, LinnDrum, "tb", "xxxxxxxxxxxxxxxx");
     drums (w, LinnDrum, "cr", "x..............................................................." );
 
-    w.show (ModelD);
-    p ("modeld_wave", 0); p ("modeld_cutoff", 0.35f); p ("modeld_emphasis", 0.25f); p ("modeld_contour", 0.4f);
-    p ("modeld_decay", 0.25f); p ("modeld_sustain", 0.3f); p ("modeld_volume", 0.7f);
-    line (w, ModelD, bars ({ "A1 . A2 . A1 . A2 . A1 . A2 . A1 . A2 .", "D2 . D3 . D2 . D3 . D2 . D3 . D2 . D3 .",
+    w.show (EBass);
+    p ("ebass_octave", 2); p ("ebass_type", 0); p ("ebass_tone", 0.55f); p ("ebass_volume", 0.7f);
+    line (w, EBass, bars ({ "A1 . A2 . A1 . A2 . A1 . A2 . A1 . A2 .", "D2 . D3 . D2 . D3 . D2 . D3 . D2 . D3 .",
                              "G1 . G2 . G1 . G2 . G1 . G2 . G1 . G2 .", "C2 . C3 . C2 . C3 . E2 . E3 . E2 . E3 ." }));
 
     w.show (Strings);
@@ -615,6 +618,430 @@ void pianoHouse (ExampleWriter& w)
     drums (w, SoundFx, "imp", "x...............................................................");
     drums (w, SoundFx, "rise", "................................................x...............");
 }
+
+void minimal (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 125); p ("swing", 0.3f); p ("key", 9); p ("scale", 1); p ("bars", 3);
+    p ("echoTime", 3); p ("echoFeedback", 0.5f); p ("echoLevel", 0.6f); p ("reverbSize", 0.5f); p ("reverbLevel", 0.4f); p ("comp", 0.3f);
+
+    w.show (TR909);
+    p ("tr909_bd_decay", 0.35f); p ("tr909_rs_level", 0.45f); p ("tr909_rs_echo", 0.35f); p ("tr909_ch_level", 0.35f); p ("tr909_ch_decay", 0.2f);
+    p ("tr909_cp_level", 0.45f); p ("tr909_cp_reverb", 0.3f);
+    drums (w, TR909, "bd", "x...x...x...x...");
+    drums (w, TR909, "rs", "..x..x...x..x..." "..x..x...x....x.");
+    drums (w, TR909, "ch", "..x...x...x...x.");
+    drums (w, TR909, "cp", "................" "............x..." "................" "............x.x.");
+
+    w.show (Percussion);
+    p ("perc_sh_level", 0.3f); p ("perc_cl_level", 0.35f); p ("perc_cl_echo", 0.4f); p ("perc_cgh_level", 0.35f);
+    drums (w, Percussion, "sh", "x.x.x.x.x.x.x.x.");
+    drums (w, Percussion, "cl", "...x.......x....");
+    drums (w, Percussion, "cgh", "................" "......x.......x.");
+
+    w.show (ModelD);
+    p ("modeld_wave", 2); p ("modeld_cutoff", 0.22f); p ("modeld_sub", 0.6f); p ("modeld_contour", 0.2f); p ("modeld_decay", 0.3f);
+    p ("modeld_sustain", 0.3f); p ("modeld_volume", 0.7f);
+    line (w, ModelD, bars ({ ". . A1 . . . . A1 . . . . . . A1 .", ". . A1 . . . . A1 . . C2 . . . A1 .",
+                             ". . A1 . . . . A1 . . . . . . A1 .", ". . A1 . . . . A1 . . G1 . . E1 . ." }));
+
+    w.show (SH101);
+    p ("sh101_octave", 2); p ("sh101_saw", 0); p ("sh101_square", 0.9f); p ("sh101_sub", 0); p ("sh101_cutoff", 0.55f); p ("sh101_reso", 0.4f);
+    p ("sh101_env", 0.2f); p ("sh101_decay", 0.15f); p ("sh101_sustain", 0); p ("sh101_release", 0.1f); p ("sh101_echo", 0.45f); p ("sh101_volume", 0.55f);
+    line (w, SH101, bars ({ rest16, "A3 . . . . . . . . . E4 . . . . .", "A3 . . . . . C4 . . . E4 . . . . .", "A3 . . . . . C4 . . . G4 . . . E4 ." }));
+
+    w.show (SoundFx);
+    p ("fx_rev_level", 0.4f); p ("fx_rev_decay", 0.45f);
+    drums (w, SoundFx, "rev", "................................................" "........x.......");
+}
+
+void hardTechno (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 150); p ("swing", 0.0f); p ("key", 4); p ("scale", 6); p ("bars", 3);
+    p ("echoTime", 1); p ("echoFeedback", 0.35f); p ("echoLevel", 0.4f); p ("reverbSize", 0.6f); p ("reverbLevel", 0.35f);
+    p ("comp", 0.45f); p ("disto", 0.15f);
+
+    w.show (TR909);
+    p ("tr909_bd_drive", 0.6f); p ("tr909_bd_tone", 0.75f); p ("tr909_bd_decay", 0.55f); p ("tr909_drive", 0.2f);
+    p ("tr909_oh_level", 0.4f); p ("tr909_ch_level", 0.35f); p ("tr909_cp_level", 0.55f); p ("tr909_rs_level", 0.4f); p ("tr909_rs_echo", 0.3f);
+    drums (w, TR909, "bd", "X...X...X...X...");
+    drums (w, TR909, "oh", "..x...x...x...x.");
+    drums (w, TR909, "ch", "xx.xxx.xxx.xxx.x");
+    drums (w, TR909, "cp", "....x.......x...");
+    drums (w, TR909, "rs", "..x....x..x....x");
+    drums (w, TR909, "sd", "................................................" "........x.x.xxxx");
+
+    w.show (ModelD);
+    p ("modeld_wave", 0); p ("modeld_cutoff", 0.25f); p ("modeld_emphasis", 0.3f); p ("modeld_contour", 0.4f); p ("modeld_decay", 0.15f);
+    p ("modeld_sustain", 0.1f); p ("modeld_overdrive", 0.6f); p ("modeld_volume", 0.65f);
+    line (w, ModelD, ". E1 E1 . . E1 E1 . . E1 E1 . . E1 E1 .");
+
+    w.show (JP8000);
+    p ("jp8000_chord", 10); p ("jp8000_detune", 0.7f); p ("jp8000_mix", 0.7f); p ("jp8000_cutoff", 0.6f); p ("jp8000_reso", 0.3f);
+    p ("jp8000_env", 0.4f); p ("jp8000_decay", 0.25f); p ("jp8000_sustain", 0.1f); p ("jp8000_release", 0.2f); p ("jp8000_drive", 0.3f);
+    p ("jp8000_echo", 0.3f); p ("jp8000_reverb", 0.25f); p ("jp8000_volume", 0.45f);
+    line (w, JP8000, bars ({ rest16, "E3 . . E3 . . F3 . E3 . . . G3 . F3 .", rest16, "E3 . . E3 . . F3 . E3 . . . A3 . G3 F3" }));
+
+    w.show (SoundFx);
+    p ("fx_imp_level", 0.6f); p ("fx_rise_level", 0.5f); p ("fx_rise_decay", 0.35f);
+    drums (w, SoundFx, "imp", "x...............................................................");
+    drums (w, SoundFx, "rise", "................................................x...............");
+}
+
+void jungle (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 165); p ("swing", 0.05f); p ("key", 7); p ("scale", 1); p ("bars", 3);
+    p ("echoTime", 2); p ("echoFeedback", 0.4f); p ("echoLevel", 0.5f); p ("reverbSize", 0.7f); p ("reverbLevel", 0.45f); p ("comp", 0.35f);
+
+    w.show (BreakKit);
+    p ("breaks_crush", 0.3f); p ("breaks_sd_level", 0.75f); p ("breaks_gs_level", 0.35f); p ("breaks_rd_level", 0.35f);
+    drums (w, BreakKit, "bd", "x.x.......xx......xx......x.....");
+    drums (w, BreakKit, "sd", "....x..x.x..x..x.x..x..x.x....x.");
+    drums (w, BreakKit, "gs", "......x..........x......x.......");
+    drums (w, BreakKit, "rd", "x.x.x.x.x.x.x.x.");
+    drums (w, BreakKit, "cr", "x..............................................................." );
+
+    w.show (ModelD);
+    p ("modeld_wave", 2); p ("modeld_sub", 0.7f); p ("modeld_cutoff", 0.2f); p ("modeld_emphasis", 0.1f); p ("modeld_contour", 0.1f);
+    p ("modeld_sustain", 0.9f); p ("modeld_decay", 0.6f); p ("modeld_glide", 0.3f); p ("modeld_volume", 0.75f);
+    line (w, ModelD, bars ({ held ("G1", 16), held ("G1", 8) + held ("A#1", 8), held ("C2", 16), held ("A#1", 8) + held ("D2", 8) }));
+
+    w.show (Strings);
+    p ("strings_octave", 2); p ("strings_chord", 1); p ("strings_attack", 0.7f); p ("strings_release", 0.7f); p ("strings_brightness", 0.35f);
+    p ("strings_reverb", 0.5f); p ("strings_volume", 0.35f);
+    line (w, Strings, bars ({ held ("G3", 32), held ("C3", 16), held ("A#2", 16) }));
+
+    w.show (Choir);
+    p ("choir_vowel", 1); p ("choir_attack", 0.6f); p ("choir_release", 0.6f); p ("choir_reverb", 0.5f); p ("choir_volume", 0.3f); p ("choir_chord", 0);
+    line (w, Choir, bars ({ rest16, "D4 - - - - - - - A#3 - - - - - - -", rest16, "G4 - - - - - - - F4 - - - D4 - - -" }));
+
+    w.show (SoundFx);
+    p ("fx_rwd_level", 0.45f); p ("fx_rwd_decay", 0.3f);
+    drums (w, SoundFx, "rwd", "................................................" "........x.......");
+}
+
+void breakbeat (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 132); p ("swing", 0.1f); p ("key", 2); p ("scale", 15); p ("bars", 3);
+    p ("echoTime", 2); p ("echoFeedback", 0.35f); p ("echoLevel", 0.45f); p ("reverbLevel", 0.35f); p ("comp", 0.4f);
+
+    w.show (BreakKit);
+    p ("breaks_crush", 0.2f); p ("breaks_sd_level", 0.75f); p ("breaks_bd_level", 0.9f);
+    drums (w, BreakKit, "bd", "x.....x...x....." "x.....x.x.......");
+    drums (w, BreakKit, "sd", "....x.......x...");
+    drums (w, BreakKit, "gs", ".......x..x....x");
+    drums (w, BreakKit, "ch", "x.x.x...x.x.x...");
+    drums (w, BreakKit, "oh", "......x.......x.");
+    drums (w, BreakKit, "cr", "x..............................................................." );
+
+    w.show (ModelD);
+    p ("modeld_wave", 0); p ("modeld_cutoff", 0.32f); p ("modeld_emphasis", 0.4f); p ("modeld_contour", 0.55f); p ("modeld_decay", 0.2f);
+    p ("modeld_sustain", 0.2f); p ("modeld_overdrive", 0.45f); p ("modeld_volume", 0.7f);
+    const juce::String bass = "D2 . . D2 . . F2 . D2 . G2 . . A2 . C3 ";
+    line (w, ModelD, bars ({ bass, bass, bass, "D2 . . D2 . . F2 . D2 . G2 . A2 C3 D3 C3" }));
+
+    w.show (Hoover);
+    p ("hoover_chord", 10); p ("hoover_dip", 0.6f); p ("hoover_cutoff", 0.75f); p ("hoover_volume", 0.45f); p ("hoover_reverb", 0.2f);
+    line (w, Hoover, bars ({ "D3 - - - . . . . . . . . . . . .", rest16, "D3 - - - . . . . F3 - - - . . . .", rest16 }));
+
+    w.show (SH101);
+    p ("sh101_saw", 0.8f); p ("sh101_cutoff", 0.4f); p ("sh101_reso", 0.55f); p ("sh101_env", 0.6f); p ("sh101_decay", 0.25f);
+    p ("sh101_sustain", 0.2f); p ("sh101_echo", 0.3f); p ("sh101_volume", 0.5f);
+    line (w, SH101, bars ({ rest16, rest16, "D4 . F4 . G4 . A4 . C5 . A4 . G4 . F4 .", "D4 . F4 . G4 . A4 . C5 - - - D5 - - ." }));
+
+    w.show (SoundFx);
+    p ("fx_scr_level", 0.45f); p ("fx_scr_decay", 0.35f);
+    drums (w, SoundFx, "scr", "................" "............x..." "................" "........x.......");
+}
+
+void ukGarage (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 132); p ("swing", 0.55f); p ("key", 7); p ("scale", 5); p ("bars", 3);
+    p ("echoTime", 2); p ("echoFeedback", 0.35f); p ("echoLevel", 0.4f); p ("reverbSize", 0.55f); p ("reverbLevel", 0.4f); p ("comp", 0.3f);
+
+    w.show (TR909);
+    p ("tr909_rs_level", 0.45f); p ("tr909_ch_level", 0.35f); p ("tr909_oh_level", 0.35f); p ("tr909_sd_level", 0.55f);
+    drums (w, TR909, "bd", "x.........x..x.." "x......x..x.....");
+    drums (w, TR909, "sd", "....x.......x...");
+    drums (w, TR909, "rs", "..x..x.....x..x.");
+    drums (w, TR909, "ch", "x.x.x.x.x.x.x.x.");
+    drums (w, TR909, "oh", "......x.......x.");
+
+    w.show (Percussion);
+    p ("perc_sh_level", 0.3f);
+    drums (w, Percussion, "sh", "xxxxxxxxxxxxxxxx");
+
+    w.show (ModelD);
+    p ("modeld_wave", 1); p ("modeld_cutoff", 0.3f); p ("modeld_emphasis", 0.3f); p ("modeld_contour", 0.4f); p ("modeld_decay", 0.35f);
+    p ("modeld_sustain", 0.5f); p ("modeld_glide", 0.25f); p ("modeld_volume", 0.7f);
+    line (w, ModelD, bars ({ "G1 . . G1 . . . . . . A#1 . . C2~ D2 .", "C2 . . C2 . . . . . . D2 . . A#1 . .",
+                             "G1 . . G1 . . . . . . A#1 . . C2~ D2 .", "C2 . . C2 . . . . D2 . . . F2 - - ." }));
+
+    w.show (Organ);
+    p ("organ_octave", 2); p ("organ_chord", 1); p ("organ_type", 1); p ("organ_volume", 0.45f); p ("organ_reverb", 0.2f);
+    line (w, Organ, bars ({ ". . G3 . . G3 . . . . G3 . . G3 . .", ". . C3 . . C3 . . . . C3 . . C3 . ." }));
+
+    w.show (Choir);
+    p ("choir_vowel", 1); p ("choir_attack", 0.5f); p ("choir_release", 0.5f); p ("choir_reverb", 0.4f); p ("choir_volume", 0.3f);
+    line (w, Choir, bars ({ held ("G3", 16), held ("C3", 16) }));
+}
+
+void gabber (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 185); p ("swing", 0.0f); p ("key", 9); p ("scale", 1); p ("bars", 3);
+    p ("echoTime", 1); p ("echoFeedback", 0.3f); p ("echoLevel", 0.3f); p ("reverbSize", 0.5f); p ("reverbLevel", 0.3f);
+    p ("comp", 0.5f); p ("disto", 0.25f);
+
+    w.show (TR909);
+    p ("tr909_bd_drive", 0.9f); p ("tr909_bd_tone", 0.8f); p ("tr909_bd_decay", 0.65f); p ("tr909_bd_tune", 0.45f); p ("tr909_drive", 0.35f);
+    p ("tr909_oh_level", 0.4f); p ("tr909_cp_level", 0.5f);
+    drums (w, TR909, "bd", "X...X...X...X..." "X...X...X...X..." "X...X...X...X..." "X...X...X.X.XXXX");
+    drums (w, TR909, "oh", "..x...x...x...x.");
+    drums (w, TR909, "cp", "....x.......x...");
+    drums (w, TR909, "cr", "x..............................................................." );
+
+    w.show (Hoover);
+    p ("hoover_octave", 2); p ("hoover_chord", 0); p ("hoover_dip", 0.8f); p ("hoover_cutoff", 0.85f); p ("hoover_drive", 0.35f);
+    p ("hoover_volume", 0.5f); p ("hoover_reverb", 0.2f);
+    line (w, Hoover, bars ({ "A3 - - . A3 - . . C4 - . . A3 - G3 -", "A3 - - . A3 - . . E4 - . . D4 - C4 -",
+                             "A3 - - . A3 - . . C4 - . . A3 - G3 -", "F3 - - . F3 - . . G3 - . . E4 - - -" }));
+
+    w.show (SoundFx);
+    p ("fx_imp_level", 0.6f);
+    drums (w, SoundFx, "imp", "x...............................................................");
+}
+
+void drill (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 142); p ("swing", 0.05f); p ("key", 2); p ("scale", 3); p ("bars", 3);
+    p ("echoTime", 2); p ("echoFeedback", 0.4f); p ("echoLevel", 0.45f); p ("reverbSize", 0.65f); p ("reverbLevel", 0.45f); p ("comp", 0.35f);
+
+    w.show (TR808);
+    p ("tr808_bd_decay", 0.3f); p ("tr808_sd_level", 0.55f); p ("tr808_sd_reverb", 0.15f); p ("tr808_ch_level", 0.4f); p ("tr808_ch_decay", 0.2f);
+    p ("tr808_rs_level", 0.4f);
+    drums (w, TR808, "bd", "x......x..x....." "x.....x.....x...");
+    drums (w, TR808, "sd", "........x....x..");
+    drums (w, TR808, "ch", "x..x..x.x..x..x." "x..x..x.x..x.3x.");
+    drums (w, TR808, "rs", "...x.....x......");
+
+    w.show (Sub808);
+    p ("sub808_octave", 2); p ("sub808_decay", 0.8f); p ("sub808_glide", 0.6f); p ("sub808_punch", 0.4f); p ("sub808_overdrive", 0.4f);
+    p ("sub808_volume", 0.75f);
+    line (w, Sub808, bars ({ "D1 - - - - - - D1 - - D1~ - - F1 - -", "A#0 - - - - - A#0 - - - - - G1~ - A1 -",
+                             "D1 - - - - - - D1 - - D1~ - - F1 - -", "A#0 - - - - - A#0 - - - - - C#1 - - -" }));
+
+    w.show (Piano);
+    p ("piano_octave", 2); p ("piano_chord", 0); p ("piano_type", 0); p ("piano_brightness", 0.4f); p ("piano_release", 0.5f);
+    p ("piano_reverb", 0.4f); p ("piano_volume", 0.55f);
+    line (w, Piano, bars ({ "D5 . . F5 . . A5 . G#5 . . . F5 . E5 .", "D5 . . F5 . . A5 . A#5 . . . A5 . G#5 .",
+                            "D5 . . F5 . . A5 . G#5 . . . F5 . E5 .", "F5 . . E5 . . D5 . C#5 - - - - - . ." }));
+
+    w.show (Choir);
+    p ("choir_octave", 1); p ("choir_vowel", 4); p ("choir_chord", 1); p ("choir_attack", 0.6f); p ("choir_reverb", 0.6f); p ("choir_volume", 0.3f);
+    line (w, Choir, bars ({ held ("D3", 16), held ("A#2", 16), held ("D3", 16), held ("A2", 16) }));
+}
+
+void rnb (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 90); p ("swing", 0.2f); p ("key", 5); p ("scale", 5); p ("bars", 3);
+    p ("echoTime", 2); p ("echoFeedback", 0.3f); p ("echoLevel", 0.35f); p ("reverbSize", 0.6f); p ("reverbLevel", 0.4f); p ("comp", 0.3f);
+
+    w.show (LinnDrum);
+    p ("linn_bd_level", 0.85f); p ("linn_sd_level", 0.65f); p ("linn_sd_reverb", 0.2f); p ("linn_cp_level", 0.5f); p ("linn_ch_level", 0.35f);
+    p ("linn_ss_level", 0.45f);
+    drums (w, LinnDrum, "bd", "x......x..x..x.." "x.......x.x.....");
+    drums (w, LinnDrum, "sd", "....x.......x...");
+    drums (w, LinnDrum, "cp", "....x.......x...");
+    drums (w, LinnDrum, "ch", "xxxxxxxxxxxxxxxx" "xxxxxxx3xxxxxxx2");
+    drums (w, LinnDrum, "ss", "......x.......x.");
+
+    w.show (Sub808);
+    p ("sub808_decay", 0.6f); p ("sub808_overdrive", 0.1f); p ("sub808_tone", 0.45f); p ("sub808_glide", 0.3f); p ("sub808_volume", 0.7f);
+    line (w, Sub808, bars ({ "F1 - - - - - - F1 - - D#1 - - - - -", "A#0 - - - - - - A#0 - - C1~ - - - - -",
+                             "G#0 - - - - - - G#0 - - A#0 - - - - -", "C1 - - - - - - C1 - - D#1 - - E1 - -" }));
+
+    w.show (EPiano);
+    p ("epiano_octave", 2); p ("epiano_chord", 9); p ("epiano_type", 0); p ("epiano_tone", 0.45f); p ("epiano_tremolo", 0.4f);
+    p ("epiano_reverb", 0.3f); p ("epiano_volume", 0.6f);
+    line (w, EPiano, bars ({ "F3 - - - - - . . . . F3 - - - . .", "A#2 - - - - - . . . . A#2 - - - . .",
+                             "G#2 - - - - - . . . . G#2 - - - . .", "C3 - - - - - . . . . C3 - - - . ." }));
+
+    w.show (Strings);
+    p ("strings_chord", 1); p ("strings_attack", 0.6f); p ("strings_release", 0.6f); p ("strings_brightness", 0.4f); p ("strings_volume", 0.3f);
+    p ("strings_reverb", 0.4f);
+    line (w, Strings, bars ({ rest16, rest16, held ("G#3", 16), held ("C4", 16) }));
+}
+
+void funk (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 105); p ("swing", 0.1f); p ("key", 4); p ("scale", 9); p ("bars", 3);
+    p ("echoTime", 2); p ("echoFeedback", 0.25f); p ("echoLevel", 0.3f); p ("reverbSize", 0.45f); p ("reverbLevel", 0.3f); p ("comp", 0.35f);
+
+    w.show (AcousticKit);
+    p ("kit_gs_level", 0.3f); p ("kit_ch_level", 0.4f);
+    drums (w, AcousticKit, "bd", "x..x..x...x..x..");
+    drums (w, AcousticKit, "sd", "....X.......X...");
+    drums (w, AcousticKit, "gs", "......x..x....x.");
+    drums (w, AcousticKit, "ch", "xxxxxxxxxxxxxx.x");
+    drums (w, AcousticKit, "oh", "..............x.");
+    drums (w, AcousticKit, "cr", "x..............................................................." );
+
+    w.show (EBass);
+    p ("ebass_octave", 2); p ("ebass_type", 1); p ("ebass_tone", 0.6f); p ("ebass_volume", 0.7f);
+    const juce::String slap = "E1! . . E2 E1 . G1 . E1 . A1 . B1 . D2 E2 ";
+    line (w, EBass, bars ({ slap, slap, slap, "E1! . . E2 E1 . G1 . A1 . A1 . B1 D2 E2 G2" }));
+
+    w.show (EPiano);
+    p ("epiano_octave", 2); p ("epiano_chord", 0); p ("epiano_type", 2); p ("epiano_tone", 0.6f); p ("epiano_volume", 0.5f);
+    line (w, EPiano, ". . E4 G4 . E4 . . D4 . E4 . . G4 A4 .");
+
+    w.show (Pluck);
+    p ("pluck_octave", 2); p ("pluck_chord", 1); p ("pluck_type", 2); p ("pluck_strum", 0.1f); p ("pluck_volume", 0.5f);
+    line (w, Pluck, ". . E3 . . . E3 . . . E3 . . . E3 .");
+
+    w.show (Brass);
+    p ("brass_octave", 2); p ("brass_chord", 1); p ("brass_type", 3); p ("brass_brightness", 0.65f); p ("brass_volume", 0.5f);
+    p ("brass_reverb", 0.2f);
+    line (w, Brass, bars ({ rest16, ". . . . . . . . . . . . E4! . E4 -", rest16, ". . . . . . . . A4! . G4 . E4 - - ." }));
+}
+
+void pop (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 110); p ("swing", 0.0f); p ("key", 0); p ("scale", 2); p ("bars", 3);
+    p ("echoTime", 2); p ("echoFeedback", 0.3f); p ("echoLevel", 0.35f); p ("reverbSize", 0.55f); p ("reverbLevel", 0.4f); p ("comp", 0.35f);
+
+    w.show (AcousticKit);
+    p ("kit_sd_reverb", 0.15f); p ("kit_ch_level", 0.4f);
+    drums (w, AcousticKit, "bd", "x.......x.x.....");
+    drums (w, AcousticKit, "sd", "....x.......x..." "....x.......x..." "....x.......x..." "....x.......x.xx");
+    drums (w, AcousticKit, "ch", "x.x.x.x.x.x.x.x.");
+    drums (w, AcousticKit, "cr", "x..............................................................." );
+
+    w.show (EBass);
+    p ("ebass_type", 2); p ("ebass_volume", 0.65f);
+    line (w, EBass, bars ({ "C2 . C2 . C2 . C2 . C2 . C2 . C2 . C2 .", "G1 . G1 . G1 . G1 . G1 . G1 . G1 . G1 .",
+                            "A1 . A1 . A1 . A1 . A1 . A1 . A1 . A1 .", "F1 . F1 . F1 . F1 . F1 . F1 . G1 . G1 ." }));
+
+    w.show (Piano);
+    p ("piano_octave", 2); p ("piano_chord", 1); p ("piano_type", 3); p ("piano_brightness", 0.6f); p ("piano_volume", 0.5f);
+    line (w, Piano, bars ({ "C3 . . C3 . . C3 . . . C3 . . C3 . .", "G2 . . G2 . . G2 . . . G2 . . G2 . .",
+                            "A2 . . A2 . . A2 . . . A2 . . A2 . .", "F2 . . F2 . . F2 . . . G2 . . G2 . ." }));
+
+    w.show (SH101);
+    p ("sh101_octave", 2); p ("sh101_saw", 0.9f); p ("sh101_square", 0.3f); p ("sh101_cutoff", 0.55f); p ("sh101_reso", 0.3f);
+    p ("sh101_env", 0.3f); p ("sh101_sustain", 0.7f); p ("sh101_glide", 0.15f); p ("sh101_echo", 0.25f); p ("sh101_volume", 0.5f);
+    line (w, SH101, bars ({ "E4 - . E4 D4 . C4 . D4 - . E4 - - . .", "D4 - . D4 B3 . G3 . B3 - . D4 - - . .",
+                            "C4 - . C4 B3 . A3 . C4 - . E4 - - . .", "F4 - . E4 D4 . C4 . D4 - - - C4 - - ." }));
+}
+
+void afroHouse (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 122); p ("swing", 0.15f); p ("key", 9); p ("scale", 1); p ("bars", 3);
+    p ("echoTime", 2); p ("echoFeedback", 0.4f); p ("echoLevel", 0.45f); p ("reverbSize", 0.6f); p ("reverbLevel", 0.4f); p ("comp", 0.3f);
+    p ("pump", 0.15f);
+
+    w.show (TR909);
+    p ("tr909_ch_level", 0.35f); p ("tr909_cp_level", 0.5f); p ("tr909_cp_reverb", 0.25f);
+    drums (w, TR909, "bd", "x...x...x...x...");
+    drums (w, TR909, "cp", "....x.......x...");
+    drums (w, TR909, "ch", "..x...x...x...x.");
+
+    w.show (Percussion);
+    p ("perc_cgl_level", 0.5f); p ("perc_cgh_level", 0.45f); p ("perc_sh_level", 0.3f); p ("perc_ag_level", 0.35f); p ("perc_ag_echo", 0.3f);
+    drums (w, Percussion, "cgl", "x..x..x...x..x..");
+    drums (w, Percussion, "cgh", "...x..x.x.....x.");
+    drums (w, Percussion, "sh", "x.xxx.xxx.xxx.xx");
+    drums (w, Percussion, "ag", "x..x..x....x..x.");
+
+    w.show (WorldPerc);
+    p ("world_tlk_level", 0.45f); p ("world_djs_level", 0.4f);
+    drums (w, WorldPerc, "tlk", "................" "................" "................" "..........x..x..");
+    drums (w, WorldPerc, "djs", "..........x.....");
+
+    w.show (ModelD);
+    p ("modeld_wave", 2); p ("modeld_sub", 0.6f); p ("modeld_cutoff", 0.25f); p ("modeld_sustain", 0.6f); p ("modeld_volume", 0.7f);
+    line (w, ModelD, bars ({ "A1 - . A1 - . A1 - . . . . . . . .", "F1 - . F1 - . F1 - . . . . . . . .",
+                             "A1 - . A1 - . A1 - . . . . . . . .", "G1 - . G1 - . G1 - . . E1 - . . . ." }));
+
+    w.show (Mallets);
+    p ("mallets_octave", 2); p ("mallets_type", 4); p ("mallets_echo", 0.35f); p ("mallets_reverb", 0.3f); p ("mallets_volume", 0.6f);
+    line (w, Mallets, bars ({ "E4 . A4 . C5 . A4 . E4 . . G4 . E4 . .", "C4 . F4 . A4 . F4 . C4 . . E4 . C4 . .",
+                              "E4 . A4 . C5 . A4 . E4 . . G4 . E4 . .", "D4 . G4 . B4 . G4 . E4 - - - . . . ." }));
+}
+
+void reggae (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 76); p ("swing", 0.2f); p ("key", 7); p ("scale", 2); p ("bars", 3);
+    p ("echoTime", 3); p ("echoFeedback", 0.55f); p ("echoLevel", 0.55f); p ("reverbSize", 0.65f); p ("reverbLevel", 0.4f); p ("comp", 0.3f);
+
+    w.show (AcousticKit);
+    p ("kit_xs_level", 0.55f); p ("kit_xs_echo", 0.35f); p ("kit_ch_level", 0.35f);
+    drums (w, AcousticKit, "bd", "........x.......");
+    drums (w, AcousticKit, "xs", "........x.......");
+    drums (w, AcousticKit, "ch", "x.x.x.x.x.x.x.x.");
+    drums (w, AcousticKit, "oh", "..............x.");
+    drums (w, AcousticKit, "sd", "................................................" "............x.xx");
+
+    w.show (EBass);
+    p ("ebass_type", 0); p ("ebass_tone", 0.2f); p ("ebass_decay", 0.8f); p ("ebass_volume", 0.75f);
+    line (w, EBass, bars ({ "G1 - . . B1 . D2 - . . E2 . D2 . B1 .", "C2 - . . E2 . G2 - . . E2 . C2 . . .",
+                            "D2 - . . F#2 . A2 - . . F#2 . D2 . . .", "C2 - . . E2 . G2 - . . A2 . G2 . D2 ." }));
+
+    w.show (Pluck);
+    p ("pluck_octave", 2); p ("pluck_chord", 1); p ("pluck_type", 2); p ("pluck_strum", 0.05f); p ("pluck_echo", 0.3f); p ("pluck_volume", 0.5f);
+    line (w, Pluck, bars ({ ". . . . G3 . . . . . . . G3 . . .", ". . . . C3 . . . . . . . C3 . . .",
+                            ". . . . D3 . . . . . . . D3 . . .", ". . . . C3 . . . . . . . C3 . . ." }));
+
+    w.show (Organ);
+    p ("organ_octave", 2); p ("organ_chord", 1); p ("organ_bass", 0.5f); p ("organ_middle", 0.6f); p ("organ_high", 0.2f);
+    p ("organ_click", 0.6f); p ("organ_volume", 0.4f);
+    line (w, Organ, bars ({ ". G3 . G3 . G3 . G3 . G3 . G3 . G3 . G3", ". C3 . C3 . C3 . C3 . C3 . C3 . C3 . C3",
+                            ". D3 . D3 . D3 . D3 . D3 . D3 . D3 . D3", ". C3 . C3 . C3 . C3 . C3 . C3 . C3 . C3" }));
+
+    w.show (SoundFx);
+    p ("fx_sir_level", 0.35f); p ("fx_sir_echo", 0.5f); p ("fx_sir_decay", 0.45f);
+    drums (w, SoundFx, "sir", "................................................" "x...............");
+}
+
+void ambient (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 80); p ("swing", 0.0f); p ("key", 2); p ("scale", 8); p ("bars", 3);
+    p ("echoTime", 4); p ("echoFeedback", 0.6f); p ("echoLevel", 0.55f); p ("reverbSize", 0.95f); p ("reverbLevel", 0.65f); p ("comp", 0.35f); p ("volume", 1.0f);
+
+    w.show (Strings);
+    p ("strings_chord", 1); p ("strings_attack", 0.85f); p ("strings_release", 0.85f); p ("strings_brightness", 0.4f);
+    p ("strings_ensemble", 0.9f); p ("strings_reverb", 0.5f); p ("strings_volume", 0.4f);
+    line (w, Strings, bars ({ held ("D3", 16), held ("E3", 16), held ("B2", 16), held ("A2", 16) }));
+
+    w.show (Choir);
+    p ("choir_vowel", 1); p ("choir_chord", 1); p ("choir_attack", 0.8f); p ("choir_release", 0.8f); p ("choir_reverb", 0.6f); p ("choir_volume", 0.3f);
+    line (w, Choir, bars ({ rest16, held ("E3", 16), rest16, held ("A2", 16) }));
+
+    w.show (Mallets);
+    p ("mallets_type", 9); p ("mallets_octave", 2); p ("mallets_echo", 0.5f); p ("mallets_reverb", 0.6f); p ("mallets_volume", 0.45f);
+    line (w, Mallets, bars ({ "F#5 . . . . . . . A5 . . . . . . .", "G#5 . . . . . . . . . . . E5 . . .",
+                              "D5 . . . . . . . F#5 . . . . . . .", "C#5 . . . . . . . . . . . . . . ." }));
+
+    w.show (Mellotron);
+    p ("mellotron_chord", 0); p ("mellotron_type", 0); p ("mellotron_wow", 0.5f); p ("mellotron_echo", 0.4f); p ("mellotron_volume", 0.4f);
+    line (w, Mellotron, bars ({ rest16, "B4 - - - - - - - G#4 - - - - - - -", "A4 - - - - - - - F#4 - - - - - - -", "E4 - - - - - - - - - - - - - - -" }));
+
+    w.show (SoundFx);
+    p ("fx_rain_level", 0.4f); p ("fx_rain_decay", 0.95f);
+    drums (w, SoundFx, "rain", "x...............................................................");
+}
 } // namespace
 
 const std::vector<ExampleInfo>& examples()
@@ -636,6 +1063,19 @@ const std::vector<ExampleInfo>& examples()
         { "Studio 54", "Disco", "Disco : kick sur chaque temps, basse en octaves, cordes et orgue sur les contretemps.", 120 },
         { "Perreo", "Reggaeton", "Le dembow à la 808, percussions latines, basse 808 sur le tresillo et marimba FM.", 95 },
         { "Piano Paradise", "House", "Piano house des années 90 : stabs de piano, chœurs « aah », basse sur les contretemps, riser et impact.", 124 },
+        { "Click & Cut", "Minimal", "Minimale berlinoise : rimshots dans l'écho, percussions qui rebondissent, bleeps du 101, cymbale à l'envers.", 125 },
+        { "Steel Mill", "Hard Techno", "Kick saturé à 150 BPM, stabs en quintes du 8000, impact et riser.", 150 },
+        { "Rainforest", "Jungle", "Amen break découpé, sub profonde, nappes et chœur, rewind de sound system.", 165 },
+        { "Big Beat", "Breakbeat", "Breakbeat gras, hoover, lead du 101 et scratch.", 132 },
+        { "Late Train", "UK Garage", "2-step très chaloupé, orgue house, basse qui glisse et chœur « ooh ».", 132 },
+        { "Rotterdam", "Gabber", "Kick gabber à 185 BPM et hoover qui hurle.", 185 },
+        { "Southside", "Drill", "Hi-hats en triolets, 808 qui glisse, piano sombre et chant grégorien.", 142 },
+        { "Velvet", "R&B", "Groove lent, Rhodes en accords de 9e, basse 808 douce, charlestons en roulements.", 90 },
+        { "Get On Up", "Funk", "Batterie avec ghost notes, basse slap, clavinet, guitare funk et section de cuivres.", 105 },
+        { "Golden Hour", "Pop", "Grille I-V-vi-IV, batterie acoustique, piano, basse au médiator et mélodie qui chante.", 110 },
+        { "Kalahari", "Afro House", "Congas, agogo, talking drum, basse sur le tresillo et kalimba.", 122 },
+        { "One Drop", "Reggae", "One drop, basse ronde, skank de guitare, orgue bubble et sirène dub.", 76 },
+        { "Northern Lights", "Ambient", "Nappes de cordes et de chœur, crotales, flûtes de mellotron et pluie.", 80 },
         { "Neon Drive", "Synthwave", "Années 80 : LinnDrum à grosse snare, basse qui pulse, nappes de cordes et lead nostalgique.", 100 },
     };
     return list;
@@ -661,7 +1101,20 @@ void buildExample (int index, ExampleWriter& w)
         case 13: disco (w); break;
         case 14: reggaeton (w); break;
         case 15: pianoHouse (w); break;
-        case 16: synthwave (w); break;
+        case 16: minimal (w); break;
+        case 17: hardTechno (w); break;
+        case 18: jungle (w); break;
+        case 19: breakbeat (w); break;
+        case 20: ukGarage (w); break;
+        case 21: gabber (w); break;
+        case 22: drill (w); break;
+        case 23: rnb (w); break;
+        case 24: funk (w); break;
+        case 25: pop (w); break;
+        case 26: afroHouse (w); break;
+        case 27: reggae (w); break;
+        case 28: ambient (w); break;
+        case 29: synthwave (w); break;
         default: break;
     }
 }

@@ -239,7 +239,7 @@ StartScreen::StartScreen (TechMachineProcessor& p) : processor (p)
     {
         auto* card = exampleCards.add (new ExampleCard (examples()[(size_t) i]));
         card->onClick = [this, i] { if (onExample) onExample (i); };
-        addAndMakeVisible (card);
+        cardsContent.addAndMakeVisible (card);
     }
 }
 
@@ -283,11 +283,8 @@ void StartScreen::paint (juce::Graphics& g)
     if (! recentButtons.isEmpty())
         g.drawText (utf8 ("PROJETS RÉCENTS"), x, recentButtons[0]->getY() - 22, 300, 16, juce::Justification::centredLeft);
     if (! exampleCards.isEmpty())
-    {
-        const auto first = exampleCards[0]->getBounds();
-        g.drawText (utf8 ("PROJETS EXEMPLES — clique pour écouter et modifier"), first.getX(), first.getY() - 24, 500, 16,
+        g.drawText (utf8 ("PROJETS EXEMPLES — un par style, clique pour écouter et modifier (fais défiler)"), cardsView.getX(), cardsView.getY() - 24, 700, 16,
                     juce::Justification::centredLeft);
-    }
     g.setFont (paint::font (12.0f, false));
     g.drawText (utf8 ("Tu peux revenir ici à tout moment : menu PROJET › Accueil."), panel.getX() + 40, panel.getBottom() - 34, 600, 16,
                 juce::Justification::centredLeft);
@@ -315,12 +312,20 @@ void StartScreen::resized()
     }
 
     const int gridX = x + 390, gridY = panel.getY() + 130;
-    constexpr int columns = 3;
+    constexpr int columns = 3, cardH = 92;
+    if (cardsView.getViewedComponent() == nullptr)
+    {
+        cardsView.setViewedComponent (&cardsContent, false);
+        cardsView.setScrollBarsShown (true, false);
+        cardsView.setScrollBarThickness (10);
+        addAndMakeVisible (cardsView);
+    }
+    cardsView.setBounds (gridX, gridY, panel.getRight() - 40 - gridX, panel.getBottom() - 56 - gridY);
     const int rows = (exampleCards.size() + columns - 1) / columns;
-    const int cardW = (panel.getRight() - 40 - gridX - 10 * (columns - 1)) / columns;
-    const int cardH = juce::jmin (100, (panel.getBottom() - 60 - gridY) / juce::jmax (1, rows) - 8);
+    const int cardW = (cardsView.getWidth() - 14 - 10 * (columns - 1)) / columns;
+    cardsContent.setSize (cardsView.getWidth() - 12, rows * (cardH + 8));
     for (int i = 0; i < exampleCards.size(); ++i)
-        exampleCards[i]->setBounds (gridX + (i % columns) * (cardW + 10), gridY + (i / columns) * (cardH + 8), cardW, cardH);
+        exampleCards[i]->setBounds ((i % columns) * (cardW + 10), (i / columns) * (cardH + 8), cardW, cardH);
 }
 
 //==============================================================================

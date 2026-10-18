@@ -31,6 +31,8 @@ juce::PropertiesFile& settings()
         o.applicationName = "Tech Machine";
         o.filenameSuffix = "settings";
         o.folderName = "Tech Machine";
+        // Automated tests keep their own settings, away from the user's recent projects and choices.
+        if (juce::SystemStats::getEnvironmentVariable ("TECHMACHINE_TEST_SETTINGS", {}).isNotEmpty()) o.folderName = "Tech Machine Tests";
         o.osxLibrarySubFolder = "Application Support";
         return o;
     }());
