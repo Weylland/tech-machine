@@ -23,17 +23,24 @@ juce_add_plugin(TechMachine
 target_sources(TechMachine PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
+    Source/processor/Editing.cpp
+    Source/processor/Midi.cpp
+    Source/processor/Project.cpp
     Source/core/Examples.cpp
     Source/core/Help.cpp
     Source/core/Language.cpp
     Source/core/Translations.cpp
     Source/core/MachineDefs.cpp
+    Source/core/MidiLearn.cpp
     Source/core/Music.cpp
     Source/core/PatternLibrary.cpp
     Source/core/Presets.cpp
     Source/core/Styles.cpp
     Source/dsp/DrumVoices.cpp
+    Source/machines/DrumMachine.cpp
+    Source/machines/Instruments.cpp
     Source/machines/Machines.cpp
+    Source/machines/SampleBank.cpp
     Source/ui/MachinePanel.cpp
     Source/ui/Paint.cpp)
 

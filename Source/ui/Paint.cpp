@@ -583,12 +583,12 @@ void icon (Graphics& g, const juce::String& name, Rect r, Colour colour)
     else if (name == "globe")
     {
         const auto c = b.getCentre();
-        const float t = juce::jmax (1.2f, s * 0.08f), r = s * 0.38f;
-        g.drawEllipse (Rect (2.0f * r, 2.0f * r).withCentre (c), t);
-        g.drawEllipse (Rect (r, 2.0f * r).withCentre (c), t);
-        g.drawLine (c.x - r, c.y, c.x + r, c.y, t);
-        g.drawLine (c.x - r * 0.85f, c.y - r * 0.5f, c.x + r * 0.85f, c.y - r * 0.5f, t);
-        g.drawLine (c.x - r * 0.85f, c.y + r * 0.5f, c.x + r * 0.85f, c.y + r * 0.5f, t);
+        const float t = juce::jmax (1.2f, s * 0.08f), radius = s * 0.38f;
+        g.drawEllipse (Rect (2.0f * radius, 2.0f * radius).withCentre (c), t);
+        g.drawEllipse (Rect (radius, 2.0f * radius).withCentre (c), t);
+        g.drawLine (c.x - radius, c.y, c.x + radius, c.y, t);
+        g.drawLine (c.x - radius * 0.85f, c.y - radius * 0.5f, c.x + radius * 0.85f, c.y - radius * 0.5f, t);
+        g.drawLine (c.x - radius * 0.85f, c.y + radius * 0.5f, c.x + radius * 0.85f, c.y + radius * 0.5f, t);
     }
     else if (name == "patterns")
     {
@@ -596,9 +596,9 @@ void icon (Graphics& g, const juce::String& name, Rect r, Colour colour)
         for (int row = 0; row < 3; ++row)
             for (int col = 0; col < 3; ++col)
             {
-                const Rect r (x0 + (float) col * (cell + gap), y0 + (float) row * (cell + gap), cell, cell);
-                if ((row + col) % 2 == 0) g.fillRoundedRectangle (r, s * 0.04f);
-                else g.drawRoundedRectangle (r.reduced (s * 0.02f), s * 0.04f, juce::jmax (1.0f, s * 0.05f));
+                const Rect square (x0 + (float) col * (cell + gap), y0 + (float) row * (cell + gap), cell, cell);
+                if ((row + col) % 2 == 0) g.fillRoundedRectangle (square, s * 0.04f);
+                else g.drawRoundedRectangle (square.reduced (s * 0.02f), s * 0.04f, juce::jmax (1.0f, s * 0.05f));
             }
     }
     else if (name == "folder")

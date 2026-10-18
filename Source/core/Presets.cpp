@@ -7,7 +7,7 @@ namespace techno
 {
 namespace
 {
-using V = std::vector<std::pair<const char*, float>>;
+using V = std::vector<PresetValue>;
 
 // Drum kits: the same moods for every kit, written on the rows that play each role.
 std::vector<SoundPreset> drumKits (const MachineDef& def)

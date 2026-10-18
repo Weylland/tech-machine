@@ -492,11 +492,11 @@ MainView::MainView (TechMachineProcessor& p)
     auto& hooks = midiLearnHooks();
     hooks.learn = [this] (const juce::String& id)
     {
-        processor.startMidiLearn (id);
+        processor.midiLearn.start (id);
         showInfo (utf8 ("MIDI learn"), utf8 ("Tourne maintenant le bouton ou le fader de ton contrôleur MIDI : il pilotera ce réglage."), audioButton);
     };
-    hooks.forget = [this] (const juce::String& id) { processor.forgetMidiLearn (id); };
-    hooks.controllerFor = [this] (const juce::String& id) { return processor.midiControllerFor (id); };
+    hooks.forget = [this] (const juce::String& id) { processor.midiLearn.forget (id); };
+    hooks.controllerFor = [this] (const juce::String& id) { return processor.midiLearn.controllerFor (id); };
 
     styleButton (audioButton, juce::Colour (0xff3a3b40));
     audioButton.onClick = [this] { showAudioSettings(); };
@@ -898,10 +898,10 @@ bool MainView::keyPressed (const juce::KeyPress& key)
 
 void MainView::timerCallback()
 {
-    if (processor.midiMapVersion.load() != lastMidiMapVersion)
+    if (processor.midiLearn.version.load() != lastMidiMapVersion)
     {
-        lastMidiMapVersion = processor.midiMapVersion.load();
-        processor.saveMidiMap();
+        lastMidiMapVersion = processor.midiLearn.version.load();
+        processor.midiLearn.save();
     }
     if (const int target = processor.midiTargetMachine(); target != lastMidiTarget)
     {
@@ -914,9 +914,9 @@ void MainView::timerCallback()
         grid.setPlayhead (processor.currentStep.load());
         if (processor.patternVersion.load() != grid.knownVersion) grid.reload();
     }
-    if (processor.sampleVersion.load() != lastSampleVersion)
+    if (processor.sampleVersion() != lastSampleVersion)
     {
-        lastSampleVersion = processor.sampleVersion.load();
+        lastSampleVersion = processor.sampleVersion();
         for (auto* panel : panels) panel->refreshSampleNames();
     }
     if (midiRecordButton.getToggleState() != processor.isRecordingNotes())

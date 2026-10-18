@@ -1,12 +1,14 @@
 #pragma once
 
 #include "core/Examples.h"
+#include "core/MidiLearn.h"
 #include "core/PatternLibrary.h"
 #include "core/Presets.h"
 #include "core/Styles.h"
 #include "dsp/Effects.h"
 #include "dsp/Reverb.h"
 #include "machines/Machines.h"
+#include "machines/SampleBank.h"
 
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -26,7 +28,7 @@ public:
     bool hasEditor() const override { return true; }
 
     const juce::String getName() const override { return "Tech Machine"; }
-    bool acceptsMidi() const override { return false; }
+    bool acceptsMidi() const override { return true; }
     bool producesMidi() const override { return false; }
     double getTailLengthSeconds() const override { return 0.0; }
 
@@ -60,25 +62,22 @@ public:
     void applyPattern (int machineType, const techno::Pattern&);
     void applyPreset (int machineType, const techno::SoundPreset&);
 
-    // MIDI: the machine that receives the keyboard / pads, recording of what is played, MIDI learn.
+    // MIDI: the machine that receives the keyboard / pads, recording of what is played (MIDI learn: see midiLearn).
     void setMidiTarget (int machineType) { midiTarget = machineType; }
     int midiTargetMachine() const;
     void setRecordNotes (bool on);
     void previewNote (int machineType, int midiNote, bool on);   // plays a note right away (piano roll)
     bool isRecordingNotes() const { return recordNotes.load(); }
-    void startMidiLearn (const juce::String& paramId);
-    void forgetMidiLearn (const juce::String& paramId);
-    int midiControllerFor (const juce::String& paramId) const;
-    void saveMidiMap();
+    std::atomic<int> midiActivity { 0 };
 
     // Sampler pads.
-    static constexpr int numPads = 8;
+    static constexpr int numPads = techno::SampleBank::numPads;
     bool loadSamplePad (int pad, const juce::File&);
-    bool chopLoop (const juce::File&);
+    bool chopLoop (const juce::File& loop);
     void clearSamplePads();
-    juce::String samplePadName (int pad) const;
-    std::atomic<int> sampleVersion { 0 };
-    std::atomic<int> midiMapVersion { 0 }, midiActivity { 0 };
+    juce::String samplePadName (int pad) const { return samples.name (pad); }
+    int sampleVersion() const { return samples.version.load(); }
+
     juce::RangedAudioParameter* presetParameter (int machineType, const char* key);
     void shiftMachine (int machineType, int direction);
     void duplicateFirstBar (int machineType);
@@ -114,6 +113,7 @@ public:
     juce::File getLastRecording() const { return lastRecording; }
 
     juce::AudioProcessorValueTreeState apvts;
+    techno::MidiLearn midiLearn { apvts };
     std::atomic<bool> playing { false };
     std::atomic<int> currentStep { -1 };
     std::atomic<int> patternVersion { 0 };
@@ -182,21 +182,16 @@ private:
     int quantizedStep() const;
     void recordNoteOn (int machineType, int note, float velocity);
     void recordNoteOff (int machineType, int note);
-    void loadMidiMap();
+    int recordedSemitone (int machineType, int note) const;
     std::atomic<int> midiTarget { -1 };
     std::atomic<bool> recordNotes { false };
-    std::atomic<juce::RangedAudioParameter*> learnTarget { nullptr };
-    std::array<std::atomic<juce::RangedAudioParameter*>, 128> ccMap {};
     int recordStart[128] {};
 
     struct PreviewNote { int type = 0, note = 0; bool on = false; };
     std::array<PreviewNote, 64> previewQueue {};
     juce::AbstractFifo previewFifo { 64 };
 
-    std::array<std::atomic<const techno::SampleData*>, numPads> sampleSlots {};
-    std::vector<std::unique_ptr<techno::SampleData>> sampleStore;   // kept until the end: the audio thread may still play an old sound
-    static std::shared_ptr<const juce::AudioBuffer<float>> readAudioFile (const juce::File&, double& sampleRate);
-    void setPad (int pad, std::shared_ptr<const juce::AudioBuffer<float>>, double rate, int start, int end, const juce::String& name, const juce::String& path);
+    techno::SampleBank samples;
 
     juce::TimeSliceThread writerThread { "Tech Machine recorder" };
     std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> threadedWriter;
