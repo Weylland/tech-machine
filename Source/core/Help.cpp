@@ -96,6 +96,13 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "Des sons tout faits pour cette machine : les plus célèbres (piano électrique du DX7, acid de la 303, supersaw de la trance, "
             "orgue gospel, 808 du trap…) ou, sur une boîte à rythmes, des kits (hard techno, trap, lo-fi, dub…).\n\n"
             "Ça remplace les réglages du son, pas tes notes. Tu peux ensuite tourner les boutons pour l'adapter." } },
+        { "machine.roll", { "Piano roll",
+            "Une autre façon d'écrire les notes : une grille avec les hauteurs (de bas en haut) et les pas (de gauche à droite), "
+            "comme dans les logiciels de musique.\n\n"
+            "Clique pour poser une note, glisse vers la droite pour l'allonger, clic droit (ou re-clic) pour l'effacer. "
+            "Les lignes grisées sont hors de la gamme choisie.\n\n"
+            "Sur les synthés polyphoniques, tu peux empiler plusieurs notes au même pas pour écrire tes propres accords. "
+            "Le bouton PAS À PAS revient aux cases habituelles." } },
         { "machine.more", { "Outils",
             "Copier / coller la partie, dupliquer la 1re mesure sur toute la séquence, décaler toute la partie d'un pas "
             "vers la gauche ou la droite, ou tout effacer." } },

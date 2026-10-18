@@ -18,17 +18,20 @@ struct TrackData
     std::array<std::array<std::uint8_t, maxSteps>, maxDrumRows> rolls {};
     std::array<bool, maxSteps> on {}, accent {}, slide {};
     std::array<int, maxSteps> note {};
+    std::array<std::uint64_t, maxSteps> chord {};
 };
 
 // Sequencer data of one machine, shared between the UI (writes) and the audio thread (reads):
 // every cell is atomic. Drum machines use hits + accent, synths use on/note/accent/slide
 // (slide = glide for mono synths, hold the chord for poly synths).
+// chord: notes written freely in the piano roll of a poly synth, one bit per semitone; 0 = chord built from note + chord type.
 struct Track
 {
     std::array<std::array<std::atomic<bool>, maxSteps>, maxDrumRows> hits;
     std::array<std::array<std::atomic<std::uint8_t>, maxSteps>, maxDrumRows> rolls;   // 0 = single hit, 2..4 = roll
     std::array<std::atomic<bool>, maxSteps> on, accent, slide;
     std::array<std::atomic<int>, maxSteps> note;
+    std::array<std::atomic<std::uint64_t>, maxSteps> chord;
 
     Track() { clear(); }
 
@@ -42,6 +45,7 @@ struct Track
         {
             on[(size_t) i] = accent[(size_t) i] = slide[(size_t) i] = false;
             note[(size_t) i] = 0;
+            chord[(size_t) i] = 0;
         }
     }
 
@@ -60,6 +64,7 @@ struct Track
             d.accent[s] = accent[s].load();
             d.slide[s] = slide[s].load();
             d.note[s] = note[s].load();
+            d.chord[s] = chord[s].load();
         }
         return d;
     }
@@ -78,6 +83,7 @@ struct Track
             accent[s] = d.accent[s];
             slide[s] = d.slide[s];
             note[s] = d.note[s];
+            chord[s] = d.chord[s];
         }
     }
 
@@ -104,6 +110,7 @@ struct Track
             accent[dst] = accent[src].load();
             slide[dst] = slide[src].load();
             note[dst] = note[src].load();
+            chord[dst] = chord[src].load();
         }
     }
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../PluginProcessor.h"
+#include "PianoRoll.h"
 #include "Widgets.h"
 
 namespace techno
@@ -36,6 +37,9 @@ private:
     void showSoundMenu();
 
 public:
+    // Switches between the step keys and the piano roll (synths).
+    void setRollMode (bool on);
+
     // Shows the MIDI badge on the machine that receives the keyboard.
     void setMidiTarget (bool isTarget)
     {
@@ -45,7 +49,9 @@ public:
     }
 
 private:
-    bool midiTarget = false;
+    bool midiTarget = false, rollMode = false;
+    std::unique_ptr<PianoRoll> roll;
+    IconButton rollButton { "keys", "PIANO ROLL" };
     void showMoreMenu();
     void showRowFx (int row);
     InfoButton& addInfo (const HelpText&);

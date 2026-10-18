@@ -949,9 +949,16 @@ std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
         e->setAttribute ("on", encodeBools (m->track.on));
         e->setAttribute ("slide", encodeBools (m->track.slide));
 
-        juce::StringArray notes;
+        juce::StringArray notes, chords;
+        bool anyChord = false;
         for (auto& n : m->track.note) notes.add (juce::String (n.load()));
+        for (auto& c : m->track.chord)
+        {
+            chords.add (juce::String::toHexString ((juce::int64) c.load()));
+            anyChord = anyChord || c.load() != 0;
+        }
         e->setAttribute ("note", notes.joinIntoString (","));
+        if (anyChord) e->setAttribute ("chord", chords.joinIntoString (","));
     }
     return xml;
 }
@@ -988,6 +995,9 @@ void TechMachineProcessor::restoreProjectXml (const juce::XmlElement& source)
             auto notes = juce::StringArray::fromTokens (e->getStringAttribute ("note"), ",", {});
             for (int i = 0; i < maxSteps; ++i)
                 m->track.note[(size_t) i] = juce::jlimit (0, noteRange - 1, notes[i].getIntValue());
+            auto chords = juce::StringArray::fromTokens (e->getStringAttribute ("chord"), ",", {});
+            for (int i = 0; i < maxSteps && i < chords.size(); ++i)
+                m->track.chord[(size_t) i] = (std::uint64_t) chords[i].getHexValue64() & ((1ull << noteRange) - 1);
         }
     }
     xml.removeChildElement (patterns, true);

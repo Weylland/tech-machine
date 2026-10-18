@@ -546,6 +546,16 @@ void icon (Graphics& g, const juce::String& name, Rect r, Colour colour)
             g.drawLine (corner.x, corner.y, corner.x, corner.y + dy, t);
         }
     }
+    else if (name == "keys")
+    {
+        const float t = juce::jmax (1.2f, s * 0.08f);
+        const auto box = b.reduced (s * 0.12f, s * 0.2f);
+        g.drawRect (box, t);
+        for (int i = 1; i < 4; ++i)
+            g.drawVerticalLine ((int) (box.getX() + box.getWidth() * (float) i / 4.0f), box.getY(), box.getBottom());
+        for (float f : { 0.25f, 0.5f, 0.75f })
+            g.fillRect (Rect (box.getWidth() * 0.12f, box.getHeight() * 0.55f).withCentre ({ box.getX() + box.getWidth() * f, box.getY() + box.getHeight() * 0.275f }));
+    }
     else if (name == "sound")
     {
         // A small waveform.

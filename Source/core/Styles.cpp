@@ -1511,6 +1511,7 @@ void shiftTrack (Track& t, int steps, int direction)
         copy.accent[dst] = t.accent[src].load();
         copy.slide[dst] = t.slide[src].load();
         copy.note[dst] = t.note[src].load();
+        copy.chord[dst] = t.chord[src].load();
     }
     for (int s = 0; s < steps; ++s)
     {
@@ -1524,6 +1525,7 @@ void shiftTrack (Track& t, int steps, int direction)
         t.accent[i] = copy.accent[i].load();
         t.slide[i] = copy.slide[i].load();
         t.note[i] = copy.note[i].load();
+        t.chord[i] = copy.chord[i].load();
     }
     t.tile (steps);
 }

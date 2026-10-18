@@ -317,7 +317,7 @@ public:
     {
         const auto st = (size_t) s.step, prev = (size_t) s.prevStep;
         const bool held = gateOpen && track.on[prev] && track.slide[prev] && track.on[st]
-                       && track.note[prev].load() == track.note[st].load();
+                       && track.note[prev].load() == track.note[st].load() && track.chord[prev].load() == track.chord[st].load();
         if (held)
         {
             gateCountdown = gateSamples (s);
@@ -326,15 +326,25 @@ public:
         if (! track.on[st]) return;
 
         releaseAll();
-        const int root = snapToScale (s.scale, track.note[st]);
-        int intervals[5];
-        const int count = chordIntervals (s.scale, root, (int) values[1], intervals);
-        const int base = machineBaseNote (def, s.key, octave) + root;
-
         Chord chord;
-        chord.count = count;
-        for (int k = 0; k < count; ++k) chord.notes[k] = base + intervals[k];
-        if (count >= 3) chord = closestVoicing (chord);
+        if (const auto mask = track.chord[st].load(); mask != 0)
+        {
+            // Notes written in the piano roll: played exactly as written.
+            const int base = machineBaseNote (def, s.key, octave);
+            for (int n = 0; n < noteRange && chord.count < Chord::maxNotes; ++n)
+                if ((mask >> n) & 1u) chord.notes[chord.count++] = base + snapToScale (s.scale, n);
+        }
+        else
+        {
+            const int root = snapToScale (s.scale, track.note[st]);
+            int intervals[5];
+            const int count = chordIntervals (s.scale, root, (int) values[1], intervals);
+            const int base = machineBaseNote (def, s.key, octave) + root;
+            chord.count = count;
+            for (int k = 0; k < count; ++k) chord.notes[k] = base + intervals[k];
+            if (count >= 3) chord = closestVoicing (chord);
+        }
+        const int count = chord.count;
         previousChord = chord;
 
         // Same loudness whether one note or a five-note chord is played.
@@ -392,7 +402,8 @@ protected:
 private:
     struct Chord
     {
-        int notes[5] {};
+        static constexpr int maxNotes = 8;
+        int notes[maxNotes] {};
         int count = 0;
 
         float mean() const
