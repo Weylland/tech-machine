@@ -1,4 +1,5 @@
 #include "Machines.h"
+#include "../core/Styles.h"
 #include "../dsp/Effects.h"
 
 namespace techno
@@ -121,6 +122,35 @@ public:
         for (auto& n : rollsLeft) n = 0;
     }
 
+    // General MIDI drum map first (what pads and keyboards send), then the rows in order from note 36.
+    int rowForMidiNote (int note) const override
+    {
+        struct Gm { int note; Role role; };
+        static constexpr Gm map[] {
+            { 35, Role::Kick }, { 36, Role::Kick }, { 37, Role::Rim }, { 38, Role::Snare }, { 39, Role::Clap }, { 40, Role::Ghost },
+            { 41, Role::LowTom }, { 42, Role::ClosedHat }, { 43, Role::LowTom }, { 44, Role::ClosedHat }, { 45, Role::MidTom },
+            { 46, Role::OpenHat }, { 47, Role::MidTom }, { 48, Role::HighTom }, { 49, Role::Crash }, { 50, Role::HighTom },
+            { 51, Role::Ride }, { 52, Role::Cymbal }, { 54, Role::Tambourine }, { 55, Role::Cymbal }, { 56, Role::Cowbell },
+            { 57, Role::Crash }, { 59, Role::Ride }, { 60, Role::HighBongo }, { 61, Role::LowBongo }, { 62, Role::HighConga },
+            { 63, Role::HighConga }, { 64, Role::LowConga }, { 65, Role::HighTimbale }, { 66, Role::LowTimbale }, { 67, Role::Agogo },
+            { 68, Role::Agogo }, { 70, Role::Shaker }, { 73, Role::Guiro }, { 74, Role::Guiro }, { 75, Role::Claves },
+            { 76, Role::Perc }, { 77, Role::Perc }, { 80, Role::Triangle }, { 81, Role::Triangle }, { 82, Role::Shaker },
+        };
+        for (auto& g : map)
+            if (g.note == note)
+                if (const int row = rowForRole (def, g.role); row >= 0) return row;
+        return numRows > 0 ? ((note - 36) % numRows + numRows) % numRows : -1;
+    }
+
+    void liveNoteOn (int note, float velocity) override
+    {
+        const int row = rowForMidiNote (note);
+        if (row < 0) return;
+        if (def.rows[(size_t) row].role == Role::ClosedHat && openHatRow >= 0) voices[(size_t) openHatRow]->choke();
+        voices[(size_t) row]->trigger (0.4f + velocity * 0.6f, settings[row]);
+        if (def.rows[(size_t) row].role == Role::Kick) kickHit = true;
+    }
+
     void render (Frame& f) override
     {
         for (int i = 0; i < numRows; ++i)
@@ -241,6 +271,26 @@ public:
     {
         voice->gateOff();
         gateCountdown = 0;
+        heldCount = 0;
+    }
+
+    // Mono: the last key held plays; releasing it returns to the previous one with a glide (legato).
+    void liveNoteOn (int note, float velocity) override
+    {
+        const bool legato = heldCount > 0;
+        if (heldCount < (int) std::size (held)) held[heldCount++] = note;
+        voice->noteOn (note, velocity > 0.85f, legato);
+        gateCountdown = 0;
+    }
+
+    void liveNoteOff (int note) override
+    {
+        int k = 0;
+        for (int i = 0; i < heldCount; ++i)
+            if (held[i] != note) held[k++] = held[i];
+        heldCount = k;
+        if (heldCount > 0) voice->noteOn (held[heldCount - 1], false, true);
+        else voice->gateOff();
     }
 
 private:
@@ -248,6 +298,7 @@ private:
 
     std::unique_ptr<MonoVoice> voice;
     Decimator2x decimator;
+    int held[16] {}, heldCount = 0;
 };
 
 class PolyMachine : public SynthMachine
@@ -322,6 +373,14 @@ public:
         f.left = decimatorL.process (l0, l1);
         f.right = decimatorR.process (r0, r1);
         postProcess (f.left, f.right);
+    }
+
+    void liveNoteOn (int note, float velocity) override { startVoice (note, 0.5f + velocity * 0.7f); }
+
+    void liveNoteOff (int note) override
+    {
+        for (auto& v : voices)
+            if (v->isActive() && v->note == note) v->release();
     }
 
 protected:

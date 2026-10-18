@@ -59,6 +59,17 @@ public:
     void clearMachine (int machineType);
     void applyPattern (int machineType, const techno::Pattern&);
     void applyPreset (int machineType, const techno::SoundPreset&);
+
+    // MIDI: the machine that receives the keyboard / pads, recording of what is played, MIDI learn.
+    void setMidiTarget (int machineType) { midiTarget = machineType; }
+    int midiTargetMachine() const;
+    void setRecordNotes (bool on);
+    bool isRecordingNotes() const { return recordNotes.load(); }
+    void startMidiLearn (const juce::String& paramId);
+    void forgetMidiLearn (const juce::String& paramId);
+    int midiControllerFor (const juce::String& paramId) const;
+    void saveMidiMap();
+    std::atomic<int> midiMapVersion { 0 }, midiActivity { 0 };
     juce::RangedAudioParameter* presetParameter (int machineType, const char* key);
     void shiftMachine (int machineType, int direction);
     void duplicateFirstBar (int machineType);
@@ -157,6 +168,17 @@ private:
     juce::String name;
     juce::File file;
     std::atomic<bool> dirty { false };
+
+    void handleMidi (const juce::MidiBuffer&);
+    int quantizedStep() const;
+    void recordNoteOn (int machineType, int note, float velocity);
+    void recordNoteOff (int machineType, int note);
+    void loadMidiMap();
+    std::atomic<int> midiTarget { -1 };
+    std::atomic<bool> recordNotes { false };
+    std::atomic<juce::RangedAudioParameter*> learnTarget { nullptr };
+    std::array<std::atomic<juce::RangedAudioParameter*>, 128> ccMap {};
+    int recordStart[128] {};
 
     juce::TimeSliceThread writerThread { "Tech Machine recorder" };
     std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> threadedWriter;

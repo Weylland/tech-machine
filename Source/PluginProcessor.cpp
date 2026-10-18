@@ -98,6 +98,8 @@ TechMachineProcessor::TechMachineProcessor()
 
     name = utf8 ("Sans titre");
     apvts.state.addListener (this);
+    for (auto& r : recordStart) r = -1;
+    loadMidiMap();
 }
 
 TechMachineProcessor::~TechMachineProcessor()
@@ -208,7 +210,7 @@ void TechMachineProcessor::prepareToPlay (double newSampleRate, int samplesPerBl
     muteCoef = 1.0f - decayCoef (0.006f, sampleRate);
 }
 
-void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
     juce::ScopedNoDenormals noDenormals;
 
@@ -248,6 +250,9 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
     if (play && hostPpq.hasValue())
         syncToHost (*hostPpq);
+
+    handleMidi (midi);
+    midi.clear();
 
     bool anySolo = false;
     for (auto& s : strips)
@@ -616,6 +621,160 @@ void TechMachineProcessor::applyPattern (int type, const Pattern& pattern)
     undoManager.beginNewTransaction();
     beginPatternEdit();
     techno::applyPattern (machines[(size_t) type]->track, machineDef (type), context(), pattern);
+    touchPattern();
+}
+
+//==============================================================================
+// MIDI
+
+int TechMachineProcessor::midiTargetMachine() const
+{
+    const int t = midiTarget.load();
+    if (t >= 0 && t < numMachines && isShown (t)) return t;
+    for (int candidate : rackOrder)
+        if (isShown (candidate)) return candidate;
+    return -1;
+}
+
+void TechMachineProcessor::setRecordNotes (bool on)
+{
+    if (on && ! recordNotes)
+    {
+        undoManager.beginNewTransaction();
+        beginPatternEdit();
+    }
+    for (auto& s : recordStart) s = -1;
+    recordNotes = on;
+}
+
+void TechMachineProcessor::startMidiLearn (const juce::String& paramId) { learnTarget = apvts.getParameter (paramId); }
+
+void TechMachineProcessor::forgetMidiLearn (const juce::String& paramId)
+{
+    auto* p = apvts.getParameter (paramId);
+    for (auto& c : ccMap)
+        if (c.load() == p) c = nullptr;
+    ++midiMapVersion;
+}
+
+int TechMachineProcessor::midiControllerFor (const juce::String& paramId) const
+{
+    auto* p = apvts.getParameter (paramId);
+    for (int cc = 0; cc < 128; ++cc)
+        if (p != nullptr && ccMap[(size_t) cc].load() == p) return cc;
+    return -1;
+}
+
+// The assignments belong to the controller, not to a song: they are kept in the application settings.
+void TechMachineProcessor::saveMidiMap()
+{
+    juce::StringArray entries;
+    for (int cc = 0; cc < 128; ++cc)
+        if (auto* p = ccMap[(size_t) cc].load())
+            entries.add (juce::String (cc) + "=" + p->getParameterID());
+    techno::settings().setValue ("midiMap", entries.joinIntoString (";"));
+    techno::settings().saveIfNeeded();
+}
+
+void TechMachineProcessor::loadMidiMap()
+{
+    for (auto& entry : juce::StringArray::fromTokens (techno::settings().getValue ("midiMap"), ";", ""))
+    {
+        const int cc = entry.upToFirstOccurrenceOf ("=", false, false).getIntValue();
+        if (cc >= 0 && cc < 128)
+            ccMap[(size_t) cc] = apvts.getParameter (entry.fromFirstOccurrenceOf ("=", false, false));
+    }
+}
+
+int TechMachineProcessor::quantizedStep() const
+{
+    if (stepIndex < 0) return 0;
+    const double nominal = sampleRate * stepSeconds();
+    return samplesToNextStep < nominal * 0.5 ? (stepIndex + 1) % lengthSteps : stepIndex;
+}
+
+void TechMachineProcessor::handleMidi (const juce::MidiBuffer& midi)
+{
+    for (const auto meta : midi)
+    {
+        const auto m = meta.getMessage();
+        if (m.isController())
+        {
+            const int cc = m.getControllerNumber();
+            if (auto* learn = learnTarget.exchange (nullptr))
+            {
+                for (auto& c : ccMap)
+                    if (c.load() == learn) c = nullptr;
+                ccMap[(size_t) cc] = learn;
+                ++midiMapVersion;
+            }
+            if (auto* p = ccMap[(size_t) cc].load())
+                p->setValueNotifyingHost ((float) m.getControllerValue() / 127.0f);
+            continue;
+        }
+        if (! m.isNoteOnOrOff()) continue;
+
+        const int t = midiTargetMachine();
+        if (t < 0) continue;
+        const int note = m.getNoteNumber();
+        ++midiActivity;
+        if (m.isNoteOn())
+        {
+            machines[(size_t) t]->liveNoteOn (note, m.getFloatVelocity());
+            if (recordNotes && wasPlaying) recordNoteOn (t, note, m.getFloatVelocity());
+        }
+        else
+        {
+            machines[(size_t) t]->liveNoteOff (note);
+            if (recordNotes && wasPlaying) recordNoteOff (t, note);
+        }
+    }
+}
+
+void TechMachineProcessor::recordNoteOn (int type, int note, float velocity)
+{
+    const auto& def = machineDef (type);
+    auto& track = machines[(size_t) type]->track;
+    const int step = quantizedStep();
+    const auto s = (size_t) step;
+    if (def.kind == MachineKind::Drum)
+    {
+        const int row = machines[(size_t) type]->rowForMidiNote (note);
+        if (row < 0) return;
+        track.hits[(size_t) row][s] = true;
+        if (velocity > 0.85f) track.accent[s] = true;
+    }
+    else
+    {
+        const int octave = def.params.empty() ? 2 : (int) apvts.getRawParameterValue (pid::synth (type, 0))->load();
+        int semitone = note - machineBaseNote (def, currentKey(), octave);
+        while (semitone < 0) semitone += 12;
+        while (semitone >= noteRange) semitone -= 12;
+        track.on[s] = true;
+        track.note[s] = semitone;
+        track.accent[s] = velocity > 0.85f;
+        track.slide[s] = false;
+        recordStart[note & 127] = step;
+    }
+    touchPattern();
+}
+
+void TechMachineProcessor::recordNoteOff (int type, int note)
+{
+    const int start = recordStart[note & 127];
+    recordStart[note & 127] = -1;
+    if (start < 0 || machineDef (type).kind == MachineKind::Drum) return;
+
+    // Held keys become held steps (glide on mono synths, HOLD on the poly ones).
+    auto& track = machines[(size_t) type]->track;
+    const int length = (quantizedStep() - start + lengthSteps) % lengthSteps;
+    for (int k = 1; k < length; ++k)
+    {
+        const auto s = (size_t) ((start + k) % lengthSteps), prev = (size_t) ((start + k - 1) % lengthSteps);
+        track.on[s] = true;
+        track.note[s] = track.note[(size_t) start].load();
+        track.slide[prev] = true;
+    }
     touchPattern();
 }
 

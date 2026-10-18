@@ -121,13 +121,26 @@ private:
     InfoButton info;
 };
 
-// Knob (or fader) bound to a parameter, with a printed name and an "i". Right-click also opens the help.
+// Set by the editor so knobs can be assigned to a MIDI controller ("MIDI learn") from their right-click menu.
+struct MidiLearnHooks
+{
+    std::function<void (const juce::String&)> learn, forget;
+    std::function<int (const juce::String&)> controllerFor;
+};
+
+inline MidiLearnHooks& midiLearnHooks()
+{
+    static MidiLearnHooks hooks;
+    return hooks;
+}
+
+// Knob (or fader) bound to a parameter, with a printed name and an "i". Right-click: help and MIDI learn.
 class Knob : public juce::Component
 {
 public:
     Knob (juce::AudioProcessorValueTreeState& state, const juce::String& paramId, const juce::String& name,
           const HelpText& helpText, bool showLabel = true, bool asFader = false)
-        : help (helpText), label (name, helpText), fader (asFader)
+        : help (helpText), label (name, helpText), fader (asFader), parameterId (paramId)
     {
         slider.setSliderStyle (fader ? juce::Slider::LinearVertical : juce::Slider::RotaryHorizontalVerticalDrag);
         slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
@@ -146,7 +159,28 @@ public:
 
     void mouseDown (const juce::MouseEvent& e) override
     {
-        if (e.mods.isPopupMenu()) showInfo (help, *this);
+        if (! e.mods.isPopupMenu()) return;
+        auto& hooks = midiLearnHooks();
+        if (! hooks.learn)
+        {
+            showInfo (help, *this);
+            return;
+        }
+        const int cc = hooks.controllerFor ? hooks.controllerFor (parameterId) : -1;
+        juce::PopupMenu menu;
+        menu.addItem (1, utf8 ("À quoi sert ce bouton ?"));
+        menu.addSeparator();
+        menu.addItem (2, utf8 ("Assigner à un bouton MIDI (tourne ensuite le bouton de ton contrôleur)"));
+        menu.addItem (3, utf8 ("Retirer l'assignation MIDI") + (cc >= 0 ? " (CC " + juce::String (cc) + ")" : juce::String()), cc >= 0);
+        juce::Component::SafePointer<Knob> safe (this);
+        menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (this), [safe] (int r)
+        {
+            if (safe == nullptr) return;
+            auto& h = midiLearnHooks();
+            if (r == 1) showInfo (safe->help, *safe);
+            else if (r == 2 && h.learn) h.learn (safe->parameterId);
+            else if (r == 3 && h.forget) h.forget (safe->parameterId);
+        });
     }
 
     void resized() override
@@ -161,6 +195,7 @@ private:
     juce::Slider slider;
     ControlLabel label;
     bool fader;
+    juce::String parameterId;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
 };
 

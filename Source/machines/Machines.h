@@ -39,6 +39,11 @@ public:
     virtual void render (Frame&) = 0;
     virtual void stop() {}
 
+    // Played live from a MIDI keyboard or pads (audio thread).
+    virtual void liveNoteOn (int /*midiNote*/, float /*velocity*/) {}
+    virtual void liveNoteOff (int /*midiNote*/) {}
+    virtual int rowForMidiNote (int /*midiNote*/) const { return -1; }
+
     bool takeKick()
     {
         const bool hit = kickHit;

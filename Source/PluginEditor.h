@@ -135,6 +135,8 @@ private:
     techno::IconButton projectButton { "folder", techno::utf8 ("PROJET") }, undoButton { "undo" }, redoButton { "redo" };
     techno::IconButton fullScreenButton { "fullscreen", techno::utf8 ("PLEIN ÉCRAN") }, languageButton { "globe", juce::String::fromUTF8 ("FRANÇAIS") };
     techno::IconButton audioButton { "gear", techno::utf8 ("AUDIO / MIDI") };
+    techno::LedButton midiRecordButton { techno::utf8 ("ENREG. MIDI"), juce::Colour (0xffff3b1f) };
+    int lastMidiMapVersion = 0, lastMidiTarget = -2;
     techno::LedButton barButtons[4] { { "1", techno::colours::lcd }, { "2", techno::colours::lcd }, { "3", techno::colours::lcd }, { "4", techno::colours::lcd } };
     techno::LedButton pageButtons[4] { { "1", techno::colours::info }, { "2", techno::colours::info }, { "3", techno::colours::info }, { "4", techno::colours::info } };
     techno::LedButton followButton { techno::utf8 ("SUIVRE"), techno::colours::info };

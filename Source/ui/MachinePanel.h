@@ -17,6 +17,7 @@ public:
     void refreshCells();
 
     void paint (juce::Graphics&) override;
+    void paintOverChildren (juce::Graphics&) override;
     void resized() override;
 
     std::function<void()> onLayoutChange;
@@ -33,6 +34,18 @@ private:
     void showDiceMenu();
     void showPatternMenu();
     void showSoundMenu();
+
+public:
+    // Shows the MIDI badge on the machine that receives the keyboard.
+    void setMidiTarget (bool isTarget)
+    {
+        if (midiTarget == isTarget) return;
+        midiTarget = isTarget;
+        repaint();
+    }
+
+private:
+    bool midiTarget = false;
     void showMoreMenu();
     void showRowFx (int row);
     InfoButton& addInfo (const HelpText&);

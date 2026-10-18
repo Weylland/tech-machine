@@ -547,6 +547,17 @@ void MachinePanel::resized()
     }
 }
 
+void MachinePanel::paintOverChildren (juce::Graphics& g)
+{
+    if (! midiTarget) return;
+    const auto badge = juce::Rectangle<float> ((float) machineInfo.getRight() + 10.0f, 12.0f, 54.0f, 18.0f);
+    g.setColour (juce::Colour (0xff2fb8ff));
+    g.fillRoundedRectangle (badge, 9.0f);
+    g.setColour (juce::Colours::black.withAlpha (0.85f));
+    g.setFont (paint::condensed (12.0f));
+    g.drawText ("MIDI", badge, juce::Justification::centred);
+}
+
 void MachinePanel::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();

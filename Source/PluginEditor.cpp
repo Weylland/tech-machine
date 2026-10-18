@@ -478,6 +478,20 @@ MainView::MainView (TechMachineProcessor& p)
     languageButton.onClick = [this] { toggleLanguage(); };
     languageButton.setTooltip (utf8 ("Langue de l'interface : français ou anglais"));
 
+    midiRecordButton.setTooltip (utf8 ("Pendant la lecture, ce que tu joues au clavier ou aux pads MIDI s'écrit dans les pas de la machine "
+                                       "qui reçoit le MIDI (celle marquée MIDI : clique sur une machine pour la choisir). Ctrl+Z annule la prise."));
+    midiRecordButton.onClick = [this] { processor.setRecordNotes (midiRecordButton.getToggleState()); };
+    addAndMakeVisible (midiRecordButton);
+
+    auto& hooks = midiLearnHooks();
+    hooks.learn = [this] (const juce::String& id)
+    {
+        processor.startMidiLearn (id);
+        showInfo (utf8 ("MIDI learn"), utf8 ("Tourne maintenant le bouton ou le fader de ton contrôleur MIDI : il pilotera ce réglage."), audioButton);
+    };
+    hooks.forget = [this] (const juce::String& id) { processor.forgetMidiLearn (id); };
+    hooks.controllerFor = [this] (const juce::String& id) { return processor.midiControllerFor (id); };
+
     styleButton (audioButton, juce::Colour (0xff3a3b40));
     audioButton.onClick = [this] { showAudioSettings(); };
     audioButton.setTooltip (utf8 ("Carte son, pilote ASIO, taille du tampon (latence) et clavier ou contrôleur MIDI"));
@@ -517,6 +531,7 @@ void MainView::toggleLanguage()
 
 MainView::~MainView()
 {
+    midiLearnHooks() = {};
     removeMouseListener (this);
     setLookAndFeel (nullptr);
 }
@@ -538,10 +553,15 @@ void MainView::styleButton (juce::Button& button, juce::Colour colour, juce::Col
     addAndMakeVisible (button);
 }
 
-void MainView::mouseDown (const juce::MouseEvent&)
+void MainView::mouseDown (const juce::MouseEvent& e)
 {
     // Every click or drag starts a new undo step (knob moves, menu choices...).
     processor.undoManager.beginNewTransaction();
+
+    // Clicking a machine makes it the one that receives the MIDI keyboard / pads.
+    auto* panel = dynamic_cast<MachinePanel*> (e.eventComponent);
+    if (panel == nullptr && e.eventComponent != nullptr) panel = e.eventComponent->findParentComponentOfClass<MachinePanel>();
+    if (panel != nullptr) processor.setMidiTarget (panel->type);
 }
 
 void MainView::togglePlay()
@@ -849,6 +869,19 @@ bool MainView::keyPressed (const juce::KeyPress& key)
 
 void MainView::timerCallback()
 {
+    if (processor.midiMapVersion.load() != lastMidiMapVersion)
+    {
+        lastMidiMapVersion = processor.midiMapVersion.load();
+        processor.saveMidiMap();
+    }
+    if (const int target = processor.midiTargetMachine(); target != lastMidiTarget)
+    {
+        lastMidiTarget = target;
+        for (auto* panel : panels) panel->setMidiTarget (panel->type == target);
+    }
+    if (midiRecordButton.getToggleState() != processor.isRecordingNotes())
+        midiRecordButton.setToggleState (processor.isRecordingNotes(), juce::dontSendNotification);
+
     if (! focusGrabbed && isShowing())
     {
         grabKeyboardFocus();
@@ -1052,18 +1085,18 @@ void MainView::resized()
     meterInfo->setBounds (vu.getRight() + 3, masterArea.getY() + 12, 15, 15);
     // Settings column at the right of the master strip.
     {
-        auto column = juce::Rectangle<int> (masterArea.getRight() - 16 - 168, masterArea.getY() + 12, 168, masterArea.getHeight() - 24);
-        const int h = (column.getHeight() - 8) / 3;
-        audioButton.setBounds (column.removeFromTop (h));
-        column.removeFromTop (4);
-        fullScreenButton.setBounds (column.removeFromTop (h));
-        column.removeFromTop (4);
-        languageButton.setBounds (column.removeFromTop (h));
+        auto column = juce::Rectangle<int> (masterArea.getRight() - 16 - 236, masterArea.getY() + 14, 236, masterArea.getHeight() - 28);
+        auto top = column.removeFromTop ((column.getHeight() - 6) / 2);
+        column.removeFromTop (6);
+        audioButton.setBounds (top.removeFromLeft (116));
+        midiRecordButton.setBounds (top.withTrimmedLeft (4));
+        fullScreenButton.setBounds (column.removeFromLeft (116));
+        languageButton.setBounds (column.withTrimmedLeft (4));
     }
     int mx = vu.getRight() + 30;
     for (int i = 0; i < masterControls.size(); ++i)
     {
-        const int width = i == 0 ? 130 : 88;
+        const int width = i == 0 ? 130 : 84;
         masterControls[i]->setBounds (mx, masterArea.getY() + (i == 0 ? 30 : 14), width - 6, i == 0 ? 52 : 86);
         mx += width;
     }
