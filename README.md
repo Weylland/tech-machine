@@ -19,6 +19,16 @@ Va dans [Releases](../../releases/latest) et prends :
 Windows 10/11 64 bits. L'exe n'est pas signé : au premier lancement, Windows SmartScreen peut afficher
 « Windows a protégé votre ordinateur » → « Informations complémentaires » → « Exécuter quand même ».
 
+**Sur Mac** (macOS 11 ou plus récent, Intel ou Apple Silicon) :
+
+- **TechMachine-macOS-Standalone.zip** : dézippe et glisse `Tech Machine.app` dans Applications.
+- **TechMachine-macOS-VST3.zip** : copie `Tech Machine.vst3` dans `~/Library/Audio/Plug-Ins/VST3`.
+- **TechMachine-macOS-AU.zip** (Logic Pro, GarageBand) : copie `Tech Machine.component` dans `~/Library/Audio/Plug-Ins/Components`.
+
+L'app n'est pas notarisée par Apple : au premier lancement, fais clic droit sur l'app → « Ouvrir ».
+Si macOS dit qu'elle est « endommagée », tape une fois dans le Terminal :
+`xattr -dr com.apple.quarantine "/Applications/Tech Machine.app"` (même chose pour les plugins, avec leur chemin).
+
 ## Les machines
 
 Chaque machine est entièrement synthétisée (aucun sample) en imitant les circuits des originaux.

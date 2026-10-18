@@ -1,5 +1,8 @@
 #include "Paint.h"
 
+#include <BinaryData.h>
+#include <cstring>
+
 namespace techno::paint
 {
 using juce::Colour;
@@ -8,11 +11,20 @@ namespace Colours = juce::Colours;
 namespace
 {
 
+// Bahnschrift comes with Windows. Elsewhere (macOS, Linux) the embedded DejaVu Sans Condensed takes its place,
+// slightly smaller because it is wider. TECHMACHINE_EMBEDDED_FONT=1 forces it, to check the layout on Windows.
 juce::Font bahnschrift (const char* style, float size)
 {
-    static const bool available = juce::Font::findAllTypefaceNames().contains ("Bahnschrift");
-    if (! available) return juce::FontOptions (size, juce::Font::bold);
-    return juce::FontOptions ("Bahnschrift", style, size);
+    static const bool available = juce::Font::findAllTypefaceNames().contains ("Bahnschrift")
+                                  && juce::SystemStats::getEnvironmentVariable ("TECHMACHINE_EMBEDDED_FONT", {}).isEmpty();
+    if (available) return juce::FontOptions ("Bahnschrift", style, size);
+
+    static const auto regular = juce::Typeface::createSystemTypefaceFor (BinaryData::DejaVuSansCondensed_ttf,
+                                                                         (size_t) BinaryData::DejaVuSansCondensed_ttfSize);
+    static const auto bold = juce::Typeface::createSystemTypefaceFor (BinaryData::DejaVuSansCondensedBold_ttf,
+                                                                      (size_t) BinaryData::DejaVuSansCondensedBold_ttfSize);
+    const bool isRegular = std::strcmp (style, "Regular") == 0;
+    return juce::Font (juce::FontOptions (isRegular ? regular : bold).withHeight (size * 0.9f));
 }
 
 void knurl (Graphics& g, Point c, float r, int count, Colour colour)

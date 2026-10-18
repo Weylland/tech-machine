@@ -8,6 +8,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(libs/JUCE)
 
+# macOS also gets an Audio Unit (Logic Pro, GarageBand).
+if(APPLE)
+    set(TECHMACHINE_FORMATS Standalone VST3 AU)
+else()
+    set(TECHMACHINE_FORMATS Standalone VST3)
+endif()
+
 juce_add_plugin(TechMachine
     COMPANY_NAME "Nicolas Samier"
     PRODUCT_NAME "Tech Machine"
@@ -18,7 +25,13 @@ juce_add_plugin(TechMachine
     PLUGIN_CODE Tchm
     VST3_CATEGORIES Instrument Synth Drum
     COPY_PLUGIN_AFTER_BUILD FALSE
-    FORMATS Standalone VST3)
+    BUNDLE_ID com.nicolassamier.techmachine
+    FORMATS ${TECHMACHINE_FORMATS})
+
+# Font used where Bahnschrift is not installed (macOS, Linux).
+juce_add_binary_data(TechMachineFonts SOURCES
+    Source/fonts/DejaVuSansCondensed.ttf
+    Source/fonts/DejaVuSansCondensed-Bold.ttf)
 
 target_sources(TechMachine PRIVATE
     Source/PluginProcessor.cpp
@@ -64,6 +77,7 @@ endif()
 
 target_link_libraries(TechMachine
     PRIVATE
+        TechMachineFonts
         juce::juce_audio_utils
         juce::juce_audio_formats
     PUBLIC

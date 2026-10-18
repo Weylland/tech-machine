@@ -1,0 +1,52 @@
+# Builds the macOS version (app, VST3 and Audio Unit, Intel + Apple Silicon) and attaches it to the release.
+name: macOS build
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: >
+          cmake -B build -G Xcode
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Package
+        run: |
+          set -e
+          out="build/TechMachine_artefacts/Release"
+          # Not notarized: an ad-hoc signature at least lets Apple Silicon Macs run it.
+          for bundle in "$out/Standalone/Tech Machine.app" "$out/VST3/Tech Machine.vst3" "$out/AU/Tech Machine.component"; do
+            codesign --force --deep --sign - "$bundle"
+          done
+          mkdir -p dist
+          ditto -c -k --keepParent "$out/Standalone/Tech Machine.app" dist/TechMachine-macOS-Standalone.zip
+          ditto -c -k --keepParent "$out/VST3/Tech Machine.vst3" dist/TechMachine-macOS-VST3.zip
+          ditto -c -k --keepParent "$out/AU/Tech Machine.component" dist/TechMachine-macOS-AU.zip
+          lipo -info "$out/Standalone/Tech Machine.app/Contents/MacOS/Tech Machine"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TechMachine-macOS
+          path: dist/*.zip
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/*.zip --clobber
