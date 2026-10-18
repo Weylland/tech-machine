@@ -1009,6 +1009,103 @@ void acidLine (Line& line, const GenerateContext& ctx, juce::Random& r)
 //==============================================================================
 // Leads
 
+// A singable melody: a one-bar rhythmic motif repeated over the phrase, chord tones on the strong beats,
+// small steps in between, an arch-shaped contour and a cadence that settles on the root.
+// Phrase form over four bars: A, A' (the motif moved onto the next chord), B (variation), A'' + cadence.
+bool isChordTone (int degree, int root)
+{
+    const int rel = ((degree - root) % 7 + 7) % 7;
+    return rel == 0 || rel == 2 || rel == 4;
+}
+
+int nearestChordTone (int from, int root, int direction, juce::Random& r)
+{
+    int best = from, bestCost = 100;
+    for (int d = from - 4; d <= from + 4; ++d)
+    {
+        if (! isChordTone (d, root)) continue;
+        int cost = std::abs (d - from) * 2;
+        if (direction != 0 && (d - from) * direction < 0) cost += 3;   // prefer the direction of the contour
+        cost += r.nextInt (2);
+        if (cost < bestCost) { bestCost = cost; best = d; }
+    }
+    return best;
+}
+
+void singableMelody (Line& line, const GenerateContext& ctx, juce::Random& r)
+{
+    const int steps = ctx.steps, bars = juce::jmax (1, steps / pageSteps);
+    const bool fast = ctx.style.bpm >= 160.0f;
+    static const std::vector<const char*> slowRhythms {
+        "x..x..x.x...x...", "x.x...x.x.x.....", "x..x..x...x.x...", "..x.x...x..x.x..", "x...x.x...x..x..",
+        "x.xx..x.x.......", "x.x.x...x..x....", "...x..x.x..x..x.",
+    };
+    static const std::vector<const char*> fastRhythms {
+        "x.....x...x.....", "x...x...x.x.....", "x.....x.x.......", "..x...x...x.....", "x...x.....x...x.",
+    };
+    const char* rhythm = pickOne (fast ? fastRhythms : slowRhythms, r);
+
+    // Motif: pitch moves for each onset of the bar, as steps relative to the previous note.
+    int onsets[pageSteps], count = 0;
+    for (int i = 0; i < pageSteps; ++i) if (rhythm[i] == 'x') onsets[count++] = i;
+    int moves[pageSteps] {};
+    for (int k = 1; k < count; ++k) moves[k] = pickWeighted ({ { 1, 3 }, { -1, 3 }, { 2, 3 }, { -2, 3 }, { 3, 2 }, { -3, 1 }, { 4, 1 }, { -4, 1 }, { 0, 1 } }, r);
+
+    const int low = 2, high = 11;          // range in scale degrees above the tonic
+    int current = 4 + r.nextInt (3);
+
+    for (int bar = 0; bar < bars; ++bar)
+    {
+        const int phrasePos = bar % 4;                 // 0 = A, 1 = A', 2 = B, 3 = cadence
+        const bool lastBar = bar == bars - 1;
+        const int direction = phrasePos < 2 ? 1 : -1;  // rise in the first half of the phrase, fall back after
+        for (int k = 0; k < count; ++k)
+        {
+            const int i = onsets[k], s = bar * pageSteps + i;
+            if (s >= steps) break;
+            const int root = chordAt (ctx, s);
+            if (lastBar && i >= 8) break;              // leave room for the final long note
+
+            int move = moves[k];
+            if (phrasePos == 2 && k >= count / 2) move = -move;                         // B: the answer goes the other way
+            if (phrasePos == 2 && k == count - 1 && chance (r, 0.5f)) continue;         // and breathes
+            int next = current + move;
+            const bool strong = i % 4 == 0 || k == 0;
+            if (strong) next = nearestChordTone (next, root, direction, r);
+            if (next > high) next = nearestChordTone (high - 2, root, -1, r);
+            if (next < low) next = nearestChordTone (low + 2, root, 1, r);
+            current = next;
+            line.note (s, current, i == 0);
+        }
+        // Phrase endings: a long note on a chord tone (the root at the very end).
+        const bool phraseEnd = phrasePos == 3 || lastBar;
+        if (phraseEnd)
+        {
+            const int s = bar * pageSteps + 8;
+            if (s < steps)
+            {
+                const int root = chordAt (ctx, s);
+                int target = root + 7 * ((current - root) / 7);
+                if (std::abs (target + 7 - current) < std::abs (target - current)) target += 7;
+                target = juce::jlimit (low, high, target);
+                for (int t = s; t < bar * pageSteps + pageSteps && t < steps; ++t) line.on[(size_t) t] = false;
+                line.note (s, target, true);
+                line.hold (s, juce::jmin (steps - 1, s + 5), steps);
+                current = target;
+            }
+        }
+    }
+
+    // Some notes are held until the next one (legato), the others stay short.
+    for (int s = 0; s < steps - 1; ++s)
+    {
+        if (! line.on[(size_t) s] || line.slide[(size_t) s]) continue;
+        int next = s + 1;
+        while (next < steps && ! line.on[(size_t) next]) ++next;
+        if (next - s >= 3 && chance (r, 0.45f)) line.hold (s, juce::jmin (next - 1, s + 3), steps);
+    }
+}
+
 void leadLine (Line& line, const GenerateContext& ctx, LeadMode mode, juce::Random& r)
 {
     const int steps = ctx.steps, bars = steps / pageSteps;
@@ -1017,6 +1114,11 @@ void leadLine (Line& line, const GenerateContext& ctx, LeadMode mode, juce::Rand
     {
         case LeadMode::Motif:
         {
+            if (bars >= 2 || chance (r, 0.6f))
+            {
+                singableMelody (line, ctx, r);
+                break;
+            }
             // Two half-bar cells: the second answers the first and resolves on a chord tone.
             static constexpr int weights[8] { 3, 1, 3, 3, 1, 2, 3, 2 };
             bool onset[8] {};
@@ -1280,6 +1382,46 @@ void varyMelody (Track& t, int steps, int scale, GenerateMode mode, juce::Random
 }
 } // namespace
 
+std::vector<BandMember> defaultBand (const StyleDef& style)
+{
+    const juce::String name (style.name);
+    struct Entry { const char* genre; std::vector<BandMember> band; };
+    static const std::vector<Entry> bands {
+        { "Techno", { { TR909, nullptr }, { ModelD, "Basse Minimoog" }, { Juno106, "Stab house" }, { SH101, "Bleep" } } },
+        { "Detroit", { { TR909, nullptr }, { ModelD, "Basse funk" }, { Juno106, "Accord deep house" }, { Strings, nullptr } } },
+        { "Berlin", { { TR909, "Rumble berlinois (kick dans la reverb)" }, { ModelD, "Sub profonde" }, { Juno106, "Accord deep house" }, { SoundFx, nullptr } } },
+        { "Minimal", { { TR909, "Serré et sec" }, { Percussion, nullptr }, { SH101, "Bleep" } } },
+        { "Acid", { { TR909, nullptr }, { TB303, "Acid classique" }, { Juno106, "Stab house" } } },
+        { "Hard Techno", { { TR909, "Hard techno (kick saturé)" }, { ModelD, "Basse Minimoog" }, { JP8000, "Lead hardstyle" } } },
+        { "Dub Techno", { { TR909, "Dub (écho sur les percussions)" }, { ModelD, "Sub profonde" }, { Juno106, "Accord deep house" } } },
+        { "House", { { TR909, nullptr }, { ModelD, "Basse funk" }, { Piano, "Piano house (stabs)" }, { Choir, "Grand chœur" } } },
+        { "Trance", { { TR909, nullptr }, { ModelD, "Basse Minimoog" }, { JP8000, "Supersaw trance" }, { SH101, "Lead 101" } } },
+        { "Psytrance", { { TR909, nullptr }, { ModelD, "Basse pluck" }, { SH101, "Lead 101" }, { JP8000, "Nappe" } } },
+        { "Drum & Bass", { { BreakKit, nullptr }, { ModelD, "Reese (drum & bass)" }, { Strings, "Nappe lente (ambient)" }, { DX7, "Rhodes doux" } } },
+        { "Jungle", { { BreakKit, nullptr }, { ModelD, "Sub profonde" }, { Strings, "Cordes sombres" }, { SoundFx, nullptr } } },
+        { "Breakbeat", { { BreakKit, nullptr }, { ModelD, "Basse funk" }, { SH101, "Lead 101" }, { Juno106, "Stab house" } } },
+        { "Électro", { { TR808, nullptr }, { SH101, "Basse caoutchouc" }, { DX7, "Lead synthé" } } },
+        { "UK Garage", { { TR909, nullptr }, { ModelD, "Basse funk" }, { Organ, "Orgue house (M1)" }, { Choir, "Chœur « ooh »" } } },
+        { "Gabber", { { TR909, "Hard techno (kick saturé)" }, { JP8000, "Hoover" } } },
+        { "Hip-Hop", { { MPC, nullptr }, { ModelD, "Basse funk" }, { Piano, "Piano feutré (lo-fi)" }, { Mallets, "Vibraphone" } } },
+        { "Trap", { { TR808, "Trap (kick long, charlestons secs)" }, { Sub808, "808 trap" }, { Mallets, "Boîte à musique (trap)" }, { Strings, "Cordes sombres" } } },
+        { "Drill", { { TR808, "Trap (kick long, charlestons secs)" }, { Sub808, "808 drill (longs glissés)" }, { Mallets, "Cloches tubulaires" }, { Choir, "Chant grégorien" } } },
+        { "Lo-fi", { { CR78, "Lo-fi poussiéreux" }, { ModelD, "Sub profonde" }, { DX7, "Rhodes doux" }, { Mallets, "Vibraphone" }, { SoundFx, nullptr } } },
+        { "R&B", { { LinnDrum, nullptr }, { Sub808, "808 propre" }, { DX7, "Piano électrique (E.Piano 1)" }, { Strings, nullptr } } },
+        { "Funk", { { LinnDrum, nullptr }, { ModelD, "Basse funk" }, { Organ, "Jazz B3" }, { Pluck, "Guitare funk (étouffée)" } } },
+        { "Disco", { { LinnDrum, nullptr }, { ModelD, "Basse funk" }, { Strings, "Disco" }, { Piano, "Piano pop brillant" } } },
+        { "Synthwave", { { LinnDrum, "Grande salle (reverb sur la caisse claire)" }, { ModelD, "Basse pluck" }, { Juno106, "Nappe Juno" }, { JP8000, "Lead trance" } } },
+        { "Pop", { { LinnDrum, nullptr }, { ModelD, "Basse Minimoog" }, { Piano, "Piano pop brillant" }, { SH101, "Lead 101" } } },
+        { "Reggaeton", { { TR808, nullptr }, { Percussion, nullptr }, { Sub808, "808 courte (reggaeton)" }, { Pluck, "Guitare reggaeton" }, { Mallets, "Marimba" } } },
+        { "Afro House", { { TR909, nullptr }, { Percussion, nullptr }, { ModelD, "Sub profonde" }, { Mallets, "Kalimba" } } },
+        { "Reggae", { { LinnDrum, "Dub (écho sur les percussions)" }, { ModelD, "Sub profonde" }, { Organ, "Reggae (bubble)" }, { Pluck, "Guitare funk (étouffée)" } } },
+        { "Ambient", { { Strings, "Nappe lente (ambient)" }, { Choir, "Grand chœur" }, { Mallets, "Cloches tubulaires" }, { Piano, "Ballade (avec pédale)" } } },
+    };
+    for (auto& e : bands)
+        if (name == juce::String::fromUTF8 (e.genre)) return e.band;
+    return { { TR909, nullptr }, { ModelD, nullptr }, { Juno106, nullptr } };
+}
+
 const std::vector<StyleDef>& styles()
 {
     static const std::vector<StyleDef> list = buildStyles();
@@ -1336,7 +1478,7 @@ void generate (Track& track, const MachineDef& def, const GenerateContext& ctx, 
         case Piano:   chordLine (line, ctx, pickOne (style.chordModes, r), r); break;
         case Strings:
         case Choir:   chordLine (line, ctx, ChordMode::Pad, r); break;
-        case Mallets: leadLine (line, ctx, pickOne (style.leadModes, r), r); break;
+        case Mallets: singableMelody (line, ctx, r); break;
         case Pluck:
         {
             const auto& modes = style.chordModes;

@@ -571,6 +571,25 @@ void TechMachineProcessor::generateAll()
     beginPatternEdit();
     chooseProgression();
 
+    // Empty rack: set up the usual band of the genre, with its tempo, swing and scale, over 4 bars.
+    bool anyShown = false;
+    for (int t = 0; t < numMachines; ++t) anyShown = anyShown || isShown (t);
+    if (! anyShown)
+    {
+        const auto& style = styles()[(size_t) genreIndex];
+        setParam (pid::bpm, style.bpm);
+        setParam (pid::swing, style.swing);
+        setParam (pid::scale, (float) style.scale);
+        setBars (4);
+        for (auto& member : defaultBand (style))
+        {
+            setShown (member.machine, true);
+            if (member.preset == nullptr) continue;
+            for (auto& preset : presetsFor (member.machine))
+                if (std::strcmp (preset.name, member.preset) == 0) applyPreset (member.machine, preset);
+        }
+    }
+
     // Drums first, so the bass lines know where the kicks are.
     for (int pass = 0; pass < 2; ++pass)
     {

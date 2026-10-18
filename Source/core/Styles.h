@@ -40,6 +40,14 @@ struct StyleDef
 
 const std::vector<StyleDef>& styles();
 
+// The machines SURPRISE! sets up when the rack is empty, with the sound (preset name) to load on each one.
+struct BandMember
+{
+    int machine;
+    const char* preset;
+};
+std::vector<BandMember> defaultBand (const StyleDef&);
+
 enum class GenerateMode { NewIdea, Vary, Denser, Sparser };
 
 struct GenerateContext
