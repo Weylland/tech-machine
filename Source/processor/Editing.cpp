@@ -40,7 +40,7 @@ private:
 
 TechMachineProcessor::Snapshot TechMachineProcessor::snapshot() const
 {
-    Snapshot s;
+    Snapshot s (machines.size());
     for (size_t t = 0; t < machines.size(); ++t) s[t] = machines[t]->track.snapshot();
     return s;
 }
@@ -193,15 +193,10 @@ void TechMachineProcessor::applyPreset (int type, const SoundPreset& preset)
     // Back to the factory sound first, so a preset only has to list what it changes.
     for (const char* fx : { "drive", "crush", "filter", "echo", "reverb" }) reset (pid::machine (type, fx));
     if (def.kind == MachineKind::Drum)
-    {
         for (int r = 0; r < (int) def.rows.size(); ++r)
             for (const char* p : { "level", "tune", "decay", "tone", "drive", "filter", "pan", "echo", "reverb" })
                 reset (pid::row (type, r, p));
-    }
-    else
-    {
-        for (int i = 0; i < (int) def.params.size(); ++i) reset (pid::synth (type, i));
-    }
+    for (int i = 0; i < (int) def.params.size(); ++i) reset (pid::synth (type, i));
 
     for (auto& [key, value] : preset.values)
         if (auto* p = presetParameter (type, key))

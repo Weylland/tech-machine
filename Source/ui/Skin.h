@@ -204,6 +204,54 @@ inline const Skin& skinFor (int machineType)
         { C (0xffd6d6d2), C (0xffbcbcb6), C (0xff2c2c2e), C (0xfff0f0f0), C (0xff202022), C (0xff4a4a4e), C (0xff7a7a7e),
           C (0xff2a8cff), C (0xff2a8cff), { C (0xff4a4a4e), C (0xff424246), C (0xff4a4a4e), C (0xff424246) },
           C (0xff5aa8ff), C (0xff06121e), KnobStyle::Classic, C (0xff3a3a3e), false, false, false, true, "SAMPLE PLAYER", "SAMPLER" },
+        // 8-bit: home computer brown with the blue of its screen.
+        { C (0xff3a3530), C (0xff2a2622), C (0xff1a1714), C (0xffe8e0d0), C (0xffece6da), C (0xffb8ae9c), C (0xff6a6052),
+          C (0xff8f84ff), C (0xff9af5ff), { C (0xff4b3fae), C (0xff42379a), C (0xff4b3fae), C (0xff42379a) },
+          C (0xff9af5ff), C (0xff10123a), KnobStyle::Modern, C (0xff2c2824), false, false, true, false, "SOUND INTERFACE CHIP", "8-BIT" },
+        // Semi-modular: slate panel, orange print, sliders.
+        { C (0xff2b3036), C (0xff1e2226), C (0xff121518), C (0xffffe6d6), C (0xfff2f2f2), C (0xffb8bec6), C (0xff626a74),
+          C (0xffff7a3d), C (0xffff3b1f), { C (0xffcfd3d8), C (0xffbfc4ca), C (0xffcfd3d8), C (0xffbfc4ca) },
+          C (0xffffa06a), C (0xff1e0e04), KnobStyle::Classic, C (0xff3a4048), true, false, false, false, "SEMI-MODULAR SYNTHESIZER", "SEMI-MOD" },
+        // Wavetable: deep blue panel, violet light.
+        { C (0xff2a3f6a), C (0xff1c2c4e), C (0xff111c34), C (0xffe6e2ff), C (0xffeceaff), C (0xffb0b4d8), C (0xff606894),
+          C (0xff8a7dff), C (0xffb4a8ff), { C (0xffc8cce0), C (0xffb8bcd2), C (0xffc8cce0), C (0xffb8bcd2) },
+          C (0xffb4a8ff), C (0xff120c30), KnobStyle::Modern, C (0xff24345a), false, false, false, false, "WAVE COMPUTER", "WAVETABLE" },
+        // LA synth: dark grey with teal print.
+        { C (0xff2a2c2e), C (0xff1c1d1f), C (0xff101112), C (0xffd8fff8), C (0xffe8f4f2), C (0xffa4b8b4), C (0xff566664),
+          C (0xff4fd1c5), C (0xff4fd1c5), { C (0xff3a3e40), C (0xff34383a), C (0xff3a3e40), C (0xff34383a) },
+          C (0xff7ae8dc), C (0xff061a18), KnobStyle::Modern, C (0xff262a2c), false, false, false, false, "LINEAR SYNTHESIZER", "LA SYNTH" },
+        // CS-80: dark panel, wood cheeks and its coloured lever caps.
+        { C (0xff2a2624), C (0xff1c1918), C (0xff100e0d), C (0xfff4e8dc), C (0xfff4e8dc), C (0xffc4b4a4), C (0xff6e6054),
+          C (0xffe04a3a), C (0xffff3b1f), { C (0xffd84a3a), C (0xffe8b43a), C (0xfff0ece4), C (0xff4a8ad8) },
+          C (0xffff7a5a), C (0xff200806), KnobStyle::Classic, C (0xff2c2826), true, true, false, false, "POLYPHONIC SYNTHESIZER", "CS-80" },
+        // Ether: art deco ivory, brass and a green glow.
+        { C (0xffe8dcc4), C (0xffd0c2a4), C (0xff3a2a18), C (0xfff4ead8), C (0xff2a1e10), C (0xff5c4a34), C (0xff8a765a),
+          C (0xff2f8f6a), C (0xff3fdf9a), { C (0xff6a5236), C (0xff5c462e), C (0xff6a5236), C (0xff5c462e) },
+          C (0xff7affc0), C (0xff0a1a10), KnobStyle::Cap, C (0xfff0e4c8), false, true, false, true, "ELECTRONIC INSTRUMENTS", "ETHER" },
+        // West coast: black panel, bright colours.
+        { C (0xff1c1c1c), C (0xff111111), C (0xff080808), C (0xfffff4c8), C (0xfff4f4f4), C (0xffbcbcbc), C (0xff606060),
+          C (0xffffd23f), C (0xffffd23f), { C (0xffd8443a), C (0xff3a7ad8), C (0xffe8c43a), C (0xff3ab86a) },
+          C (0xffffe27a), C (0xff1a1404), KnobStyle::Cap, C (0xfff0f0f0), false, false, false, false, "MODULAR ELECTRONIC MUSIC SYSTEM", "WEST COAST" },
+        // Vocoder: warm brown with green light.
+        { C (0xff4a3a2a), C (0xff32271c), C (0xff1e170f), C (0xffe8ffe8), C (0xfff4ecdc), C (0xffc8b8a0), C (0xff7a6a54),
+          C (0xff5cf2a6), C (0xff5cf2a6), { C (0xffe8dcc4), C (0xffdacdb4), C (0xffe8dcc4), C (0xffdacdb4) },
+          C (0xff8affc4), C (0xff06200e), KnobStyle::Classic, C (0xff3a2e22), false, false, false, false, "VOCODER PLUS", "VOCODER" },
+        // 606: silver plate, dark keys, red LEDs.
+        { C (0xffd6d4cc), C (0xffbab8b0), C (0xff2a2a2c), C (0xffeeeeee), C (0xff1e1e20), C (0xff4a4a4c), C (0xff76746e),
+          C (0xffe0302a), C (0xffff2a1f), { C (0xff3a3a3c), C (0xff323234), C (0xff3a3a3c), C (0xff323234) },
+          C (0xffff6a5a), C (0xff1a1a1a), KnobStyle::Classic, C (0xff4a4a4e), false, false, false, true, "MICRO DRUM COMPUTER", "606" },
+        // Rhythm box: wood cabinet and cream push buttons.
+        { C (0xff6b4a2c), C (0xff4c331d), C (0xff2a1c10), C (0xfff4e6c8), C (0xfff4e6c8), C (0xffd8c4a0), C (0xff9a8060),
+          C (0xffe8a050), C (0xffff5a1f), { C (0xfff0e2c4), C (0xffe2d2b2), C (0xfff0e2c4), C (0xffe2d2b2) },
+          C (0xffffc078), C (0xff2a1a08), KnobStyle::Cap, C (0xffeadcc0), false, true, false, false, "AUTOMATIC RHYTHM", "RHYTHM BOX" },
+        // Digital kit: light plastic and pastel pads.
+        { C (0xffe4e6ea), C (0xffcdd0d6), C (0xff2a3040), C (0xffeef2fa), C (0xff1e2230), C (0xff4a5266), C (0xff7a8296),
+          C (0xff2a7fff), C (0xff2a7fff), { C (0xff7fb2ff), C (0xffffa05a), C (0xffffd85a), C (0xffb8bcc6) },
+          C (0xff5aa0ff), C (0xff06101e), KnobStyle::Classic, C (0xff3a4050), false, false, false, true, "DIGITAL RHYTHM COMPOSER", "DIGITAL" },
+        // Synth drums: dark metallic blue, magenta light.
+        { C (0xff232036), C (0xff161424), C (0xff0c0b16), C (0xffffd8f6), C (0xfff0e8f8), C (0xffb8a8c8), C (0xff625474),
+          C (0xffff4fd8), C (0xffff4fd8), { C (0xff34304a), C (0xff2e2a42), C (0xff34304a), C (0xff2e2a42) },
+          C (0xffff7ae4), C (0xff20061a), KnobStyle::Modern, C (0xff2a2640), false, false, true, false, "RHYTHM SYNTHESIZER", "SYNTH DRUMS" },
     }};
     return skins[(size_t) machineType];
 }

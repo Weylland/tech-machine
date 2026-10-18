@@ -156,17 +156,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout TechMachineProcessor::create
                 layout.add (knob (pid::row (t, r, "reverb"), rowName + " reverb", 0.0f));
             }
         }
-        else
+
+        for (int i = 0; i < (int) def.params.size(); ++i)
         {
-            for (int i = 0; i < (int) def.params.size(); ++i)
-            {
-                const auto& p = def.params[(size_t) i];
-                const juce::String paramName = name + " " + utf8 (p.label);
-                if (p.choices.empty())
-                    layout.add (knob (pid::synth (t, i), paramName, p.def));
-                else
-                    layout.add (choice (pid::synth (t, i), paramName, p.choices, (int) p.def));
-            }
+            const auto& p = def.params[(size_t) i];
+            const juce::String paramName = name + " " + utf8 (p.label);
+            if (p.choices.empty())
+                layout.add (knob (pid::synth (t, i), paramName, p.def));
+            else
+                layout.add (choice (pid::synth (t, i), paramName, p.choices, (int) p.def));
         }
     }
 

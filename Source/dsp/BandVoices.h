@@ -263,7 +263,31 @@ private:
 struct Poly80Params
 {
     float saw = 0.8f, pulse = 0.4f, detune = 0.3f, cutoff = 0.5f, reso = 0.2f, env = 0.4f;
+    int model = 0;   // 0 = Prophet-5 / OB-X, the others in Poly80Voice::models
 };
+
+// How each modelled polysynth differs: filter slope, oscillators, drive, drift and stereo width.
+struct Poly80Model
+{
+    bool ladder;          // 24 dB ladder, otherwise 12 dB state-variable
+    int oscillators;      // 1 to 3
+    float sub, drive, spread, drift, width, brighter, bandpass, chorus;
+};
+
+inline const Poly80Model& poly80Model (int index)
+{
+    static constexpr Poly80Model models[8] {
+        { false, 2, 0.0f, 0.0f, 0.0f, 0.0f, 0.45f, 0.0f, 0.0f, 0.0f },    // Prophet-5 / OB-X (original voice)
+        { true, 2, 0.0f, 0.2f, 0.05f, 0.3f, 0.5f, 0.0f, 0.0f, 0.0f },     // Jupiter-8
+        { true, 1, 0.45f, 0.1f, 0.0f, 0.2f, 0.45f, 0.0f, 0.0f, 0.8f },    // Polysix with its ensemble
+        { true, 2, 0.0f, 0.0f, 0.04f, 0.0f, 0.5f, 0.6f, 0.0f, 0.5f },     // JX-3P / JX-10: DCOs, bright, chorus
+        { false, 2, 0.0f, 0.15f, 0.15f, 0.5f, 0.45f, 0.2f, 0.25f, 0.0f }, // OB-8 / OB-6: SEM filter, wide
+        { true, 2, 0.0f, 0.6f, 0.06f, 0.3f, 0.45f, 0.0f, 0.0f, 0.0f },    // Prophet-6 / Prophet '08: driven
+        { false, 2, 0.0f, 0.3f, 0.06f, 0.1f, 0.4f, 0.3f, 0.0f, 0.0f },    // minilogue / Take 5: crisp
+        { true, 3, 0.1f, 0.4f, 0.2f, 0.3f, 0.45f, 0.0f, 0.0f, 0.0f },     // PolyBrute / Muse: three oscillators
+    };
+    return models[juce::jlimit (0, 7, index)];
+}
 
 class Poly80Voice : public PolyVoice
 {
@@ -292,6 +316,11 @@ public:
 
     void process (float& left, float& right) override
     {
+        if (p.model != 0)
+        {
+            processModel (left, right);
+            return;
+        }
         const float d = 1.0f + p.detune * 0.012f;
         const float dt1 = freq / fs, dt2 = freq * d / fs;
         advance (phase1, dt1);
@@ -308,10 +337,58 @@ public:
     }
 
 private:
+    void processModel (float& left, float& right)
+    {
+        const auto& m = poly80Model (p.model);
+        drift += (noise.next() * 0.0015f - drift * 0.0003f) * m.drift;
+        const float base = freq * (1.0f + drift * 0.01f);
+        static constexpr float spreadSign[3] { -1.0f, 1.0f, 0.0f };
+        float sum = 0.0f, side = 0.0f;
+        for (int i = 0; i < m.oscillators; ++i)
+        {
+            const float ratio = i == 0 ? 1.0f : (i == 1 ? 1.0f + p.detune * 0.012f : 1.0f - p.detune * 0.009f);
+            const float dt = base * ratio / fs;
+            advance (phases[i], dt);
+            const float osc = p.saw * blepSaw (phases[i], dt) + p.pulse * blepPulse (phases[i], dt, m.width);
+            sum += osc;
+            side += osc * spreadSign[i];
+        }
+        if (m.sub > 0.0f)
+        {
+            advance (subPhase, base * 0.5f / fs);
+            sum += m.sub * (subPhase < 0.5f ? 1.0f : -1.0f);
+        }
+        sum *= 0.3f * (m.oscillators == 3 ? 0.8f : (m.oscillators == 1 ? 1.4f : 1.0f));
+
+        const float e = adsr.next();
+        const float octaves = p.cutoff * 8.5f + m.brighter + p.env * e * 4.0f + std::log2 (freq / 261.6f) * 0.4f;
+        const float fc = juce::jmin (30.0f * std::exp2 (octaves), 17000.0f);
+        const float input = m.drive > 0.0f ? fastTanh (sum * (1.0f + m.drive * 2.0f)) / (1.0f + m.drive) : sum;
+        float y;
+        if (m.ladder)
+        {
+            ladder.set (fc, p.reso * 0.95f, fs);
+            y = ladder.process (input) * 2.4f;
+        }
+        else
+        {
+            filter.set (fc, 0.6f + p.reso * 4.0f, fs);
+            filter.process (input);
+            y = (filter.lp * (1.0f - m.bandpass) + filter.bp * m.bandpass * 1.5f) * 1.8f;
+        }
+        y *= e * gain;
+        const float wide = side * m.spread * e * gain * 0.3f;
+        left += y + wide;
+        right += y - wide;
+    }
+
     const Poly80Params& p;
     float fs = 44100.0f, freq = 220, gain = 1, phase1 = 0, phase2 = 0.37f;
+    float phases[3] { 0.0f, 0.37f, 0.71f }, subPhase = 0, drift = 0;
     Adsr adsr;
     Svf filter;
+    Ladder ladder;
+    Noise noise;
 };
 
 //==============================================================================

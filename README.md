@@ -2,8 +2,8 @@
 
 Une groovebox pour faire de la musique électronique sans rien y connaître : techno, house, trance, drum & bass,
 mais aussi hip-hop, trap, lo-fi, funk, disco, reggaeton, afro, reggae, synthwave, pop, ambient…
-38 instruments recréés par synthèse (et un sampler pour tes propres sons), un séquenceur pas à pas et un piano roll,
-près de 300 sons célèbres prêts à jouer, une bibliothèque de rythmes, le clavier MIDI, et une explication derrière
+50 instruments recréés par synthèse (et un sampler pour tes propres sons), un séquenceur pas à pas et un piano roll,
+plus de 430 sons célèbres prêts à jouer, une bibliothèque de rythmes, le clavier MIDI, et une explication derrière
 chaque bouton, en français ou en anglais.
 
 ![Tech Machine](docs/screenshot.png)
@@ -54,7 +54,7 @@ Chaque machine est entièrement synthétisée (aucun sample) en imitant les circ
 | **Bass** | Basse électrique | Aux doigts, slap, médiator, fretless, contrebasse |
 | **Wobble** | Basses dubstep / drum & bass | Wobble calé sur le tempo, Reese, Growl |
 | **Hoover** | Roland Alpha Juno (1985) | Le hoover de la rave et du gabber |
-| **Poly 80s** | Prophet-5 / OB-X | Cuivres « Jump », nappes synthwave |
+| **Poly 80s** | Prophet-5, OB-X, Jupiter-8, Polysix, JX-3P, OB-6, Prophet-6, minilogue, PolyBrute | 8 modèles : cuivres « Jump », nappes synthwave, accords 80s |
 | **M1** | Korg M1 (1988) | Piano house, orgue, nappes Lore et Universe |
 | **EDM** | Supersaw moderne | Accords future bass avec sidechain intégré, plucks |
 | **Talkbox** | Talkbox | Le synthé qui parle du G-funk et de Daft Punk |
@@ -63,9 +63,28 @@ Chaque machine est entièrement synthétisée (aucun sample) en imitant les circ
 | **Brass** | Cuivres | Trompette, trombone, sax, section funk, stabs |
 | **Winds** | Bois | Flûte, flûte de pan, clarinette, shakuhachi, ocarina, flûte trap |
 | **Orchestra** | Orchestre | Cordes, pizzicato, orch hit, timbales, harpe |
+| **606** | Roland TR-606 (1981) | La petite sœur de la 808 : acid, électro minimaliste, EBM |
+| **Rhythm Box** | Wurlitzer Side Man, Rhythm Ace, Donca-Matic | Les premières boîtes à rythmes : douces et rétro |
+| **Digital Kit** | Roland TR-505 / TR-626, Alesis SR-16 | Boîtes numériques granuleuses de la fin des années 80 |
+| **Synth Drums** | Korg ER-1, Elektron Machinedrum / Syntakt | Percussions FM et en anneau : bips, clangs, zaps |
+| **8-Bit** | Puce SID (Commodore 64), SidStation | Chiptune : carrés, triangle en escalier, arpèges ultra-rapides |
+| **Semi-Mod** | ARP 2600 / Odyssey, Korg MS-20, EMS VCS 3, MiniBrute | Leads qui crient, basses sales, modulateur en anneau |
+| **Wavetable** | PPG Wave, Waldorf Microwave / Blofeld, Prophet VS, Wavestation | Tables d'ondes, synthèse vectorielle, séquences d'ondes |
+| **LA Synth** | Roland D-50, JD-800, JV-1080, Yamaha SY77 | Fantasia, Pizzagogo, nappes de verre |
+| **CS-80** | Yamaha CS-80 (1977) | Les cuivres de Blade Runner, nappes veloutées |
+| **Éther** | Thérémine, ondes Martenot, Korg monotron | Voix qui glissent et vibrent, science-fiction des années 50 |
+| **West Coast** | Buchla 100 (1965) | FM, wavefolder et low pass gate : bongos et cloches électroniques |
+| **Vocoder** | Korg VC-10, Roland VP-330, microKORG | La voix robot : la machine prononce elle-même ses mots |
+
+Le **Sampler** a aussi 6 caractères : original, 8 bits (Fairlight, Emulator), 12 bits (SP-1200), 16 bits vintage
+(S900, MPC60), lo-fi (SP-404) et granulaire (P-6). Et les sons d'usine ajoutent de nombreux autres synthés dans l'esprit
+de leur famille : Juno-60, Moog Taurus, Voyager, Sub 37, MC-202, Pro-One, Bass Station, Nord Lead, Virus, TB-3,
+Chamberlin, TR-8, DrumBrute, Volca Beats…
 
 Les noms des constructeurs sont cités uniquement pour décrire les instruments qui ont inspiré ces machines.
-Ce projet n'est ni affilié ni approuvé par Roland, Moog, Yamaha, Linn, Akai, ARP, Hammond, Korg, Sequential, Oberheim, Simmons ou Streetly.
+Ce projet n'est ni affilié ni approuvé par Roland, Moog, Yamaha, Linn, Akai, ARP, Hammond, Korg, Sequential, Oberheim, Simmons,
+Streetly, Buchla, EMS, PPG, Waldorf, Arturia, Elektron, E-mu, Ensoniq, Fairlight, Alesis, Novation, Access, Clavia, Wurlitzer,
+Ace Tone ou Commodore.
 
 ## Ce qu'on peut faire
 
@@ -73,7 +92,7 @@ Ce projet n'est ni affilié ni approuvé par Roland, Moog, Yamaha, Linn, Akai, A
 - **30 projets exemples**, au moins un par style : techno, acid, Detroit, house, Berlin, minimale, hard techno,
   trance, psytrance, drum & bass, jungle, breakbeat, UK garage, gabber, électro, hip-hop, trap, drill, lo-fi, R&B,
   funk, disco, pop, reggaeton, afro house, reggae, synthwave, ambient…
-- **Sons prêts à jouer** (bouton SONS) : près de 300 sons célèbres, dont 30 sons FM du DX7 (E.Piano, Bass 1, Tub Bells…)
+- **Sons prêts à jouer** (bouton SONS) : plus de 430 sons célèbres, dont 30 sons FM du DX7 (E.Piano, Bass 1, Tub Bells…)
   et des kits pour chaque boîte à rythmes.
 - **Piano roll** pour les synthés, avec accords libres sur les synthés polyphoniques.
 - **Clavier et pads MIDI** : joue en direct, enregistre dans les pas (ENREG. MIDI) — sur les synthés polyphoniques,

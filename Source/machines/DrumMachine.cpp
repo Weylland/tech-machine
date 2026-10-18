@@ -37,6 +37,8 @@ public:
             fx.reverb = state.getRawParameterValue (pid::row (type, i, "reverb"));
         }
         accentParam = state.getRawParameterValue (pid::machine (type, "accent"));
+        for (int i = 0; i < (int) def.params.size(); ++i) machineParams.push_back (state.getRawParameterValue (pid::synth (type, i)));
+        machineValues.resize (machineParams.size());
     }
 
     void prepare (float sampleRate) override
@@ -64,6 +66,11 @@ public:
             fx.dsp.set (fx.filter->load(), fs);
         }
         accentAmount = accentParam->load();
+        if (! machineParams.empty())
+        {
+            for (size_t i = 0; i < machineParams.size(); ++i) machineValues[i] = machineParams[i]->load();
+            for (auto& v : voices) v->setMachineParams (machineValues.data());
+        }
     }
 
     void onStep (const StepInfo& s) override
@@ -177,6 +184,8 @@ public:
 private:
     std::vector<std::unique_ptr<DrumVoice>> voices;
     int numRows = 0, openHatRow = -1;
+    std::vector<std::atomic<float>*> machineParams;
+    std::vector<float> machineValues;
     std::atomic<float>* levelParam[maxDrumRows] {};
     std::atomic<float>* tuneParam[maxDrumRows] {};
     std::atomic<float>* decayParam[maxDrumRows] {};

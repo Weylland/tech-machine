@@ -55,6 +55,7 @@ public:
 
 private:
     bool midiTarget = false;
+    int subtitleRight = 600;   // the subtitle stops before the header buttons
     std::unique_ptr<juce::FileChooser> chooser;
     void chooseSampleFile (std::function<void (const juce::File&)> then);
     IconButton rollButton { "keys", "PIANO ROLL" };

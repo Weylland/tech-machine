@@ -1,5 +1,6 @@
 #include "DrumVoices.h"
 #include "FxVoices.h"
+#include "KitVoices.h"
 #include "PercussionVoices.h"
 #include "SamplerVoice.h"
 
@@ -194,6 +195,61 @@ std::unique_ptr<DrumVoice> createDrumVoice (const juce::String& machine, const j
         if (row == "cl") return std::make_unique<Claves>();
     }
 
+    else if (machine == "tr606")
+    {
+        if (row == "bd") return std::make_unique<Kick606>();
+        if (row == "sd") return std::make_unique<Snare606>();
+        if (row == "lt") return std::make_unique<Tom> (110.0f, 0.25f, 0.02f);
+        if (row == "ht") return std::make_unique<Tom> (165.0f, 0.25f, 0.02f);
+        if (row == "ch") return metal (tr808, 0.25f, 0.0f, 8000.0f, 0.9f, 7000.0f, 0.01f, 0.05f, 6.0f, 0.0f);
+        if (row == "oh") return metal (tr808, 0.25f, 0.0f, 8000.0f, 0.9f, 7000.0f, 0.06f, 0.45f, 5.0f, 0.0f);
+        if (row == "cy") return std::make_unique<Cymbal808> (tr808);
+    }
+    else if (machine == "rhythmbox")
+    {
+        if (row == "bd") return std::make_unique<SoftKick>();
+        if (row == "sd") return std::make_unique<BrushSnare>();
+        if (row == "rs") return std::make_unique<RimShot> (1200.0f, 480.0f);
+        if (row == "ch") return metal (acoustic, 0.6f, 0.0f, 7000.0f, 0.6f, 6000.0f, 0.01f, 0.05f, 3.0f, 0.0f);
+        if (row == "cy") return metal (crash, 0.4f, 0.0f, 6000.0f, 0.6f, 3000.0f, 0.3f, 1.5f, 1.8f, 0.2f);
+        if (row == "cl") return std::make_unique<Claves>();
+        if (row == "bl") return std::make_unique<Membrane> (300.0f, 0.04f, 1.7f, 0.2f, 0.05f, 0.25f);
+        if (row == "bh") return std::make_unique<Membrane> (420.0f, 0.04f, 1.7f, 0.2f, 0.04f, 0.2f);
+        if (row == "cg") return std::make_unique<Membrane> (190.0f, 0.05f, 1.59f, 0.25f, 0.08f, 0.35f);
+        if (row == "gu") return std::make_unique<Guiro>();
+        if (row == "ma") return std::make_unique<Maracas>();
+    }
+    else if (machine == "digital")
+    {
+        auto crushed = [] (std::unique_ptr<DrumVoice> v) { return std::make_unique<Bitcrushed> (std::move (v), 8.0f, 2); };
+        if (row == "bd") return crushed (std::make_unique<SampledKick>());
+        if (row == "sd") return crushed (std::make_unique<SampledSnare>());
+        if (row == "rs") return crushed (std::make_unique<RimShot> (1650.0f, 510.0f));
+        if (row == "cp") return crushed (std::make_unique<HandClap> (3, 0.008f, 1250.0f));
+        if (row == "ch") return metal (tr909, 0.45f, 48.0f, 9000.0f, 0.9f, 7000.0f, 0.01f, 0.07f, 4.6f, 0.0f);
+        if (row == "oh") return metal (tr909, 0.45f, 48.0f, 9000.0f, 0.9f, 7000.0f, 0.08f, 0.55f, 3.9f, 0.0f);
+        if (row == "lt") return crushed (std::make_unique<Membrane> (120.0f, 0.3f, 1.5f, 0.2f, 0.1f, 0.5f));
+        if (row == "ht") return crushed (std::make_unique<Membrane> (185.0f, 0.3f, 1.5f, 0.2f, 0.08f, 0.45f));
+        if (row == "cb") return crushed (std::make_unique<Cowbell808>());
+        if (row == "ti") return crushed (std::make_unique<Membrane> (420.0f, 0.04f, 2.3f, 0.5f, 0.1f, 0.5f));
+        if (row == "ag") return crushed (std::make_unique<Bell> (880.0f));
+        if (row == "cr") return metal (crash, 0.55f, 48.0f, 7000.0f, 0.6f, 3500.0f, 0.5f, 2.5f, 2.6f, 0.35f);
+        if (row == "rd") return metal (ride, 0.15f, 48.0f, 6500.0f, 1.2f, 2500.0f, 0.4f, 2.0f, 3.0f, 0.25f);
+    }
+    else if (machine == "synthdrums")
+    {
+        auto fm = [] (FmPercConfig c) { return std::make_unique<FmPerc> (c); };
+        if (row == "bd") return fm ({ 50.0f, 2.5f, 0.025f, 1.0f, 1.5f, 0.01f, 0.0f, 0.0f, 0.0f, 0.1f, 0.7f, 0.9f });
+        if (row == "sd") return fm ({ 180.0f, 0.6f, 0.02f, 1.48f, 1.0f, 0.03f, 2.1f, 0.7f, 300.0f, 0.06f, 0.35f, 0.8f });
+        if (row == "t1") return fm ({ 110.0f, 1.2f, 0.06f, 1.5f, 2.0f, 0.08f, 0.0f, 0.0f, 0.0f, 0.1f, 0.8f, 0.85f });
+        if (row == "bp") return fm ({ 1200.0f, 0.3f, 0.005f, 2.0f, 1.5f, 0.02f, 0.0f, 0.0f, 0.0f, 0.02f, 0.2f, 0.6f });
+        if (row == "cl") return fm ({ 540.0f, 0.0f, 0.01f, 1.0f, 0.5f, 0.1f, 1.48f, 0.0f, 0.0f, 0.05f, 0.6f, 0.7f });
+        if (row == "cp") return std::make_unique<HandClap> (4, 0.007f, 1600.0f);
+        if (row == "ch") return fm ({ 3200.0f, 0.0f, 0.01f, 1.4142f, 9.0f, 0.05f, 0.0f, 0.5f, 6000.0f, 0.01f, 0.07f, 0.6f });
+        if (row == "oh") return fm ({ 3200.0f, 0.0f, 0.01f, 1.4142f, 9.0f, 0.3f, 0.0f, 0.5f, 6000.0f, 0.06f, 0.6f, 0.55f });
+        if (row == "zp") return fm ({ 300.0f, 4.0f, 0.03f, 1.0f, 0.0f, 0.01f, 0.0f, 0.0f, 0.0f, 0.05f, 0.3f, 0.7f });
+    }
+
     jassertfalse;
     return std::make_unique<Claves>();
 }
@@ -213,6 +269,11 @@ float drumVoiceTrim (const juce::String& machine, const juce::String& row)
         { "cr78", "sd", 1.3f }, { "cr78", "ch", 2.4f }, { "cr78", "cy", 1.5f }, { "cr78", "gu", 0.5f },
         { "mpc", "ch", 1.1f }, { "mpc", "cr", 1.3f }, { "perc", "gu", 0.5f },
         { "fx", "zap", 2.5f }, { "fx", "gun", 1.8f }, { "fx", "rwd", 1.6f }, { "fx", "rain", 1.5f }, { "kit", "bd", 1.4f }, { "kit", "rb", 1.3f }, { "fx", "sir", 2.0f }, { "fx", "horn", 2.8f }, { "fx", "vin", 1.5f }, { "fx", "rev", 1.4f },
+        { "tr606", "bd", 1.85f }, { "tr606", "sd", 1.23f }, { "tr606", "lt", 1.7f }, { "tr606", "ht", 1.7f }, { "tr606", "ch", 1.2f },
+        { "tr606", "oh", 1.13f }, { "tr606", "cy", 1.7f },
+        { "rhythmbox", "bd", 0.9f }, { "rhythmbox", "sd", 2.0f }, { "rhythmbox", "rs", 1.25f }, { "rhythmbox", "ch", 1.7f },
+        { "rhythmbox", "cy", 1.6f }, { "rhythmbox", "gu", 0.6f },
+        { "synthdrums", "bd", 1.45f }, { "synthdrums", "sd", 1.65f }, { "synthdrums", "bp", 1.45f },
     };
     for (auto& t : trims)
         if (machine == t.machine && row == t.row) return t.gain;

@@ -287,12 +287,142 @@ std::map<int, std::vector<SoundPreset>> build()
         { "Cordes épiques", { { "type", 0 }, { "ensemble", 1 }, { "attack", 0.55f }, { "@reverb", 0.45f } } },
     };
 
+    m[Chip] = {
+        { "Arpèges C64", {} },
+        { "Lead de jeu vidéo", { { "arp", 0 }, { "chord", 0 }, { "octave", 3 }, { "vibrato", 0.45f } } },
+        { "Arpèges très rapides", { { "wave", 2 }, { "arp", 2 } } },
+        { "Basse triangle (console)", { { "wave", 3 }, { "arp", 0 }, { "chord", 0 }, { "octave", 1 }, { "decay", 0.3f }, { "sustain", 0.8f } } },
+        { "Accords en dent de scie", { { "wave", 4 }, { "arp", 0 }, { "pwm", 0 } } },
+        { "Lead SidStation", { { "wave", 4 }, { "arp", 0 }, { "chord", 0 }, { "octave", 3 }, { "lofi", 0.6f }, { "vibrato", 0.3f } } },
+        { "Bruit d'explosion", { { "wave", 5 }, { "arp", 0 }, { "chord", 0 }, { "decay", 0.25f }, { "sustain", 0 } } },
+    };
+    m[SemiMod] = {
+        { "ARP 2600 — lead", { { "model", 0 }, { "octave", 3 }, { "cutoff", 0.55f }, { "reso", 0.4f } } },
+        { "ARP 2600 — robot (anneau)", { { "model", 0 }, { "ring", 0.9f }, { "octave", 3 }, { "cutoff", 0.7f }, { "env", 0.6f }, { "decay", 0.2f }, { "sustain", 0 } } },
+        { "Odyssey — synchro qui crie", { { "model", 1 }, { "env", 0.8f }, { "cutoff", 0.5f }, { "decay", 0.5f }, { "octave", 3 } } },
+        { "MS-20 — basse qui hurle", { { "model", 2 }, { "octave", 1 }, { "cutoff", 0.35f }, { "reso", 0.8f }, { "overdrive", 0.5f } } },
+        { "MS-20 — lead acide", { { "model", 2 }, { "octave", 3 }, { "reso", 0.7f }, { "env", 0.6f } } },
+        { "VCS 3 — science-fiction", { { "model", 3 }, { "ring", 0.6f }, { "osc2", 0.8f }, { "reso", 0.6f }, { "glide", 0.6f } } },
+        { "MiniBrute — brut", { { "model", 4 }, { "overdrive", 0.8f }, { "octave", 1 }, { "cutoff", 0.4f }, { "reso", 0.5f } } },
+        { "Mother-32 — séquence", { { "model", 4 }, { "overdrive", 0.3f }, { "cutoff", 0.3f }, { "env", 0.7f }, { "decay", 0.25f }, { "sustain", 0 } } },
+    };
+    m[Wavetable] = {
+        { "PPG — nappe numérique", { { "table", 0 }, { "position", 0.2f }, { "sweep", 0.6f }, { "attack", 0.3f }, { "release", 0.5f } } },
+        { "PPG — cloches", { { "table", 0 }, { "position", 0.7f }, { "sweep", 0.3f }, { "decay", 0.4f }, { "sustain", 0.2f } } },
+        { "Microwave — basse", { { "table", 1 }, { "octave", 1 }, { "chord", 0 }, { "position", 0.4f }, { "sweep", 0.7f }, { "decay", 0.3f }, { "sustain", 0.3f } } },
+        { "Blofeld — nappe vivante", { { "table", 1 }, { "motion", 0.5f }, { "position", 0.5f }, { "attack", 0.4f }, { "release", 0.6f } } },
+        { "Chœur numérique (voyelles)", { { "table", 2 }, { "motion", 0.3f }, { "attack", 0.4f } } },
+        { "Métal (modwave)", { { "table", 3 }, { "position", 0.6f }, { "sweep", 0.5f } } },
+        { "Prophet VS — vectoriel", { { "table", 4 }, { "motion", 0.4f }, { "position", 0.5f }, { "attack", 0.2f } } },
+        { "Wavestation — séquence", { { "table", 5 }, { "motion", 0.35f }, { "release", 0.5f } } },
+        { "wavestate — séquence rapide", { { "table", 5 }, { "motion", 0.7f } } },
+        { "Orgue numérique", { { "table", 7 }, { "position", 0.3f }, { "motion", 0.1f } } },
+    };
+    m[LaSynth] = {
+        { "Fantasia (D-50)", { { "type", 0 } } }, { "Pizzagogo (D-50)", { { "type", 1 } } },
+        { "Danse numérique (D-50)", { { "type", 2 } } }, { "Staccato (D-50)", { { "type", 3 }, { "chord", 0 } } },
+        { "Voix de verre (D-50)", { { "type", 4 } } }, { "Nappe JD-800", { { "type", 5 }, { "attack", 0.4f } } },
+        { "Cuivres LA", { { "type", 6 } } }, { "Piano JV-1080 / SY77", { { "type", 7 } } },
+        { "Cloches new age", { { "type", 0 }, { "layer", 1 }, { "attack", 0.6f }, { "@reverb", 0.4f } } },
+    };
+    m[CS80] = {
+        { "Blade Runner (cuivres)", { { "type", 0 } } },
+        { "Chariots de feu", { { "type", 0 }, { "brilliance", 0.65f }, { "attack", 0.2f }, { "@reverb", 0.35f } } },
+        { "Nappe veloutée", { { "type", 1 } } }, { "Cordes CS", { { "type", 2 } } },
+        { "Cloches (anneau)", { { "type", 3 } } }, { "Lead expressif", { { "type", 4 }, { "chord", 0 }, { "octave", 3 } } },
+    };
+    m[Ether] = {
+        { "Thérémine (science-fiction)", { { "type", 0 } } }, { "Thérémine doux", { { "type", 0 }, { "vibrato", 0.3f }, { "tone", 0.2f } } },
+        { "Ondes Martenot", { { "type", 1 } } }, { "Ondes — creux", { { "type", 2 } } }, { "Ondes — gambe", { { "type", 3 } } },
+        { "Ondes — palme", { { "type", 4 }, { "@reverb", 0.4f } } },
+        { "Monotron", { { "type", 5 }, { "glide", 0.2f } } }, { "Monotron qui grince", { { "type", 5 }, { "tone", 0.9f } } },
+    };
+    m[WestCoast] = {
+        { "Bongos Buchla", { { "ratio", 0 }, { "gate", 0 }, { "decay", 0.25f }, { "fm", 0.3f } } },
+        { "Cloche Buchla", { { "ratio", 5 }, { "decay", 0.6f }, { "fm", 0.5f } } },
+        { "Pluck boisé", { { "ratio", 1 }, { "fold", 0.6f }, { "decay", 0.35f } } },
+        { "Métal (7:4)", { { "ratio", 4 }, { "fm", 0.6f } } },
+        { "Bulles électroniques", { { "ratio", 2 }, { "fm", 0.7f }, { "fold", 0.7f }, { "decay", 0.15f }, { "@echo", 0.4f } } },
+        { "Nappe pliée (filtre seul)", { { "gate", 2 }, { "decay", 0.8f }, { "fold", 0.5f }, { "chord", 1 } } },
+    };
+    m[Vocoder] = {
+        { "Robot (VC-10)", { { "words", 0 } } }, { "Techno robot", { { "words", 1 } } }, { "Électro", { { "words", 2 } } },
+        { "Oh yeah (disco)", { { "words", 3 } } }, { "Chœur robot (VP-330)", { { "words", 5 }, { "release", 0.6f } } },
+        { "microKORG", { { "words", 4 }, { "carrier", 0.6f } } },
+        { "Voix de géant", { { "shift", 0.15f } } }, { "Voix de souris", { { "shift", 0.85f } } },
+    };
+
+    // Other synths of the same families, made with the machines that already have their sound.
+    auto add = [&m] (int type, std::initializer_list<SoundPreset> presets) { for (auto& p : presets) m[type].push_back (p); };
+    add (Poly80, {
+        { "Jupiter-8 — nappe", { { "model", 1 }, { "attack", 0.5f }, { "release", 0.6f }, { "cutoff", 0.45f } } },
+        { "Jupiter-4 — arpèges", { { "model", 1 }, { "pulse", 0.8f }, { "saw", 0.2f }, { "decay", 0.25f }, { "sustain", 0.2f } } },
+        { "Polysix — accords", { { "model", 2 }, { "decay", 0.35f }, { "sustain", 0.4f } } },
+        { "JX-3P — pop 80s", { { "model", 3 } } },
+        { "JX-10 — nappe", { { "model", 3 }, { "attack", 0.5f }, { "release", 0.6f } } },
+        { "OB-8 — cuivres", { { "model", 4 }, { "saw", 1 }, { "pulse", 0 }, { "env", 0.6f }, { "attack", 0.08f } } },
+        { "OB-6 — nappe large", { { "model", 4 }, { "attack", 0.5f }, { "release", 0.7f } } },
+        { "Prophet-600 — premier MIDI", { { "model", 0 }, { "pulse", 0.7f }, { "detune", 0.15f } } },
+        { "Prophet-6 — saturé", { { "model", 5 } } },
+        { "Prophet '08 — basse", { { "model", 5 }, { "octave", 1 }, { "chord", 0 }, { "cutoff", 0.3f }, { "env", 0.5f } } },
+        { "minilogue — moderne", { { "model", 6 } } },
+        { "Take 5 — accords", { { "model", 6 }, { "decay", 0.4f }, { "sustain", 0.5f } } },
+        { "PolyBrute — énorme", { { "model", 7 } } },
+        { "Moog Muse — nappe", { { "model", 7 }, { "attack", 0.4f }, { "release", 0.6f }, { "cutoff", 0.4f } } },
+    });
+    add (Juno106, {
+        { "Juno-60 (chorus II)", { { "chorus", 2 } } },
+        { "Juno-6 brut (sans chorus)", { { "chorus", 0 }, { "hpf", 0 } } },
+    });
+    add (ModelD, {
+        { "Moog Taurus (pédalier)", { { "octave", 0 }, { "wave", 0 }, { "cutoff", 0.3f }, { "contour", 0.3f }, { "decay", 0.6f }, { "sustain", 0.8f } } },
+        { "Little Phatty", { { "cutoff", 0.4f }, { "emphasis", 0.4f }, { "overdrive", 0.4f } } },
+        { "Minimoog Voyager (lead)", { { "octave", 3 }, { "cutoff", 0.6f }, { "detune", 0.3f }, { "glide", 0.4f } } },
+        { "Sub 37 (basse moderne)", { { "octave", 1 }, { "sub", 1 }, { "overdrive", 0.5f }, { "cutoff", 0.35f } } },
+        { "Minitaur (sub)", { { "octave", 0 }, { "sub", 1 }, { "cutoff", 0.25f } } },
+    });
+    add (SH101, {
+        { "MC-202", { { "saw", 1 }, { "square", 0 }, { "sub", 0.6f }, { "reso", 0.5f }, { "decay", 0.25f } } },
+        { "Pro-One", { { "saw", 0.8f }, { "square", 0.5f }, { "cutoff", 0.5f }, { "reso", 0.4f }, { "env", 0.6f } } },
+        { "SH-1000 / SH-3 (vintage)", { { "square", 0.8f }, { "saw", 0.2f }, { "cutoff", 0.55f } } },
+        { "miniKORG 700", { { "saw", 0.6f }, { "square", 0.6f }, { "reso", 0.35f }, { "glide", 0.4f } } },
+        { "Bass Station", { { "octave", 1 }, { "sub", 0.8f }, { "reso", 0.6f }, { "env", 0.7f } } },
+        { "Volca Bass", { { "octave", 1 }, { "saw", 1 }, { "reso", 0.7f }, { "decay", 0.2f }, { "sustain", 0 } } },
+    });
+    add (TB303, {
+        { "TB-3 (moderne)", { { "cutoff", 0.4f }, { "reso", 0.75f }, { "@drive", 0.3f } } },
+        { "TT-303 / Volca acide", { { "wave", 1 }, { "cutoff", 0.3f }, { "reso", 0.8f } } },
+    });
+    add (JP8000, {
+        { "Nord Lead", { { "chord", 0 }, { "octave", 3 }, { "detune", 0.25f }, { "cutoff", 0.65f }, { "reso", 0.35f } } },
+        { "Virus — trance", { { "detune", 0.6f }, { "mix", 0.8f }, { "cutoff", 0.55f }, { "@reverb", 0.3f } } },
+        { "AN1x", { { "detune", 0.35f }, { "cutoff", 0.45f }, { "env", 0.5f } } },
+        { "Supernova — nappe", { { "attack", 0.5f }, { "release", 0.7f }, { "detune", 0.5f } } },
+        { "Prophecy — lead", { { "chord", 0 }, { "octave", 3 }, { "cutoff", 0.7f }, { "reso", 0.5f } } },
+        { "SH-201 / System-1", { { "detune", 0.2f }, { "cutoff", 0.5f }, { "env", 0.6f }, { "decay", 0.3f } } },
+        { "S-1 / J-6 — accords", { { "decay", 0.35f }, { "sustain", 0.3f }, { "cutoff", 0.45f } } },
+        { "microKORG — lead", { { "chord", 0 }, { "octave", 3 }, { "detune", 0.15f }, { "cutoff", 0.6f } } },
+    });
+    add (DX7, {
+        { "opsix — cloches", { { "preset", 2 }, { "brightness", 0.8f } } },
+        { "Digitone — basse", { { "preset", 1 }, { "octave", 1 }, { "chord", 0 }, { "brightness", 0.7f } } },
+    });
+    add (Mellotron, { { "Chamberlin (cordes douces)", { { "type", 1 }, { "wow", 0.3f }, { "noise", 0.5f }, { "tone", 0.4f } } } });
+    add (Organ, { { "Roues phoniques (Telharmonium)", { { "bass", 0.6f }, { "middle", 0.6f }, { "high", 0 }, { "leslie", 0 }, { "click", 0 } } } });
+
     for (int t = 0; t < numMachines; ++t)
         if (machineDef (t).kind == MachineKind::Drum && t != SoundFx && t != Sampler)
             m[t] = drumKits (machineDef (t));
 
     // 808 extras.
     m[TR808].push_back ({ "Miami bass (kick infini)", { { "bd.decay", 1.0f }, { "bd.tune", 0.3f }, { "bd.level", 1.0f }, { "cb.level", 0.5f } } });
+    m[TR808].push_back ({ "Volca Beats", { { "bd.decay", 0.35f }, { "sd.tone", 0.7f }, { "ch.decay", 0.2f }, { "@crush", 0.15f } } });
+    m[TR808].push_back ({ "T-8 / TR-6S (compact)", { { "bd.decay", 0.5f }, { "bd.drive", 0.2f }, { "sd.tone", 0.6f } } });
+    m[TR808].push_back ({ "Tempest (analogique)", { { "bd.drive", 0.4f }, { "bd.decay", 0.6f }, { "sd.decay", 0.6f }, { "@drive", 0.2f } } });
+    m[TR909].push_back ({ "TR-8 / TR-8S (net)", { { "bd.tone", 0.6f }, { "sd.tone", 0.6f }, { "ch.decay", 0.3f } } });
+    m[TR909].push_back ({ "DrumBrute (techno sale)", { { "bd.drive", 0.7f }, { "sd.drive", 0.5f }, { "@drive", 0.3f }, { "@crush", 0.1f } } });
+    m[TR909].push_back ({ "Analog Rytm (gros kick)", { { "bd.decay", 0.7f }, { "bd.level", 1.0f }, { "bd.drive", 0.4f }, { "@reverb", 0.15f } } });
+    m[TR909].push_back ({ "TR-1000 (moderne)", { { "bd.tone", 0.7f }, { "sd.tone", 0.7f }, { "oh.decay", 0.5f }, { "@reverb", 0.1f } } });
     return m;
 }
 } // namespace

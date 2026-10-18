@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(TechMachine VERSION 0.6.2)
+project(TechMachine VERSION 0.7.0)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_CXX_STANDARD 17)
@@ -37,6 +37,7 @@ target_sources(TechMachine PRIVATE
     Source/core/Presets.cpp
     Source/core/Styles.cpp
     Source/dsp/DrumVoices.cpp
+    Source/dsp/Wavetables.cpp
     Source/machines/DrumMachine.cpp
     Source/machines/Instruments.cpp
     Source/machines/Machines.cpp
