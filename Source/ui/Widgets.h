@@ -112,11 +112,22 @@ public:
     void paint (juce::Graphics& g) override
     {
         g.setColour (skinOf (*this).text);
-        g.setFont (paint::condensed (12.0f));
-        g.drawFittedText (name, getLocalBounds().withTrimmedRight (15), juce::Justification::centred, 1, 0.75f);
+        g.setFont (font());
+        g.drawFittedText (name, getLocalBounds().withTrimmedRight (15), juce::Justification::centred, 1, minimumScale);
     }
 
+    // Whether the name is shown whole (it may be squeezed down to minimumScale, then it gets cut).
+    bool fits() const { return juce::GlyphArrangement::getStringWidth (font(), name) * minimumScale <= (float) (getWidth() - 15); }
+    const juce::String& getText() const { return name; }
+
+    // Width a control needs for this name to read comfortably.
+    static int widthFor (const juce::String& text) { return (int) std::ceil (juce::GlyphArrangement::getStringWidth (font(), text) * 0.8f) + 15; }
+
+    static constexpr float minimumScale = 0.75f;
+
 private:
+    static juce::Font font() { return paint::condensed (12.0f); }
+
     juce::String name;
     InfoButton info;
 };
@@ -219,10 +230,21 @@ public:
     {
         auto b = getLocalBounds();
         label.setBounds (b.removeFromBottom (16));
-        box.setBounds (b.withSizeKeepingCentre (b.getWidth() - 4, 28));
+        box.setBounds (b.withSizeKeepingCentre (b.getWidth() - 4, boxHeight));
+    }
+
+    // Width needed to show its longest choice (squeezed at most to 80 %, as the theme allows) and its name.
+    int preferredWidth() const
+    {
+        float longest = 0.0f;
+        const auto font = paint::condensed (juce::jmin (16.0f, (float) boxHeight * 0.55f));
+        for (int i = 0; i < box.getNumItems(); ++i)
+            longest = juce::jmax (longest, juce::GlyphArrangement::getStringWidth (font, box.getItemText (i)));
+        return juce::jmax ((int) std::ceil (longest * 0.8f) + 36, ControlLabel::widthFor (label.getText()));
     }
 
 private:
+    static constexpr int boxHeight = 28;
     juce::ComboBox box;
     ControlLabel label;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> attachment;

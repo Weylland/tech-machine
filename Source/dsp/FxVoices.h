@@ -192,7 +192,7 @@ class Vinyl : public FxVoice
     }
     float rumble = 0;
     Svf hiss, crackle;
-    juce::Random random;
+    juce::Random random { 0x7ec4 };   // fixed seed: the same project always sounds the same
 };
 
 // Reversed cymbal: grows louder and stops dead. End it one step before a downbeat.
@@ -278,6 +278,6 @@ class Rain : public FxVoice
         return wash.lp * 0.18f + drops.bp * 0.5f;
     }
     Svf wash, drops;
-    juce::Random random;
+    juce::Random random { 0x7ec4 };   // fixed seed: the same project always sounds the same
 };
 } // namespace techno

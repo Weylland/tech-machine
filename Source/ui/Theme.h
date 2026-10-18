@@ -134,6 +134,7 @@ public:
     {
         label.setBounds (6, 1, box.getWidth() - 26, box.getHeight() - 2);
         label.setFont (getComboBoxFont (box));
+        label.setMinimumHorizontalScale (0.8f);   // long names are squeezed a little before being cut
     }
 
     void drawPopupMenuBackground (juce::Graphics& g, int width, int height) override

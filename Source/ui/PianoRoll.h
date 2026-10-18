@@ -79,6 +79,7 @@ public:
             }
         }
         knownVersion = processor.patternVersion.load();
+        if (fittedSteps >= 0 && fittedSteps != len) fitAll();   // the sequence got longer or shorter
         repaint();
     }
 
@@ -519,7 +520,7 @@ public:
         {
             // Zoom around the mouse.
             const float before = (e.position.x - (float) keyW + scrollX) / stepW;
-            stepW = juce::jlimit (8.0f, 120.0f, stepW * (w.deltaY > 0 ? 1.15f : 1.0f / 1.15f));
+            stepW = juce::jlimit (8.0f, 240.0f, stepW * (w.deltaY > 0 ? 1.15f : 1.0f / 1.15f));
             scrollX = before * stepW - (e.position.x - (float) keyW);
         }
         else if (e.mods.isShiftDown() || std::abs (w.deltaX) > std::abs (w.deltaY))
@@ -592,7 +593,8 @@ public:
     void fitAll()
     {
         layout();
-        stepW = juce::jlimit (8.0f, 80.0f, (float) (getWidth() - keyW - 12) / (float) juce::jmax (1, steps()));
+        stepW = juce::jlimit (8.0f, 240.0f, (float) (getWidth() - keyW - 12) / (float) juce::jmax (1, steps()));
+        fittedSteps = steps();
         scrollX = 0.0f;
         // Centre the notes vertically (or the middle of the range).
         int low = noteRange, high = 0;
@@ -820,6 +822,7 @@ private:
     std::vector<int> chordPreview;
     std::vector<bool> glide;
     float stepW = 0.0f, scrollX = 0.0f, scrollY = 0.0f;
+    int fittedSteps = -1;
     int playhead = -1, grabbed = -1, downStep = 0, downPitch = 0, previewPitch = -1, pressedKey = -1, dragLane = -1;
     bool laneValue = false;
     Drag dragMode = Drag::None;
@@ -836,10 +839,7 @@ public:
         addAndMakeVisible (grid);
         grid.onClose = [this] { if (onClose) onClose(); };
 
-        for (int t : rackOrder)
-            if (machineDef (t).kind != MachineKind::Drum) machineBox.addItem (utf8 (machineDef (t).name), t + 1);
-        machineBox.setSelectedId (machineType + 1, juce::dontSendNotification);
-        machineBox.onChange = [this] { grid.setMachine (machineBox.getSelectedId() - 1); grid.fitAll(); };
+        refreshMachines();
         machineBox.setTooltip (utf8 ("La machine dont tu écris les notes"));
         addAndMakeVisible (machineBox);
 
@@ -867,7 +867,13 @@ public:
             if (! poly) stackBox.setSelectedId (1, juce::sendNotificationSync);
         };
         updateStack();
-        machineBox.onChange = [this, updateStack] { grid.setMachine (machineBox.getSelectedId() - 1); grid.fitAll(); updateStack(); };
+        machineBox.onChange = [this, updateStack]
+        {
+            if (machineBox.getSelectedId() <= 0) return;
+            grid.setMachine (machineBox.getSelectedId() - 1);
+            grid.fitAll();
+            updateStack();
+        };
 
         auto button = [this] (IconButton& b, const char* tip, std::function<void()> action)
         {
@@ -890,6 +896,16 @@ public:
     std::function<void()> onClose;
     PianoRollGrid& getGrid() { return grid; }
 
+    // The synths of the rack (the machine being edited is always listed).
+    void refreshMachines()
+    {
+        machineBox.clear (juce::dontSendNotification);
+        for (int t : rackOrder)
+            if (machineDef (t).kind != MachineKind::Drum && (processor.isShown (t) || t == grid.machine()))
+                machineBox.addItem (utf8 (machineDef (t).name), t + 1);
+        machineBox.setSelectedId (grid.machine() + 1, juce::dontSendNotification);
+    }
+
     void paint (juce::Graphics& g) override
     {
         g.setColour (juce::Colour (0xff101113));
@@ -897,39 +913,44 @@ public:
         g.setColour (colours::text);
         g.setFont (paint::display (22.0f));
         g.drawText ("PIANO ROLL", 16, 8, 160, 30, juce::Justification::centredLeft);
+        // How to use it, along the bottom.
         g.setColour (colours::dim);
         g.setFont (paint::font (12.5f, false));
-        g.drawText (utf8 ("Clic = poser · glisser = déplacer · bord droit = allonger · clic droit ou double-clic = effacer · "
-                          "Ctrl+glisser = sélectionner · Alt+glisser = copier · flèches = déplacer / transposer (Maj = mesure / octave) · "
-                          "Ctrl+molette = zoom · Maj+molette = défiler"),
-                    16, 40, getWidth() - 32, 16, juce::Justification::centredLeft);
+        g.drawFittedText (utf8 ("Clic = poser · glisser = déplacer · bord droit = allonger · clic droit ou double-clic = effacer · "
+                                "Ctrl+glisser = sélectionner · Alt+glisser = copier · flèches = déplacer / transposer (Maj = mesure / octave) · "
+                                "Ctrl+molette = zoom · Maj+molette = défiler"),
+                          getLocalBounds().reduced (16, 0).removeFromBottom (24), juce::Justification::centredLeft, 1, 0.8f);
     }
 
     void resized() override
     {
-        auto bar = getLocalBounds().reduced (12, 8).removeFromTop (30);
-        bar.removeFromLeft (160);
-        close.setBounds (bar.removeFromRight (110));
-        bar.removeFromRight (10);
-        machineBox.setBounds (bar.removeFromLeft (170));
-        bar.removeFromLeft (14);
-        lengthBox.setBounds (bar.removeFromLeft (90));
-        bar.removeFromLeft (10);
-        stackBox.setBounds (bar.removeFromLeft (170));
-        bar.removeFromLeft (14);
-        for (auto* b : { &octaveDown, &octaveUp, &duplicate, &selectAll, &fit, &erase })
+        // Row 1: what is written (machine, length, single note or chord), then the view.
+        auto row = getLocalBounds().reduced (12, 0).withTrimmedTop (8).removeFromTop (30);
+        row.removeFromLeft (160);
+        close.setBounds (row.removeFromRight (110));
+        row.removeFromRight (8);
+        fit.setBounds (row.removeFromRight (110));
+        machineBox.setBounds (row.removeFromLeft (170));
+        row.removeFromLeft (12);
+        lengthBox.setBounds (row.removeFromLeft (100));
+        row.removeFromLeft (12);
+        stackBox.setBounds (row.removeFromLeft (200));
+
+        // Row 2: the editing tools.
+        row = getLocalBounds().reduced (12, 0).withTrimmedTop (46).removeFromTop (28);
+        for (auto* b : { &octaveDown, &octaveUp, &duplicate, &selectAll, &erase })
         {
-            b->setBounds (bar.removeFromLeft (b == &selectAll ? 140 : b == &fit || b == &erase ? 94 : 102));
-            bar.removeFromLeft (6);
+            b->setBounds (row.removeFromLeft (b == &selectAll ? 160 : 112));
+            row.removeFromLeft (8);
         }
-        grid.setBounds (getLocalBounds().reduced (10).withTrimmedTop (54));
+        grid.setBounds (getLocalBounds().reduced (10, 0).withTrimmedTop (82).withTrimmedBottom (26));
     }
 
 private:
     TechMachineProcessor& processor;
     PianoRollGrid grid;
     juce::ComboBox machineBox, lengthBox, stackBox;
-    IconButton octaveDown { "down", utf8 ("OCTAVE −") }, octaveUp { "plus", utf8 ("OCTAVE +") }, duplicate { "patterns", utf8 ("DUPLIQUER") },
+    IconButton octaveDown { "down", utf8 ("OCTAVE −") }, octaveUp { "up", utf8 ("OCTAVE +") }, duplicate { "patterns", utf8 ("DUPLIQUER") },
                selectAll { "", utf8 ("TOUT SÉLECTIONNER") }, fit { "fullscreen", utf8 ("TOUT VOIR") }, erase { "trash", utf8 ("EFFACER") },
                close { "close", utf8 ("FERMER") };
 };

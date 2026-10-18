@@ -76,8 +76,9 @@ Ce projet n'est ni affilié ni approuvé par Roland, Moog, Yamaha, Linn, Akai, A
 - **Sons prêts à jouer** (bouton SONS) : près de 300 sons célèbres, dont 30 sons FM du DX7 (E.Piano, Bass 1, Tub Bells…)
   et des kits pour chaque boîte à rythmes.
 - **Piano roll** pour les synthés, avec accords libres sur les synthés polyphoniques.
-- **Clavier et pads MIDI** : joue en direct, enregistre dans les pas (ENREG. MIDI), assigne les boutons de ton
-  contrôleur (clic droit › Assigner à un bouton MIDI).
+- **Clavier et pads MIDI** : joue en direct, enregistre dans les pas (ENREG. MIDI) — sur les synthés polyphoniques,
+  les accords joués au clavier sont gardés note par note, avec leur durée — assigne les boutons de ton
+  contrôleur (clic droit › Assigner à un bouton MIDI). En VST3, l'instrument reçoit les notes de la piste MIDI.
 - **ASIO** et réglages audio (bouton AUDIO / MIDI) pour une latence minimale.
 - **Bibliothèque de patterns** (bouton PATTERNS de chaque machine) : une cinquantaine de rythmes célèbres
   (Four on the Floor, Motown, Billie Jean, Funky Drummer, Amen Break, boom bap, trap, dembow, bossa nova, one drop…),
