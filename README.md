@@ -2,8 +2,9 @@
 
 Une groovebox pour faire de la musique électronique sans rien y connaître : techno, house, trance, drum & bass,
 mais aussi hip-hop, trap, lo-fi, funk, disco, reggaeton, afro, reggae, synthwave, pop, ambient…
-21 instruments recréés par synthèse, un séquenceur pas à pas, une bibliothèque de rythmes célèbres
-et une explication derrière chaque bouton, en français ou en anglais.
+38 instruments recréés par synthèse (et un sampler pour tes propres sons), un séquenceur pas à pas et un piano roll,
+près de 300 sons célèbres prêts à jouer, une bibliothèque de rythmes, le clavier MIDI, et une explication derrière
+chaque bouton, en français ou en anglais.
 
 ![Tech Machine](docs/screenshot.png)
 
@@ -44,21 +45,47 @@ Chaque machine est entièrement synthétisée (aucun sample) en imitant les circ
 | **Piano** | Piano acoustique | À queue, droit, bastringue, pop brillant, feutré |
 | **Mallets** | Percussions mélodiques | Glockenspiel, vibraphone, célesta, boîte à musique, kalimba, steel drum, cloches, marimba |
 | **Pluck** | Cordes pincées (synthèse physique) | Guitare acoustique, nylon, funk, harpe, koto, sitar, pizzicato |
-| **Choir** | Chœurs | Voix « aah », « ooh », « eeh », « mmh » |
+| **Choir** | Chœurs | Voix « aah », « ooh », « eeh », « mmh », hommes, femmes, grégorien |
+| **707 / 727** | Roland TR-707 / TR-727 (1985) | House de Chicago, percussions latines |
+| **Drum Kit** | Batterie acoustique | Rock, pop, soul, jazz : ghost notes, cross-stick, ride bell |
+| **Simmons** | Simmons SDS-V (1981) | Toms électroniques « piou » des années 80 |
+| **World Perc** | Percussions du monde | Tabla, darbouka, djembé, talking drum, taiko, cajón |
+| **Sampler** | — | Tes propres sons sur 8 pads, découpe de boucle façon MPC |
+| **Bass** | Basse électrique | Aux doigts, slap, médiator, fretless, contrebasse |
+| **Wobble** | Basses dubstep / drum & bass | Wobble calé sur le tempo, Reese, Growl |
+| **Hoover** | Roland Alpha Juno (1985) | Le hoover de la rave et du gabber |
+| **Poly 80s** | Prophet-5 / OB-X | Cuivres « Jump », nappes synthwave |
+| **M1** | Korg M1 (1988) | Piano house, orgue, nappes Lore et Universe |
+| **EDM** | Supersaw moderne | Accords future bass avec sidechain intégré, plucks |
+| **Talkbox** | Talkbox | Le synthé qui parle du G-funk et de Daft Punk |
+| **Mellotron** | Mellotron | Flûtes, cordes, chœurs sur bandes magnétiques |
+| **E.Piano** | Rhodes, Wurlitzer, Clavinet | Pianos électriques soul, funk, lo-fi, et clavecin |
+| **Brass** | Cuivres | Trompette, trombone, sax, section funk, stabs |
+| **Winds** | Bois | Flûte, flûte de pan, clarinette, shakuhachi, ocarina, flûte trap |
+| **Orchestra** | Orchestre | Cordes, pizzicato, orch hit, timbales, harpe |
 
 Les noms des constructeurs sont cités uniquement pour décrire les instruments qui ont inspiré ces machines.
-Ce projet n'est ni affilié ni approuvé par Roland, Moog, Yamaha, Linn, Akai, ARP ou Hammond.
+Ce projet n'est ni affilié ni approuvé par Roland, Moog, Yamaha, Linn, Akai, ARP, Hammond, Korg, Sequential, Oberheim, Simmons ou Streetly.
 
 ## Ce qu'on peut faire
 
 - **Projets** : nouveau projet vide, ouvrir, enregistrer (`.techmachine`), projets récents, écran d'accueil.
-- **17 projets exemples** écrits à la main : Techno, Acid, Detroit, House, Berlin, Trance, Psytrance,
-  Drum & Bass, Dub Techno, Électro, Hip-Hop, Trap, Lo-fi, Disco, Reggaeton, Piano House, Synthwave.
+- **30 projets exemples**, au moins un par style : techno, acid, Detroit, house, Berlin, minimale, hard techno,
+  trance, psytrance, drum & bass, jungle, breakbeat, UK garage, gabber, électro, hip-hop, trap, drill, lo-fi, R&B,
+  funk, disco, pop, reggaeton, afro house, reggae, synthwave, ambient…
+- **Sons prêts à jouer** (bouton SONS) : près de 300 sons célèbres, dont 30 sons FM du DX7 (E.Piano, Bass 1, Tub Bells…)
+  et des kits pour chaque boîte à rythmes.
+- **Piano roll** pour les synthés, avec accords libres sur les synthés polyphoniques.
+- **Clavier et pads MIDI** : joue en direct, enregistre dans les pas (ENREG. MIDI), assigne les boutons de ton
+  contrôleur (clic droit › Assigner à un bouton MIDI).
+- **ASIO** et réglages audio (bouton AUDIO / MIDI) pour une latence minimale.
 - **Bibliothèque de patterns** (bouton PATTERNS de chaque machine) : une cinquantaine de rythmes célèbres
   (Four on the Floor, Motown, Billie Jean, Funky Drummer, Amen Break, boom bap, trap, dembow, bossa nova, one drop…),
   des lignes de basse, des accords et des arpèges qui suivent automatiquement les accords du morceau.
 - **Roulements** ×2, ×3, ×4 sur chaque pas de batterie (clic droit ou molette) : les charlestons du trap.
 - **Choisir ses machines** : n'affiche que ce que tu veux (une 909 seule, ou tout le studio). Une machine ajoutée arrive vide.
+- **SURPRISE !** monte un groupe complet adapté au genre si le rack est vide, avec des mélodies qui chantent
+  (motif répété, notes de l'accord sur les temps forts, cadence).
 - **Hasard musical** dans 29 genres : la basse évite le kick et suit les accords, les mélodies répondent à un motif,
   les percussions sont réparties en rythmes euclidiens. Par machine : nouvelle idée, varier un peu, plus ou moins de notes.
 - **21 gammes + mode chromatique** : impossible de faire une fausse note tant qu'une gamme est choisie.
@@ -70,7 +97,7 @@ Ce projet n'est ni affilié ni approuvé par Roland, Moog, Yamaha, Linn, Akai, A
 - **Export WAV** hors temps réel (1 à 8 boucles) et enregistrement en direct.
 - **En VST3**, la lecture, le tempo et la position suivent ton logiciel de musique.
 - **Un « i » partout** : clique dessus (ou clic droit sur un bouton) pour savoir à quoi sert chaque élément.
-- **Français / anglais** (bouton FR | EN) et **plein écran** (F11).
+- **Français / anglais** et **plein écran** (F11), en bas à droite.
 
 Raccourcis : **Espace** lecture / stop · **Ctrl+Z / Ctrl+Y** annuler / rétablir · **Ctrl+S** enregistrer ·
 **Ctrl+O** ouvrir · **Ctrl+N** nouveau projet · **F11** plein écran.
@@ -91,7 +118,8 @@ Résultats :
 - `build\TechMachine_artefacts\Release\Standalone\Tech Machine.exe`
 - `build\TechMachine_artefacts\Release\VST3\Tech Machine.vst3`
 
-Stack : C++17, [JUCE 8](https://juce.com) (sous-module dans `libs/JUCE`), CMake.
+Stack : C++17, [JUCE 8](https://juce.com) (sous-module dans `libs/JUCE`), CMake. `build.bat` télécharge aussi
+le SDK ASIO de Steinberg (utilisé sous sa licence GPLv3) pour activer les pilotes ASIO.
 
 ## Licence
 

@@ -17,13 +17,15 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "Sur les notes et les accords, glisse vers le haut ou le bas pour changer la hauteur. "
             "Sur la batterie, clic droit (ou molette) sur une case = roulement ×2, ×3, ×4 (les charlestons rapides du trap).\n\n"
             "4. Envie d'un rythme connu ? Le bouton PATTERNS de chaque machine propose les grands classiques : Four on the Floor, "
-            "Motown, Billie Jean, Amen Break, boom bap, trap, reggaeton… et des lignes de basse, accords et arpèges.\n\n"
+            "Motown, Billie Jean, Amen Break, boom bap, trap, reggaeton… et des lignes de basse, accords et arpèges. "
+            "Le bouton SONS charge des sons célèbres prêts à jouer, PIANO ROLL ouvre une grille de notes.\n\n"
             "5. En panne d'idée ? Choisis un GENRE puis clique sur SURPRISE ! (tout le rack) ou sur HASARD d'une machine "
             "(Nouvelle idée, Varier un peu, Plus de notes, Moins de notes).\n\n"
             "6. Appuie sur LECTURE (barre Espace) et tourne les boutons pendant que ça joue. Double-clic sur un bouton = valeur d'origine.\n\n"
             "7. Une erreur ? Ctrl+Z annule, Ctrl+Y rétablit.\n\n"
             "8. Enregistre ton projet (Ctrl+S) et exporte-le en WAV depuis le menu PROJET.\n\n"
-            "F11 = plein écran. Le bouton FR | EN change la langue.\n\n"
+            "En bas à droite : AUDIO / MIDI (carte son, ASIO, clavier MIDI), PLEIN ÉCRAN (F11) et la langue (FRANÇAIS / ENGLISH). "
+            "Clique sur une machine pour qu'elle reçoive ton clavier MIDI.\n\n"
             "Le petit « i » à côté de chaque élément explique à quoi il sert. Survole un bouton pour un résumé rapide." } },
 
         { "play", { "Lecture / Stop",

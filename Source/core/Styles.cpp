@@ -1496,6 +1496,7 @@ void generate (Track& track, const MachineDef& def, const GenerateContext& ctx, 
             const auto& modes = style.chordModes;
             if (std::find (modes.begin(), modes.end(), ChordMode::Skank) != modes.end()) chordLine (line, ctx, ChordMode::Skank, r);
             else if (std::find (modes.begin(), modes.end(), ChordMode::Comping) != modes.end()) chordLine (line, ctx, ChordMode::Comping, r);
+            else if (! style.chordRhythms.empty()) chordLine (line, ctx, ChordMode::Stabs, r);   // rhythm guitar chops
             else leadLine (line, ctx, LeadMode::Arp, r);
             break;
         }

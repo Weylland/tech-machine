@@ -35,7 +35,7 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
     patternButton.onClick = [this] { showPatternMenu(); };
     if (! patternKindsFor (def).empty()) addHeaderButton (patternButton, "machine.patterns");
     diceButton.onClick = [this] { showDiceMenu(); };
-    addHeaderButton (diceButton, "machine.diceMenu");
+    if (type != Sampler) addHeaderButton (diceButton, "machine.diceMenu");
     moreButton.onClick = [this] { showMoreMenu(); };
     addHeaderButton (moreButton, "machine.more");
 
