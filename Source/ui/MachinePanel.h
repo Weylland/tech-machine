@@ -7,7 +7,7 @@
 namespace techno
 {
 // One machine of the rack, drawn as its hardware faceplate.
-class MachinePanel : public juce::Component
+class MachinePanel : public juce::Component, public juce::FileDragAndDropTarget
 {
 public:
     MachinePanel (TechMachineProcessor&, int machineType, const int& viewPage);
@@ -37,6 +37,11 @@ private:
     void showSoundMenu();
 
 public:
+    // Sampler: drop audio files on the pads, and show the names of the loaded sounds.
+    bool isInterestedInFileDrag (const juce::StringArray& files) override;
+    void filesDropped (const juce::StringArray& files, int x, int y) override;
+    void refreshSampleNames();
+
     // Switches between the step keys and the piano roll (synths).
     void setRollMode (bool on);
 
@@ -51,6 +56,8 @@ public:
 private:
     bool midiTarget = false, rollMode = false;
     std::unique_ptr<PianoRoll> roll;
+    std::unique_ptr<juce::FileChooser> chooser;
+    void chooseSampleFile (std::function<void (const juce::File&)> then);
     IconButton rollButton { "keys", "PIANO ROLL" };
     void showMoreMenu();
     void showRowFx (int row);

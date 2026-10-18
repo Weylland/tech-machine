@@ -1,6 +1,7 @@
 #include "DrumVoices.h"
 #include "FxVoices.h"
 #include "PercussionVoices.h"
+#include "SamplerVoice.h"
 
 namespace techno
 {
@@ -97,6 +98,10 @@ std::unique_ptr<DrumVoice> createDrumVoice (const juce::String& machine, const j
         if (row == "sh") return std::make_unique<Maracas>();
         if (row == "pc") return std::make_unique<Membrane> (780.0f, 0.02f, 2.4f, 0.4f, 0.02f, 0.12f);
         if (row == "cr") return metal (crash, 0.55f, 2048.0f, 7000.0f, 0.6f, 3500.0f, 0.5f, 3.0f, 2.6f, 0.35f);
+    }
+    else if (machine == "sampler")
+    {
+        return std::make_unique<SampleVoice>();
     }
     else if (machine == "kit")
     {

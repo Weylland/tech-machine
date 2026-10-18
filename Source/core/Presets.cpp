@@ -288,7 +288,7 @@ std::map<int, std::vector<SoundPreset>> build()
     };
 
     for (int t = 0; t < numMachines; ++t)
-        if (machineDef (t).kind == MachineKind::Drum && t != SoundFx)
+        if (machineDef (t).kind == MachineKind::Drum && t != SoundFx && t != Sampler)
             m[t] = drumKits (machineDef (t));
 
     // 808 extras.

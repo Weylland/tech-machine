@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <map>
 
 using namespace techno;
 
@@ -100,6 +101,7 @@ TechMachineProcessor::TechMachineProcessor()
     apvts.state.addListener (this);
     for (auto& r : recordStart) r = -1;
     loadMidiMap();
+    for (int i = 0; i < numPads; ++i) machines[(size_t) Sampler]->setSampleSlot (i, &sampleSlots[(size_t) i]);
 }
 
 TechMachineProcessor::~TechMachineProcessor()
@@ -778,6 +780,89 @@ void TechMachineProcessor::recordNoteOff (int type, int note)
     touchPattern();
 }
 
+//==============================================================================
+// Sampler
+
+std::shared_ptr<const juce::AudioBuffer<float>> TechMachineProcessor::readAudioFile (const juce::File& file, double& sampleRate)
+{
+    juce::AudioFormatManager formats;
+    formats.registerBasicFormats();
+    std::unique_ptr<juce::AudioFormatReader> reader (formats.createReaderFor (file));
+    if (reader == nullptr || reader->lengthInSamples <= 0) return nullptr;
+
+    // Up to 30 seconds, mixed down to mono.
+    const int length = (int) juce::jmin<juce::int64> (reader->lengthInSamples, (juce::int64) (reader->sampleRate * 30.0));
+    juce::AudioBuffer<float> stereo ((int) juce::jmax (1u, reader->numChannels), length);
+    reader->read (&stereo, 0, length, 0, true, true);
+    auto mono = std::make_shared<juce::AudioBuffer<float>> (1, length + 1);
+    mono->clear();
+    for (int ch = 0; ch < stereo.getNumChannels(); ++ch)
+        mono->addFrom (0, 0, stereo, ch, 0, length, 1.0f / (float) stereo.getNumChannels());
+    sampleRate = reader->sampleRate;
+    return mono;
+}
+
+void TechMachineProcessor::setPad (int pad, std::shared_ptr<const juce::AudioBuffer<float>> audio, double rate, int start, int end,
+                                   const juce::String& name, const juce::String& path)
+{
+    auto data = std::make_unique<SampleData>();
+    data->audio = std::move (audio);
+    data->sampleRate = rate;
+    data->start = start;
+    data->end = end;
+    data->name = name;
+    data->path = path;
+    sampleSlots[(size_t) pad] = data.get();
+    sampleStore.push_back (std::move (data));
+    ++sampleVersion;
+    dirty = true;
+}
+
+bool TechMachineProcessor::loadSamplePad (int pad, const juce::File& file)
+{
+    if (pad < 0 || pad >= numPads) return false;
+    double rate = 44100.0;
+    auto audio = readAudioFile (file, rate);
+    if (audio == nullptr) return false;
+    const int end = audio->getNumSamples() - 1;
+    setPad (pad, std::move (audio), rate, 0, end, file.getFileNameWithoutExtension(), file.getFullPathName());
+    return true;
+}
+
+// Cuts a loop into 8 equal slices, one per pad, and writes the steps that play it back as it was (one bar, slices on eighth notes).
+bool TechMachineProcessor::chopLoop (const juce::File& file)
+{
+    double rate = 44100.0;
+    auto audio = readAudioFile (file, rate);
+    if (audio == nullptr) return false;
+    const int length = audio->getNumSamples() - 1;
+    for (int i = 0; i < numPads; ++i)
+        setPad (i, audio, rate, length * i / numPads, length * (i + 1) / numPads,
+                file.getFileNameWithoutExtension() + " " + juce::String (i + 1), file.getFullPathName());
+
+    undoManager.beginNewTransaction();
+    beginPatternEdit();
+    auto& track = machines[(size_t) Sampler]->track;
+    track.clear();
+    for (int i = 0; i < numPads; ++i) track.hits[(size_t) i][(size_t) (i * 2)] = true;
+    track.tile (pageSteps);
+    setShown (Sampler, true);
+    touchPattern();
+    return true;
+}
+
+void TechMachineProcessor::clearSamplePads()
+{
+    for (auto& slot : sampleSlots) slot = nullptr;
+    ++sampleVersion;
+}
+
+juce::String TechMachineProcessor::samplePadName (int pad) const
+{
+    if (auto* data = sampleSlots[(size_t) pad].load()) return data->name;
+    return {};
+}
+
 juce::RangedAudioParameter* TechMachineProcessor::presetParameter (int type, const char* key)
 {
     juce::String k (key);
@@ -878,6 +963,7 @@ void TechMachineProcessor::resetParameters()
 void TechMachineProcessor::newProject()
 {
     playing = false;
+    clearSamplePads();
     resetParameters();
     for (auto& m : machines) m->track.clear();
     genreIndex = 0;
@@ -959,6 +1045,11 @@ std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
         }
         e->setAttribute ("note", notes.joinIntoString (","));
         if (anyChord) e->setAttribute ("chord", chords.joinIntoString (","));
+
+        if (m->type == Sampler)
+            for (int i = 0; i < numPads; ++i)
+                if (auto* data = sampleSlots[(size_t) i].load())
+                    e->setAttribute ("pad" + juce::String (i), data->path + "|" + juce::String (data->start) + "|" + juce::String (data->end) + "|" + data->name);
     }
     return xml;
 }
@@ -995,6 +1086,23 @@ void TechMachineProcessor::restoreProjectXml (const juce::XmlElement& source)
             auto notes = juce::StringArray::fromTokens (e->getStringAttribute ("note"), ",", {});
             for (int i = 0; i < maxSteps; ++i)
                 m->track.note[(size_t) i] = juce::jlimit (0, noteRange - 1, notes[i].getIntValue());
+            if (m->type == Sampler)
+            {
+                // Each file is read once, even when its slices sit on several pads.
+                std::map<juce::String, std::pair<std::shared_ptr<const juce::AudioBuffer<float>>, double>> cache;
+                clearSamplePads();
+                for (int i = 0; i < numPads; ++i)
+                {
+                    const auto parts = juce::StringArray::fromTokens (e->getStringAttribute ("pad" + juce::String (i)), "|", "");
+                    if (parts.size() < 4) continue;
+                    auto& cached = cache[parts[0]];
+                    if (cached.first == nullptr) cached.first = readAudioFile (juce::File (parts[0]), cached.second);
+                    if (cached.first == nullptr) continue;
+                    const int last = cached.first->getNumSamples() - 1;
+                    setPad (i, cached.first, cached.second, juce::jlimit (0, last, parts[1].getIntValue()),
+                            juce::jlimit (0, last, parts[2].getIntValue()), parts[3], parts[0]);
+                }
+            }
             auto chords = juce::StringArray::fromTokens (e->getStringAttribute ("chord"), ",", {});
             for (int i = 0; i < maxSteps && i < chords.size(); ++i)
                 m->track.chord[(size_t) i] = (std::uint64_t) chords[i].getHexValue64() & ((1ull << noteRange) - 1);

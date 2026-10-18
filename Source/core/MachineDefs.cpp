@@ -895,6 +895,23 @@ std::vector<MachineDef> buildDefs()
         },
         {} });
 
+    {
+        const char* const padHelp = "Un pad du sampler. Glisse un fichier audio (WAV, AIFF, FLAC, OGG) sur cette rangée pour le charger, "
+                                    "ou passe par le menu ⋯. HAUTEUR = joue plus grave ou plus aigu, DURÉE = quelle part du son est jouée, "
+                                    "TIMBRE = filtre (à fond = son d'origine).";
+        std::vector<DrumRowDef> pads;
+        static const char* const ids[8] { "p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8" };
+        static const char* const labels[8] { "PAD 1", "PAD 2", "PAD 3", "PAD 4", "PAD 5", "PAD 6", "PAD 7", "PAD 8" };
+        for (int i = 0; i < 8; ++i) pads.push_back ({ ids[i], labels[i], Role::Perc, 0.8f, 0.5f, 1.0f, 1.0f, padHelp, "Filtre : sombre à gauche, son d'origine à fond." });
+        defs.push_back ({ Sampler, "sampler", "SAMPLER", "Sampler · tes propres sons sur 8 pads", MachineKind::Drum,
+            0xffe8e8e8, 0,
+            "Charge tes propres sons : une voix, un sample de batterie, une boucle, un bruit enregistré au téléphone… "
+            "Glisse un fichier audio (WAV, AIFF, FLAC ou OGG) sur une rangée, ou utilise le menu ⋯.\n\n"
+            "« Découper une boucle » coupe un fichier en 8 morceaux égaux, un par pad, et les place pour rejouer la boucle : "
+            "il ne reste plus qu'à les mélanger pour créer un nouveau rythme, comme sur une MPC.",
+            pads, {} });
+    }
+
     return defs;
 }
 } // namespace

@@ -11,13 +11,13 @@ enum MachineType
     LinnDrum, CR78, MPC, Percussion, DX7, Strings, Organ, Sub808,
     Piano, Mallets, Pluck, Choir, SoundFx,
     EBass, Wobble, Hoover, Poly80, M1, Edm, Talkbox, Mellotron, EPiano, Brass, Winds, Orchestra,
-    AcousticKit, TR707, Simmons, WorldPerc,
+    AcousticKit, TR707, Simmons, WorldPerc, Sampler,
     numMachines
 };
 
 // Order of the machines in the rack and in the "add" menu.
 inline constexpr int rackOrder[numMachines] {
-    TR909, TR808, LinnDrum, TR707, CR78, MPC, AcousticKit, Simmons, BreakKit, Percussion, WorldPerc, SoundFx,
+    TR909, TR808, LinnDrum, TR707, CR78, MPC, AcousticKit, Simmons, BreakKit, Percussion, WorldPerc, Sampler, SoundFx,
     TB303, SH101, ModelD, Sub808, EBass, Wobble,
     Hoover, Juno106, JP8000, Poly80, Edm, DX7, M1, Talkbox,
     Piano, EPiano, Organ, Mallets,

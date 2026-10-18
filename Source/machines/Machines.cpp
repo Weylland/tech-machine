@@ -142,6 +142,12 @@ public:
         return numRows > 0 ? ((note - 36) % numRows + numRows) % numRows : -1;
     }
 
+    void setSampleSlot (int pad, const std::atomic<const SampleData*>* slot) override
+    {
+        if (pad >= 0 && pad < numRows)
+            if (auto* sample = dynamic_cast<SampleVoice*> (voices[(size_t) pad].get())) sample->setSlot (slot);
+    }
+
     void liveNoteOn (int note, float velocity) override
     {
         const int row = rowForMidiNote (note);
@@ -1105,7 +1111,8 @@ std::unique_ptr<Machine> createMachine (int type)
         case AcousticKit:
         case TR707:
         case Simmons:
-        case WorldPerc: return std::make_unique<DrumMachine> (type);
+        case WorldPerc:
+        case Sampler:  return std::make_unique<DrumMachine> (type);
         case EBass:    return std::make_unique<MonoMachine> (type, std::make_unique<ElectricBassVoice>(), 0.85f);
         case Wobble:   return std::make_unique<MonoMachine> (type, std::make_unique<WobbleVoice>(), 0.9f);
         case Hoover:   return std::make_unique<HooverMachine>();

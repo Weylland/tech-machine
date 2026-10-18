@@ -200,6 +200,10 @@ inline const Skin& skinFor (int machineType)
         { C (0xffb0603a), C (0xff8a4626), C (0xff3a1a0a), C (0xfffff0dc), C (0xfffff0dc), C (0xffe8c8a8), C (0xffa07050),
           C (0xffffc078), C (0xffff7a1f), { C (0xffd8b48c), C (0xffc8a47c), C (0xffd8b48c), C (0xffc8a47c) },
           C (0xffffd090), C (0xff2a1408), KnobStyle::Cap, C (0xfff0dcc0), false, true, false, false, "WORLD PERCUSSION", "WORLD" },
+        // Sampler: light grey with dark rubber pads.
+        { C (0xffd6d6d2), C (0xffbcbcb6), C (0xff2c2c2e), C (0xfff0f0f0), C (0xff202022), C (0xff4a4a4e), C (0xff7a7a7e),
+          C (0xff2a8cff), C (0xff2a8cff), { C (0xff4a4a4e), C (0xff424246), C (0xff4a4a4e), C (0xff424246) },
+          C (0xff5aa8ff), C (0xff06121e), KnobStyle::Classic, C (0xff3a3a3e), false, false, false, true, "SAMPLE PLAYER", "SAMPLER" },
     }};
     return skins[(size_t) machineType];
 }

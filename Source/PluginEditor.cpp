@@ -602,6 +602,7 @@ void MainView::showAddMenu()
         menu.addSubMenu (utf8 (title) + (shown > 0 ? "  (" + juce::String (shown) + ")" : juce::String()), sub);
     };
     section ("Batteries et percussions", { TR909, TR808, LinnDrum, TR707, CR78, MPC, AcousticKit, Simmons, BreakKit, Percussion, WorldPerc, SoundFx });
+    section ("Tes propres sons", { Sampler });
     section ("Basses", { TB303, SH101, ModelD, Sub808, EBass, Wobble });
     section ("Synthés", { Hoover, Juno106, JP8000, Poly80, Edm, DX7, M1, Talkbox });
     section ("Claviers et cloches", { Piano, EPiano, Organ, Mallets });
@@ -883,6 +884,11 @@ void MainView::timerCallback()
     {
         lastMidiTarget = target;
         for (auto* panel : panels) panel->setMidiTarget (panel->type == target);
+    }
+    if (processor.sampleVersion.load() != lastSampleVersion)
+    {
+        lastSampleVersion = processor.sampleVersion.load();
+        for (auto* panel : panels) panel->refreshSampleNames();
     }
     if (midiRecordButton.getToggleState() != processor.isRecordingNotes())
         midiRecordButton.setToggleState (processor.isRecordingNotes(), juce::dontSendNotification);

@@ -4,6 +4,7 @@
 #include "../core/Music.h"
 #include "../core/Track.h"
 #include "../dsp/DrumVoices.h"
+#include "../dsp/SamplerVoice.h"
 #include "../dsp/AcousticVoices.h"
 #include "../dsp/BandVoices.h"
 #include "../dsp/KeysVoices.h"
@@ -44,6 +45,9 @@ public:
     virtual void liveNoteOn (int /*midiNote*/, float /*velocity*/) {}
     virtual void liveNoteOff (int /*midiNote*/) {}
     virtual int rowForMidiNote (int /*midiNote*/) const { return -1; }
+
+    // Sampler: where each pad finds its sound.
+    virtual void setSampleSlot (int /*pad*/, const std::atomic<const SampleData*>* /*slot*/) {}
 
     bool takeKick()
     {

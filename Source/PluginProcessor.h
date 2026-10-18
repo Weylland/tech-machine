@@ -69,6 +69,14 @@ public:
     void forgetMidiLearn (const juce::String& paramId);
     int midiControllerFor (const juce::String& paramId) const;
     void saveMidiMap();
+
+    // Sampler pads.
+    static constexpr int numPads = 8;
+    bool loadSamplePad (int pad, const juce::File&);
+    bool chopLoop (const juce::File&);
+    void clearSamplePads();
+    juce::String samplePadName (int pad) const;
+    std::atomic<int> sampleVersion { 0 };
     std::atomic<int> midiMapVersion { 0 }, midiActivity { 0 };
     juce::RangedAudioParameter* presetParameter (int machineType, const char* key);
     void shiftMachine (int machineType, int direction);
@@ -179,6 +187,11 @@ private:
     std::atomic<juce::RangedAudioParameter*> learnTarget { nullptr };
     std::array<std::atomic<juce::RangedAudioParameter*>, 128> ccMap {};
     int recordStart[128] {};
+
+    std::array<std::atomic<const techno::SampleData*>, numPads> sampleSlots {};
+    std::vector<std::unique_ptr<techno::SampleData>> sampleStore;   // kept until the end: the audio thread may still play an old sound
+    static std::shared_ptr<const juce::AudioBuffer<float>> readAudioFile (const juce::File&, double& sampleRate);
+    void setPad (int pad, std::shared_ptr<const juce::AudioBuffer<float>>, double rate, int start, int end, const juce::String& name, const juce::String& path);
 
     juce::TimeSliceThread writerThread { "Tech Machine recorder" };
     std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> threadedWriter;

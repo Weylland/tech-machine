@@ -178,7 +178,7 @@ std::vector<PatternKind> patternKindsFor (const MachineDef& def)
 {
     switch (def.kind)
     {
-        case MachineKind::Drum: return def.type == SoundFx ? std::vector<PatternKind> {} : std::vector<PatternKind> { PatternKind::Drums };
+        case MachineKind::Drum: return def.type == SoundFx || def.type == Sampler ? std::vector<PatternKind> {} : std::vector<PatternKind> { PatternKind::Drums };
         case MachineKind::Mono: return { PatternKind::Bass, PatternKind::Lead };
         case MachineKind::Poly: return { PatternKind::Chords, PatternKind::Lead };
     }

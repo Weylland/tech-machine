@@ -319,6 +319,51 @@ void MachinePanel::showSoundMenu()
     });
 }
 
+bool MachinePanel::isInterestedInFileDrag (const juce::StringArray& files)
+{
+    if (type != Sampler) return false;
+    for (auto& f : files)
+        if (juce::File (f).hasFileExtension ("wav;aif;aiff;flac;ogg")) return true;
+    return false;
+}
+
+// A file dropped on a pad goes on that pad; dropped elsewhere, it goes on the first empty pad (several files fill several pads).
+void MachinePanel::filesDropped (const juce::StringArray& files, int, int y)
+{
+    int pad = (y - drumTop) / drumRowH;
+    const bool onPad = y >= drumTop && pad >= 0 && pad < TechMachineProcessor::numPads;
+    if (! onPad)
+    {
+        pad = 0;
+        while (pad < TechMachineProcessor::numPads - 1 && processor.samplePadName (pad).isNotEmpty()) ++pad;
+    }
+    for (auto& f : files)
+    {
+        if (pad >= TechMachineProcessor::numPads) break;
+        if (processor.loadSamplePad (pad, juce::File (f))) ++pad;
+    }
+}
+
+void MachinePanel::chooseSampleFile (std::function<void (const juce::File&)> then)
+{
+    chooser = std::make_unique<juce::FileChooser> (utf8 ("Choisis un fichier audio"), juce::File(), "*.wav;*.aif;*.aiff;*.flac;*.ogg");
+    chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+                          [then] (const juce::FileChooser& fc)
+                          {
+                              if (fc.getResult().existsAsFile()) then (fc.getResult());
+                          });
+}
+
+void MachinePanel::refreshSampleNames()
+{
+    if (type != Sampler) return;
+    for (int r = 0; r < rowMutes.size() && r < TechMachineProcessor::numPads; ++r)
+    {
+        const auto name = processor.samplePadName (r);
+        rowMutes[r]->setButtonText (name.isNotEmpty() ? name.toUpperCase().substring (0, 14) : utf8 (def.rows[(size_t) r].label));
+    }
+}
+
 void MachinePanel::showPatternMenu()
 {
     juce::PopupMenu menu;
@@ -362,6 +407,19 @@ void MachinePanel::showMoreMenu()
     menu.addItem (5, utf8 ("Décaler d'un pas vers la droite →"));
     menu.addSeparator();
     menu.addItem (6, utf8 ("Tout effacer"));
+    if (type == Sampler)
+    {
+        menu.addSeparator();
+        juce::PopupMenu pads;
+        for (int i = 0; i < TechMachineProcessor::numPads; ++i)
+        {
+            const auto name = processor.samplePadName (i);
+            pads.addItem (100 + i, utf8 ("Pad ") + juce::String (i + 1) + (name.isNotEmpty() ? "   (" + name + ")" : juce::String()));
+        }
+        menu.addSubMenu (utf8 ("Charger un son sur un pad…"), pads);
+        menu.addItem (200, utf8 ("Découper une boucle sur les 8 pads…"));
+        menu.addItem (201, utf8 ("Vider les pads"));
+    }
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (moreButton), [this] (int result)
     {
         switch (result)
@@ -372,6 +430,11 @@ void MachinePanel::showMoreMenu()
             case 4: processor.shiftMachine (type, -1); break;
             case 5: processor.shiftMachine (type, 1); break;
             case 6: processor.clearMachine (type); break;
+            case 200: chooseSampleFile ([this] (const juce::File& f) { processor.chopLoop (f); }); break;
+            case 201: processor.clearSamplePads(); break;
+            case 100: case 101: case 102: case 103: case 104: case 105: case 106: case 107:
+                chooseSampleFile ([this, pad = result - 100] (const juce::File& f) { processor.loadSamplePad (pad, f); });
+                break;
             default: break;
         }
     });
