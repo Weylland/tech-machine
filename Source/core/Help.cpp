@@ -92,6 +92,10 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "Sur une boîte à rythmes : choisis un style puis un rythme. Le tempo d'origine est indiqué entre parenthèses.\n"
             "Sur un synthé : lignes de basse, accords ou arpèges. Les notes suivent automatiquement les accords et la gamme du morceau.\n\n"
             "Le pattern remplace la partie de la machine. Ctrl+Z pour revenir en arrière." } },
+        { "machine.sounds", { "Sons prêts à jouer",
+            "Des sons tout faits pour cette machine : les plus célèbres (piano électrique du DX7, acid de la 303, supersaw de la trance, "
+            "orgue gospel, 808 du trap…) ou, sur une boîte à rythmes, des kits (hard techno, trap, lo-fi, dub…).\n\n"
+            "Ça remplace les réglages du son, pas tes notes. Tu peux ensuite tourner les boutons pour l'adapter." } },
         { "machine.more", { "Outils",
             "Copier / coller la partie, dupliquer la 1re mesure sur toute la séquence, décaler toute la partie d'un pas "
             "vers la gauche ou la droite, ou tout effacer." } },

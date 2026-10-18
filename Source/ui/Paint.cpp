@@ -546,6 +546,17 @@ void icon (Graphics& g, const juce::String& name, Rect r, Colour colour)
             g.drawLine (corner.x, corner.y, corner.x, corner.y + dy, t);
         }
     }
+    else if (name == "sound")
+    {
+        // A small waveform.
+        const float t = juce::jmax (1.4f, s * 0.1f), cy = b.getCentreY();
+        static constexpr float heights[] { 0.2f, 0.5f, 0.85f, 0.45f, 0.65f, 0.3f };
+        for (int i = 0; i < 6; ++i)
+        {
+            const float x = b.getX() + s * (0.15f + 0.14f * (float) i), h = s * 0.7f * heights[i];
+            g.drawLine (x, cy - h * 0.5f, x, cy + h * 0.5f, t * 1.3f);
+        }
+    }
     else if (name == "gear")
     {
         const auto c = b.getCentre();

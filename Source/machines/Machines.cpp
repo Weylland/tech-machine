@@ -600,7 +600,7 @@ private:
     void postProcess (float& left, float& right) override
     {
         const float x = fastTanh (left * 1.6f * drive) / fastTanh (drive);
-        leslie.process (x, leslieAmount, left, right);
+        leslie.process (x * 0.55f, leslieAmount, left, right);
     }
 
     OrganParams shared;

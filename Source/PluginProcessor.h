@@ -2,6 +2,7 @@
 
 #include "core/Examples.h"
 #include "core/PatternLibrary.h"
+#include "core/Presets.h"
 #include "core/Styles.h"
 #include "dsp/Effects.h"
 #include "dsp/Reverb.h"
@@ -57,6 +58,8 @@ public:
     void generateAll();
     void clearMachine (int machineType);
     void applyPattern (int machineType, const techno::Pattern&);
+    void applyPreset (int machineType, const techno::SoundPreset&);
+    juce::RangedAudioParameter* presetParameter (int machineType, const char* key);
     void shiftMachine (int machineType, int direction);
     void duplicateFirstBar (int machineType);
     void copyMachine (int machineType);

@@ -30,6 +30,8 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
     addHeaderButton (*muteButton, "machine.mute");
     addHeaderButton (*soloButton, "machine.solo");
 
+    soundButton.onClick = [this] { showSoundMenu(); };
+    if (! presetsFor (type).empty()) addHeaderButton (soundButton, "machine.sounds");
     patternButton.onClick = [this] { showPatternMenu(); };
     if (! patternKindsFor (def).empty()) addHeaderButton (patternButton, "machine.patterns");
     diceButton.onClick = [this] { showDiceMenu(); };
@@ -293,6 +295,21 @@ void MachinePanel::showDiceMenu()
     });
 }
 
+void MachinePanel::showSoundMenu()
+{
+    juce::PopupMenu menu;
+    const auto& list = presetsFor (type);
+    menu.addSectionHeader (utf8 ("SONS PRÊTS À JOUER"));
+    for (int i = 0; i < (int) list.size(); ++i) menu.addItem (i + 1, utf8 (list[(size_t) i].name));
+    menu.addSeparator();
+    menu.addItem (-1, utf8 ("Remplace les réglages de son de cette machine (pas les notes)"), false, false);
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (soundButton), [this] (int result)
+    {
+        const auto& presets = presetsFor (type);
+        if (result >= 1 && result <= (int) presets.size()) processor.applyPreset (type, presets[(size_t) result - 1]);
+    });
+}
+
 void MachinePanel::showPatternMenu()
 {
     juce::PopupMenu menu;
@@ -467,7 +484,7 @@ void MachinePanel::resized()
     {
         it->second->setBounds (header.removeFromRight (16).withSizeKeepingCentre (15, 15));
         header.removeFromRight (3);
-        const int width = it->first == &moreButton ? 36 : it->first == &diceButton ? 110 : it->first == &patternButton ? 124 : 76;
+        const int width = it->first == &moreButton ? 36 : it->first == &diceButton ? 110 : it->first == &patternButton ? 124 : it->first == &soundButton ? 96 : 76;
         it->first->setBounds (header.removeFromRight (width));
         header.removeFromRight (10);
     }

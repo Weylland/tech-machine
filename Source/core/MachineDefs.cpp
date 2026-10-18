@@ -268,7 +268,7 @@ std::vector<MachineDef> buildDefs()
             { "decay", "DECAY", 0.4f, decayHelp, {} },
             { "sustain", "SUSTAIN", 0.5f, sustainHelp, {} },
             { "glide", "GLIDE", 0.1f, "Durée du glissé entre deux notes reliées par un SLIDE.", {} },
-            { "drive", "DRIVE", 0.3f,
+            { "overdrive", "DRIVE", 0.3f,
               "Pousse le signal dans le filtre pour le faire saturer, comme quand on monte les volumes du mixeur du Minimoog. "
               "Plus = basse plus grasse et agressive.", {} },
         } });
@@ -423,7 +423,10 @@ std::vector<MachineDef> buildDefs()
             { "preset", "SON", 0.0f,
               "Le type de son FM. Piano électrique = doux et chaleureux (lo-fi, R&B, house). Basse FM = basse claquante des années 80. "
               "Cloche = son cristallin (trap, ambient). Cuivres = attaque cuivrée. Marimba = percussion boisée. Nappe = son long et doux.",
-              { "Piano électrique", "Basse FM", "Cloche", "Cuivres", "Marimba", "Nappe FM" } },
+              { "Piano électrique", "Basse FM", "Cloche", "Cuivres", "Marimba", "Nappe FM", "Basse « Lately »", "Basse solide",
+                "Basse slap", "Piano électrique brillant", "Rhodes doux", "Clavecin", "Clavinet", "Orgue FM", "Orgue d'église",
+                "Flûte", "Harmonica", "Cordes FM", "Glockenspiel", "Vibraphone", "Xylophone", "Koto", "Guitare FM", "Sitar FM",
+                "Lead synthé", "Chœur FM", "Timbales d'orchestre", "Carillon", "Nappe cristal", "Sub basse FM" } },
             { "brightness", "BRILLANCE", 0.5f, "Quantité de modulation FM : à gauche le son est doux et rond, à droite il devient brillant, métallique et agressif.", {} },
             { "decay", "DURÉE", 0.5f, "Durée naturelle du son : court = notes sèches et percussives, long = notes qui résonnent.", {} },
             { "release", "RELEASE", 0.3f, releaseHelp, {} },
@@ -464,7 +467,7 @@ std::vector<MachineDef> buildDefs()
             { "high", "AIGUS", 0.3f, "Tirettes aiguës (2', 1 3/5', 1') : son brillant et perçant.", {} },
             { "percussion", "PERCUSSION", 0.3f, "Petite note harmonique qui claque au début de chaque note : le « pop » typique de l'orgue jazz et house.", {} },
             { "leslie", "LESLIE", 0.4f, "La cabine à haut-parleur tournant : ondulation lente (milieu) ou rapide (à fond). À zéro : coupée.", {} },
-            { "drive", "DRIVE", 0.2f, "Saturation de l'ampli : orgue rock et sale quand on pousse.", {} },
+            { "overdrive", "DRIVE", 0.2f, "Saturation de l'ampli : orgue rock et sale quand on pousse.", {} },
             { "click", "CLIC", 0.3f, "Le petit clic de contact des touches, typique des vrais orgues.", {} },
         } });
 
@@ -479,7 +482,7 @@ std::vector<MachineDef> buildDefs()
             { "decay", "DURÉE", 0.6f, "Durée de chaque note : court = basse rebondissante, long = grosse note qui tient.", {} },
             { "glide", "GLIDE", 0.35f, "Durée du glissé vers la note suivante quand SLIDE est activé. C'est la signature des basses trap.", {} },
             { "punch", "PUNCH", 0.4f, "Attaque du début de note (une petite chute de hauteur, comme un kick) : plus de punch = la basse claque mieux.", {} },
-            { "drive", "DISTO", 0.3f, "Saturation : rend la basse audible même sur les petits haut-parleurs (téléphone, laptop).", {} },
+            { "overdrive", "DISTO", 0.3f, "Saturation : rend la basse audible même sur les petits haut-parleurs (téléphone, laptop).", {} },
             { "tone", "TIMBRE", 0.6f, "Filtre après la saturation : sombre à gauche, plus mordant à droite.", {} },
         } });
 
@@ -496,7 +499,7 @@ std::vector<MachineDef> buildDefs()
             { "type", "TYPE", 0.0f,
               "Le modèle de piano. À queue = son riche et ample. Droit = plus sec et intime. Bastringue = cordes désaccordées, "
               "son de saloon. Pop brillant = attaque claire qui ressort dans le mix (house, pop). Feutré = très doux et chaud (lo-fi, piano de nuit).",
-              { "Piano à queue", "Piano droit", "Piano bastringue", "Piano pop brillant", "Piano feutré" } },
+              { "Piano à queue", "Piano droit", "Piano bastringue", "Piano pop brillant", "Piano feutré", "Piano électrique à queue (CP-70)" } },
             { "brightness", "BRILLANCE", 0.5f, "Sombre et doux à gauche, brillant et percutant à droite (comme si on jouait plus fort).", {} },
             { "decay", "TENUE", 0.5f, "Combien de temps les cordes résonnent quand la note est tenue.", {} },
             { "release", "ÉTOUFFOIR", 0.4f, "Vitesse à laquelle le son s'arrête quand on relâche la note : court = notes détachées, long = comme avec la pédale.", {} },
@@ -518,7 +521,8 @@ std::vector<MachineDef> buildDefs()
               "L'instrument. Glockenspiel = petites lames de métal très aiguës. Vibraphone = lames métalliques avec un vibrato doux (jazz, lo-fi). "
               "Célesta = clochettes féeriques. Boîte à musique = mélodie de berceuse (trap). Kalimba = piano à pouces africain. "
               "Steel drum = son des Caraïbes. Cloches tubulaires = grandes cloches d'église. Marimba = lames de bois.",
-              { "Glockenspiel", "Vibraphone", "Célesta", "Boîte à musique", "Kalimba", "Steel drum", "Cloches tubulaires", "Marimba" } },
+              { "Glockenspiel", "Vibraphone", "Célesta", "Boîte à musique", "Kalimba", "Steel drum", "Cloches tubulaires", "Marimba",
+                "Xylophone", "Crotales", "Gamelan", "Handpan", "Cloches d'église" } },
             { "brightness", "BRILLANCE", 0.5f, "Quantité d'harmoniques aiguës : sombre à gauche, scintillant à droite.", {} },
             { "decay", "DURÉE", 0.5f, "Combien de temps la lame ou la cloche résonne.", {} },
             { "release", "RELEASE", 0.5f, releaseHelp, {} },
@@ -540,7 +544,8 @@ std::vector<MachineDef> buildDefs()
               "L'instrument. Guitare acoustique = cordes métal brillantes. Nylon = guitare classique douce. Funk = notes courtes étouffées "
               "avec la paume (« tchik »). Harpe = cordes douces qui résonnent longtemps. Koto = cithare japonaise. Sitar = son indien qui "
               "grésille. Pizzicato = cordes de violon pincées.",
-              { "Guitare acoustique", "Guitare nylon", "Guitare funk (étouffée)", "Harpe", "Koto", "Sitar", "Pizzicato (cordes)" } },
+              { "Guitare acoustique", "Guitare nylon", "Guitare funk (étouffée)", "Harpe", "Koto", "Sitar", "Pizzicato (cordes)",
+                "Banjo", "Mandoline", "Ukulélé", "Guitare électrique", "Oud", "Guzheng" } },
             { "brightness", "BRILLANCE", 0.5f, "Où et comment la corde est pincée : sombre (avec le pouce) à gauche, brillant (au médiator) à droite.", {} },
             { "decay", "DURÉE", 0.5f, "Combien de temps la corde vibre.", {} },
             { "release", "AMORTI", 0.3f, "Vitesse à laquelle la corde s'arrête quand on relâche la note.", {} },
@@ -558,7 +563,7 @@ std::vector<MachineDef> buildDefs()
             { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
             { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
             { "vowel", "VOYELLE", 0.0f, "La voyelle chantée : Aah = ouvert et puissant, Ooh = rond et doux, Eeh = plus nasal et brillant, Mmh = bouche fermée, très doux.",
-              { "Aah", "Ooh", "Eeh", "Mmh" } },
+              { "Aah", "Ooh", "Eeh", "Mmh", "Oh", "Ih" } },
             { "attack", "ATTACK", 0.5f, attackHelp, {} },
             { "release", "RELEASE", 0.5f, releaseHelp, {} },
             { "ensemble", "ENSEMBLE", 0.5f, "Nombre apparent de chanteurs : à gauche une voix seule, à droite un grand chœur large.", {} },

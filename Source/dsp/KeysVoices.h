@@ -26,8 +26,32 @@ inline const FmPreset& fmPreset (int index)
         { 1.0f, 3.0f, 0.12f, 1.0f, 2.0f, 0.6f, 0.2f, 0.3f, 0.05f, 0.6f, 0.75f, true },      // brass
         { 4.0f, 2.5f, 0.05f, 1.0f, 10.0f, 0.8f, 0.02f, 0.3f, 0.001f, 0.4f, 0.0f, false },   // marimba
         { 2.0f, 1.0f, 2.0f, 1.0f, 3.0f, 0.5f, 3.0f, 0.5f, 0.6f, 2.0f, 0.9f, true },         // FM pad
+        { 1.0f, 2.5f, 0.15f, 1.0f, 3.0f, 1.5f, 0.08f, 0.4f, 0.001f, 0.4f, 0.3f, false },    // "Lately" bass
+        { 1.0f, 4.0f, 0.06f, 0.5f, 0.5f, 2.0f, 0.3f, 0.6f, 0.001f, 0.35f, 0.5f, false },    // solid bass
+        { 3.0f, 3.0f, 0.03f, 1.0f, 1.0f, 2.0f, 0.1f, 0.5f, 0.001f, 0.25f, 0.3f, false },    // slap bass
+        { 1.0f, 2.4f, 1.0f, 1.0f, 14.0f, 2.0f, 0.05f, 0.5f, 0.001f, 1.8f, 0.0f, false },    // bright electric piano
+        { 1.0f, 1.2f, 1.2f, 1.0f, 1.0f, 0.3f, 0.5f, 0.2f, 0.002f, 2.0f, 0.0f, false },      // soft Rhodes
+        { 3.0f, 3.0f, 0.4f, 2.0f, 5.0f, 2.0f, 0.2f, 0.5f, 0.001f, 0.9f, 0.0f, false },      // harpsichord
+        { 1.0f, 3.5f, 0.25f, 3.0f, 1.0f, 1.0f, 0.2f, 0.4f, 0.001f, 0.5f, 0.2f, false },     // clavinet
+        { 1.0f, 1.0f, 10.0f, 2.0f, 1.0f, 0.5f, 10.0f, 0.6f, 0.005f, 0.1f, 1.0f, false },    // FM organ
+        { 2.0f, 0.8f, 10.0f, 4.0f, 1.0f, 0.3f, 10.0f, 0.5f, 0.05f, 0.1f, 1.0f, false },     // pipe organ
+        { 1.0f, 0.4f, 10.0f, 2.0f, 1.0f, 0.1f, 10.0f, 0.1f, 0.08f, 0.1f, 1.0f, false },     // flute
+        { 1.0f, 2.0f, 1.0f, 2.0f, 1.0f, 0.8f, 1.0f, 0.3f, 0.04f, 0.3f, 0.9f, true },        // harmonica
+        { 1.0f, 1.5f, 1.0f, 1.002f, 2.0f, 1.0f, 1.0f, 0.8f, 0.25f, 1.0f, 0.9f, true },      // FM strings
+        { 7.0f, 2.0f, 0.5f, 4.0f, 1.0f, 0.5f, 0.4f, 0.4f, 0.001f, 1.5f, 0.0f, false },      // glockenspiel
+        { 4.0f, 1.0f, 0.6f, 1.0f, 1.0f, 0.0f, 0.1f, 0.0f, 0.001f, 2.5f, 0.0f, false },      // vibraphone
+        { 3.0f, 2.0f, 0.05f, 4.0f, 1.0f, 0.5f, 0.05f, 0.3f, 0.001f, 0.3f, 0.0f, false },    // xylophone
+        { 3.0f, 2.5f, 0.3f, 2.0f, 5.0f, 1.0f, 0.1f, 0.4f, 0.001f, 0.8f, 0.0f, false },      // koto
+        { 1.0f, 2.0f, 0.3f, 2.0f, 3.0f, 1.0f, 0.2f, 0.3f, 0.001f, 1.2f, 0.0f, false },      // FM guitar
+        { 1.0f, 3.0f, 1.0f, 1.0f, 7.0f, 2.0f, 0.5f, 0.5f, 0.001f, 1.5f, 0.0f, false },      // FM sitar
+        { 1.0f, 2.5f, 10.0f, 1.005f, 2.0f, 1.5f, 10.0f, 0.6f, 0.005f, 0.2f, 0.8f, false },  // synth lead
+        { 1.0f, 0.8f, 1.0f, 1.0f, 1.0f, 0.5f, 1.0f, 0.6f, 0.3f, 1.0f, 0.9f, true },         // FM choir
+        { 1.41f, 2.0f, 0.2f, 0.5f, 1.0f, 1.0f, 0.3f, 0.5f, 0.001f, 0.8f, 0.0f, false },     // timpani
+        { 1.41f, 3.0f, 1.5f, 3.5f, 1.0f, 1.0f, 1.0f, 0.5f, 0.001f, 3.0f, 0.0f, false },     // orchestra chime
+        { 5.0f, 1.0f, 3.0f, 1.0f, 1.0f, 0.3f, 3.0f, 0.7f, 0.4f, 2.0f, 0.7f, false },        // glass pad
+        { 1.0f, 0.6f, 0.3f, 0.5f, 0.5f, 0.2f, 0.3f, 0.5f, 0.001f, 0.8f, 0.7f, false },      // FM sub bass
     };
-    return presets[(size_t) juce::jlimit (0, 5, index)];
+    return presets[(size_t) juce::jlimit (0, (int) std::size (presets) - 1, index)];
 }
 
 struct FmParams
@@ -379,7 +403,7 @@ public:
 
         const float x = (std::sin (2.0f * pi * phase) + 0.12f * std::sin (4.0f * pi * phase)) * amp;
         tone.process (fastTanh (x * drive) / fastTanh (drive));
-        return tone.lp * 0.55f * (accent ? 1.15f : 1.0f);
+        return tone.lp * 0.45f * (accent ? 1.15f : 1.0f);
     }
 
 private:

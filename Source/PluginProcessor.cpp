@@ -600,6 +600,40 @@ void TechMachineProcessor::applyPattern (int type, const Pattern& pattern)
     touchPattern();
 }
 
+juce::RangedAudioParameter* TechMachineProcessor::presetParameter (int type, const char* key)
+{
+    juce::String k (key);
+    if (k.startsWithChar ('@')) return apvts.getParameter (pid::machine (type, k.substring (1).toRawUTF8()));
+    return apvts.getParameter (juce::String (machineDef (type).id) + "_" + k.replaceCharacter ('.', '_'));
+}
+
+void TechMachineProcessor::applyPreset (int type, const SoundPreset& preset)
+{
+    const auto& def = machineDef (type);
+    auto reset = [this] (const juce::String& id)
+    {
+        if (auto* p = apvts.getParameter (id)) p->setValueNotifyingHost (p->getDefaultValue());
+    };
+
+    // Back to the factory sound first, so a preset only has to list what it changes.
+    for (const char* fx : { "drive", "crush", "filter", "echo", "reverb" }) reset (pid::machine (type, fx));
+    if (def.kind == MachineKind::Drum)
+    {
+        for (int r = 0; r < (int) def.rows.size(); ++r)
+            for (const char* p : { "level", "tune", "decay", "tone", "drive", "filter", "pan", "echo", "reverb" })
+                reset (pid::row (type, r, p));
+    }
+    else
+    {
+        for (int i = 0; i < (int) def.params.size(); ++i) reset (pid::synth (type, i));
+    }
+
+    for (auto& [key, value] : preset.values)
+        if (auto* p = presetParameter (type, key))
+            p->setValueNotifyingHost (p->convertTo0to1 (value));
+    dirty = true;
+}
+
 void TechMachineProcessor::shiftMachine (int type, int direction)
 {
     undoManager.beginNewTransaction();

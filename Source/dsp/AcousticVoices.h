@@ -44,8 +44,9 @@ inline const PianoType& pianoType (int index)
         { 0.0004f, 16.0f, 0.7f, 1.0f, 1.1f },    // honky-tonk
         { 0.00018f, 1.0f, 0.9f, 1.35f, 1.3f },   // bright pop
         { 0.00015f, 0.6f, 0.55f, 0.45f, 0.5f },  // felt
+        { 0.00008f, 2.5f, 0.6f, 1.25f, 1.4f },   // electric grand (CP-70)
     };
-    return types[(size_t) juce::jlimit (0, 4, index)];
+    return types[(size_t) juce::jlimit (0, (int) std::size (types) - 1, index)];
 }
 
 struct PianoParams
@@ -163,8 +164,13 @@ inline const MalletType& malletType (int index)
         { 4, { 1.0f, 2.0f, 3.0f, 4.02f }, { 1.0f, 0.6f, 0.3f, 0.15f }, { 0.7f, 0.5f, 0.35f, 0.18f }, 0, 0.5f, 0.1f },      // steel drum
         { 4, { 1.0f, 2.76f, 5.4f, 8.93f }, { 0.6f, 1.0f, 0.7f, 0.4f }, { 3.5f, 2.4f, 1.5f, 0.9f }, -12, 0.4f, 0.0f },      // tubular bells
         { 3, { 1.0f, 3.99f, 9.2f }, { 1.0f, 0.15f, 0.05f }, { 0.5f, 0.14f, 0.05f }, 0, 0.6f, 0.0f },                       // marimba
+        { 3, { 1.0f, 3.0f, 6.1f }, { 1.0f, 0.3f, 0.08f }, { 0.35f, 0.1f, 0.05f }, 12, 0.7f, 0.0f },                        // xylophone
+        { 4, { 1.0f, 2.76f, 5.4f, 8.93f }, { 1.0f, 0.6f, 0.4f, 0.2f }, { 3.0f, 1.5f, 0.8f, 0.4f }, 24, 0.3f, 0.0f },       // crotales
+        { 4, { 1.0f, 2.32f, 4.25f, 6.63f }, { 1.0f, 0.5f, 0.3f, 0.15f }, { 2.5f, 1.2f, 0.6f, 0.3f }, 0, 0.4f, 0.3f },      // gamelan
+        { 3, { 1.0f, 2.0f, 3.0f }, { 1.0f, 0.5f, 0.25f }, { 1.6f, 1.0f, 0.6f }, 0, 0.3f, 0.0f },                           // handpan
+        { 5, { 0.5f, 1.0f, 1.19f, 1.5f, 2.0f }, { 0.5f, 0.8f, 0.6f, 0.4f, 1.0f }, { 6.0f, 4.0f, 3.0f, 2.5f, 2.0f }, -12, 0.3f, 0.0f },   // church bells
     };
-    return types[(size_t) juce::jlimit (0, 7, index)];
+    return types[(size_t) juce::jlimit (0, (int) std::size (types) - 1, index)];
 }
 
 struct MalletParams
@@ -260,8 +266,14 @@ inline const PluckType& pluckType (int index)
         { 1.6f, 0.65f, 0.9f, 0.3f, 0.0f, 0.015f },   // koto
         { 3.0f, 0.7f, 0.85f, 0.3f, 0.6f, 0.0f },     // sitar
         { 0.3f, 0.35f, 0.5f, 0.8f, 0.0f, 0.0f },     // pizzicato strings
+        { 1.2f, 0.75f, 0.95f, 0.9f, 0.0f, 0.0f },    // banjo
+        { 1.0f, 0.7f, 0.9f, 0.5f, 0.0f, 0.0f },      // mandolin
+        { 1.0f, 0.4f, 0.55f, 0.7f, 0.0f, 0.0f },     // ukulele
+        { 3.5f, 0.6f, 0.7f, 0.1f, 0.0f, 0.0f },      // clean electric guitar
+        { 1.5f, 0.5f, 0.7f, 0.7f, 0.15f, 0.01f },    // oud
+        { 2.5f, 0.6f, 0.8f, 0.4f, 0.0f, 0.02f },     // guzheng
     };
-    return types[(size_t) juce::jlimit (0, 6, index)];
+    return types[(size_t) juce::jlimit (0, (int) std::size (types) - 1, index)];
 }
 
 struct PluckParams
@@ -368,8 +380,10 @@ inline const Vowel& vowel (int index)
         { { 350.0f, 650.0f, 2700.0f }, { 1.0f, 0.3f, 0.06f }, { 6.0f, 8.0f, 18.0f } },     // ooh
         { { 500.0f, 1700.0f, 2600.0f }, { 1.0f, 0.4f, 0.25f }, { 7.0f, 12.0f, 16.0f } },   // eeh
         { { 280.0f, 900.0f, 2400.0f }, { 1.0f, 0.06f, 0.03f }, { 4.0f, 8.0f, 12.0f } },    // mmh
+        { { 450.0f, 800.0f, 2830.0f }, { 1.0f, 0.45f, 0.12f }, { 7.0f, 9.0f, 18.0f } },    // oh
+        { { 270.0f, 2300.0f, 3000.0f }, { 1.0f, 0.35f, 0.3f }, { 5.0f, 14.0f, 16.0f } },   // ih
     };
-    return vowels[(size_t) juce::jlimit (0, 3, index)];
+    return vowels[(size_t) juce::jlimit (0, (int) std::size (vowels) - 1, index)];
 }
 
 struct ChoirParams

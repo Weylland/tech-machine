@@ -277,7 +277,7 @@ public:
         ladder.set (std::min (20.0f * std::exp2 (octaves), 18000.0f), emphasis, fs);
 
         const float y = ladder.process (mix * (0.5f + drive * 2.5f));
-        return dcBlock.highpass (y) * ampEnv.next() * (accent ? 1.2f : 1.0f) * (3.5f - 1.2f * drive);
+        return dcBlock.highpass (y) * ampEnv.next() * (accent ? 1.2f : 1.0f) * (2.0f - 0.7f * drive);
     }
 
 private:

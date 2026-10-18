@@ -118,7 +118,7 @@ void techno (ExampleWriter& w)
     w.show (ModelD);
     p ("modeld_wave", 0); p ("modeld_detune", 0.1f); p ("modeld_sub", 0.5f); p ("modeld_cutoff", 0.28f);
     p ("modeld_emphasis", 0.35f); p ("modeld_contour", 0.45f); p ("modeld_decay", 0.25f); p ("modeld_sustain", 0.2f);
-    p ("modeld_drive", 0.35f); p ("modeld_volume", 0.7f);
+    p ("modeld_overdrive", 0.35f); p ("modeld_volume", 0.7f);
     const juce::String bass = ". . A1 . . . A1 A2 . . A1 . . . A1 A1 ";
     line (w, ModelD, bars ({ bass, bass, bass, ". . A1 . . . A1 A2 . . A1 . . G1 A1 C2" }));
 
@@ -232,7 +232,7 @@ void berlin (ExampleWriter& w)
     w.show (ModelD);
     p ("modeld_wave", 0); p ("modeld_detune", 0.15f); p ("modeld_sub", 0.55f); p ("modeld_cutoff", 0.22f);
     p ("modeld_emphasis", 0.4f); p ("modeld_contour", 0.5f); p ("modeld_decay", 0.18f); p ("modeld_sustain", 0.05f);
-    p ("modeld_drive", 0.4f); p ("modeld_volume", 0.7f);
+    p ("modeld_overdrive", 0.4f); p ("modeld_volume", 0.7f);
     const juce::String roll = ". A1 . A1 . A1 . A1 . A1 . A1 . A1 . A1 ";
     line (w, ModelD, bars ({ roll, roll, roll, ". A1 . A1 . A1 . A1 . A#1 . A#1 . A1 . A1" }));
 
@@ -326,7 +326,7 @@ void drumAndBass (ExampleWriter& w)
     w.show (ModelD);
     p ("modeld_wave", 0); p ("modeld_detune", 0.75f); p ("modeld_sub", 0.55f); p ("modeld_cutoff", 0.3f); p ("modeld_emphasis", 0.2f);
     p ("modeld_contour", 0.15f); p ("modeld_attack", 0.05f); p ("modeld_decay", 0.6f); p ("modeld_sustain", 0.9f);
-    p ("modeld_glide", 0.3f); p ("modeld_drive", 0.45f); p ("modeld_volume", 0.7f);
+    p ("modeld_glide", 0.3f); p ("modeld_overdrive", 0.45f); p ("modeld_volume", 0.7f);
     line (w, ModelD, bars ({ held ("F2", 16), held ("F2", 8) + held ("G#2", 4) + held ("D#2", 4),
                              held ("C#2", 16), held ("C#2", 8) + held ("D#2", 8) }));
 
@@ -433,7 +433,7 @@ void trap (ExampleWriter& w)
 
     w.show (Sub808);
     p ("sub808_octave", 2); p ("sub808_decay", 0.75f); p ("sub808_glide", 0.35f); p ("sub808_punch", 0.5f);
-    p ("sub808_drive", 0.35f); p ("sub808_volume", 0.75f);
+    p ("sub808_overdrive", 0.35f); p ("sub808_volume", 0.75f);
     line (w, Sub808, bars ({ "E1 - - - - - - E1 - - E1 - - - - -", "E1 - - - - - C2 - - - B1 - - G1 - -" }));
 
     w.show (DX7);
@@ -534,7 +534,7 @@ void reggaeton (ExampleWriter& w)
 
     w.show (Sub808);
     p ("sub808_octave", 2); p ("sub808_decay", 0.55f); p ("sub808_glide", 0.25f); p ("sub808_punch", 0.5f);
-    p ("sub808_drive", 0.25f); p ("sub808_volume", 0.75f);
+    p ("sub808_overdrive", 0.25f); p ("sub808_volume", 0.75f);
     line (w, Sub808, bars ({ "G1 - . G1 - . G1 - D#1 - . D#1 - . D#1 -", "A#1 - . A#1 - . A#1 - F1 - . F1 - . F1 -" }));
 
     w.show (DX7);

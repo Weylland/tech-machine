@@ -30,6 +30,7 @@ target_sources(TechMachine PRIVATE
     Source/core/MachineDefs.cpp
     Source/core/Music.cpp
     Source/core/PatternLibrary.cpp
+    Source/core/Presets.cpp
     Source/core/Styles.cpp
     Source/dsp/DrumVoices.cpp
     Source/machines/Machines.cpp
