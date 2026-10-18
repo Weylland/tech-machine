@@ -1,9 +1,10 @@
 #include "Language.h"
+#include "Translations.h"
 #include <unordered_map>
 
 namespace techno
 {
-const std::unordered_map<std::string, const char*>& englishTable();   // Translations.cpp
+
 
 namespace
 {

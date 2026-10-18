@@ -191,7 +191,8 @@ private:
     {
         const float bass = values[pOrgan::Bass], middle = values[pOrgan::Middle], high = values[pOrgan::High];
         const bool house = values[pOrgan::Type] > 0.5f;
-        if (bass != lastBass || middle != lastMiddle || high != lastHigh || house != lastHouse)
+        if (! juce::exactlyEqual (bass, lastBass) || ! juce::exactlyEqual (middle, lastMiddle) || ! juce::exactlyEqual (high, lastHigh)
+            || house != lastHouse)
         {
             buildOrganTable (shared, bass, middle, high, house);
             lastBass = bass;

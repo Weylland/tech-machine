@@ -550,9 +550,11 @@ bool isPercussion (Role role)
         case Role::LowTimbale: case Role::HighTimbale: case Role::Agogo: case Role::Guiro:
         case Role::Triangle: case Role::Perc:
             return true;
-        default:
+        case Role::Kick: case Role::Snare: case Role::Clap: case Role::ClosedHat: case Role::OpenHat: case Role::Ride:
+        case Role::Crash: case Role::Shaker: case Role::Ghost: case Role::Cymbal: case Role::Tambourine: case Role::Snap:
             return false;
     }
+    return false;
 }
 
 bool onlyScattered (const char* pattern)
@@ -594,8 +596,10 @@ std::vector<Role> fallbacksFor (Role role)
         case R::HighBongo:   return { R::LowBongo, R::HighConga, R::HighTom };
         case R::LowTimbale:  return { R::HighTimbale, R::MidTom, R::LowTom };
         case R::HighTimbale: return { R::LowTimbale, R::HighTom, R::Cowbell };
-        default:             return {};
+        case R::Kick:
+        case R::Ghost:       return {};
     }
+    return {};
 }
 
 int rowFor (const MachineDef& def, Role role)
@@ -1511,7 +1515,11 @@ void generate (Track& track, const MachineDef& def, const GenerateContext& ctx, 
             else leadLine (line, ctx, LeadMode::Arp, r);
             break;
         }
-        default: break;
+        // Drum machines are generated above; numMachines is not a machine.
+        case TR909: case TR808: case TR606: case BreakKit: case LinnDrum: case CR78: case MPC: case Percussion: case SoundFx:
+        case AcousticKit: case TR707: case Simmons: case WorldPerc: case Sampler: case RhythmBox: case DigitalKit: case SynthDrums:
+        case numMachines:
+            break;
     }
     line.write (track, ctx);
 }

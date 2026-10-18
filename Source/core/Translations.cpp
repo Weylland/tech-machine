@@ -1,6 +1,4 @@
-#include "Language.h"
-#include <string>
-#include <unordered_map>
+#include "Translations.h"
 
 namespace techno
 {

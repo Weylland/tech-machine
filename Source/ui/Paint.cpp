@@ -458,15 +458,15 @@ void vuMeter (Graphics& g, Rect r, float needleDb)
     g.strokePath (red, juce::PathStrokeType (3.0f));
 
     g.setFont (condensed (9.0f));
-    for (float db : { -20.0f, -10.0f, -7.0f, -5.0f, -3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f })
+    for (int db : { -20, -10, -7, -5, -3, -2, -1, 0, 1, 2, 3 })
     {
-        const float a = angleFor (db);
-        g.setColour (db > 0.0f ? Colour (0xffc8281e) : Colour (0xff222222));
+        const float a = angleFor ((float) db);
+        g.setColour (db > 0 ? Colour (0xffc8281e) : Colour (0xff222222));
         g.drawLine ({ pivot.getPointOnCircumference (radius * 0.9f, a), pivot.getPointOnCircumference (radius * 0.97f, a) }, 1.0f);
-        if (db == -20.0f || db == -10.0f || db == -5.0f || db == -3.0f || db == 0.0f || db == 3.0f)
+        if (db == -20 || db == -10 || db == -5 || db == -3 || db == 0 || db == 3)
         {
             const auto p = pivot.getPointOnCircumference (radius * 1.04f, a);
-            g.drawText (juce::String (std::abs ((int) db)), Rect (16.0f, 10.0f).withCentre (p), juce::Justification::centred);
+            g.drawText (juce::String (std::abs (db)), Rect (16.0f, 10.0f).withCentre (p), juce::Justification::centred);
         }
     }
     g.setColour (Colour (0xff222222));

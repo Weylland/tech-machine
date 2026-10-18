@@ -6,7 +6,7 @@ namespace techno
 namespace
 {
 constexpr Role K = Role::Kick, S = Role::Snare, C = Role::Clap, R = Role::Rim, H = Role::ClosedHat, O = Role::OpenHat,
-               Y = Role::Ride, Cb = Role::Cowbell, Cl = Role::Claves, Sh = Role::Shaker, Lt = Role::LowTom, Ht = Role::HighTom,
+               Y = Role::Ride, Cb = Role::Cowbell, Cl = Role::Claves, Sh = Role::Shaker, Lt = Role::LowTom,
                Lc = Role::LowConga, Hc = Role::HighConga, Ag = Role::Agogo, Tb = Role::Tambourine, Sn = Role::Snap,
                Th = Role::HighTimbale, Lb = Role::LowBongo, Hb = Role::HighBongo, Tl = Role::LowTimbale, Tr = Role::Triangle,
                Gu = Role::Guiro;

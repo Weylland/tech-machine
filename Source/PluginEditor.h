@@ -189,7 +189,7 @@ public:
 private:
     void rebuild (bool showStart);
 
-    TechMachineProcessor& processor;
+    TechMachineProcessor& techProcessor;   // AudioProcessorEditor::processor, with its real type
     std::unique_ptr<MainView> view;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TechMachineEditor)

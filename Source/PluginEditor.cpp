@@ -97,7 +97,7 @@ class MainView::ExportJob : public juce::ThreadWithProgressWindow
 public:
     ExportJob (std::unique_ptr<juce::XmlElement> project, const juce::File& target, int loopCount, std::function<void (bool)> done)
         : ThreadWithProgressWindow (utf8 ("Export WAV en cours…"), true, true),
-          xml (std::move (project)), file (target), loops (loopCount), onDone (std::move (done))
+          file (target), xml (std::move (project)), loops (loopCount), onDone (std::move (done))
     {
     }
 
@@ -437,7 +437,7 @@ MainView::MainView (TechMachineProcessor& p)
     {
         auto* panel = panels.add (new MachinePanel (processor, t, viewPage));
         panel->onLayoutChange = [this] { layoutRack(); };
-        panel->onOpenRoll = [this] (int t) { openPianoRoll (t); };
+        panel->onOpenRoll = [this] (int machineType) { openPianoRoll (machineType); };
         content.addChildComponent (panel);
     }
 
@@ -1172,13 +1172,13 @@ void MainView::resized()
 
 //==============================================================================
 TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
-    : AudioProcessorEditor (p), processor (p)
+    : AudioProcessorEditor (p), techProcessor (p)
 {
     setResizable (true, true);
     setResizeLimits (1440, 700, 3200, 2400);
 
     // The standalone app always opens on the start screen; the plugin only when its project is empty.
-    rebuild (! processor.isHosted() || processor.isProjectEmpty());
+    rebuild (! techProcessor.isHosted() || techProcessor.isProjectEmpty());
     setSize (1600, 880);
 }
 
@@ -1186,7 +1186,7 @@ TechMachineEditor::~TechMachineEditor() = default;
 
 void TechMachineEditor::rebuild (bool showStart)
 {
-    view = std::make_unique<MainView> (processor);
+    view = std::make_unique<MainView> (techProcessor);
     juce::Component::SafePointer<TechMachineEditor> safe (this);
     view->onLanguageChange = [safe]
     {
