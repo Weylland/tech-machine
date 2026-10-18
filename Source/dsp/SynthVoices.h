@@ -534,6 +534,6 @@ private:
     Adsr adsr;
     Ladder ladderL, ladderR;
     OnePole highpassL, highpassR;
-    juce::Random random;
+    juce::Random random { 0x7ec4 };   // fixed seed: the same project always sounds the same
 };
 } // namespace techno

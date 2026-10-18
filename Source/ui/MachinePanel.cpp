@@ -691,7 +691,8 @@ void MachinePanel::paint (juce::Graphics& g)
     else
     {
         const auto y = synthRowY();
-        const char* labels[3] { isPoly() ? "ACCORDS" : "NOTES", isPoly() ? "TENIR" : "ACCENT", "SLIDE" };
+        const bool chords = isPoly() && processor.apvts.getRawParameterValue (pid::synth (type, 1))->load() > 0.5f;
+        const char* labels[3] { chords ? "ACCORDS" : "NOTES", isPoly() ? "TENIR" : "ACCENT", "SLIDE" };
         const int heights[3] { 56, 26, 26 };
         for (int r = 0; r < (int) rows.size(); ++r)
         {

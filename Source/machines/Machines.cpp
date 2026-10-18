@@ -200,7 +200,7 @@ private:
     float rollInterval[maxDrumRows] {}, rollCountdown[maxDrumRows] {}, rollVelocity[maxDrumRows] {};
     bool mutes[maxDrumRows] {};
     float accentAmount = 0.5f;
-    juce::Random random;
+    juce::Random random { 0x7ec4 };   // fixed seed: the same project always sounds the same
 };
 
 class SynthMachine : public Machine

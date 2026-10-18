@@ -79,6 +79,7 @@ public:
             }
         }
         knownVersion = processor.patternVersion.load();
+        if (fittedSteps >= 0 && fittedSteps != len) fitAll();   // the sequence got longer or shorter
         repaint();
     }
 
@@ -519,7 +520,7 @@ public:
         {
             // Zoom around the mouse.
             const float before = (e.position.x - (float) keyW + scrollX) / stepW;
-            stepW = juce::jlimit (8.0f, 120.0f, stepW * (w.deltaY > 0 ? 1.15f : 1.0f / 1.15f));
+            stepW = juce::jlimit (8.0f, 240.0f, stepW * (w.deltaY > 0 ? 1.15f : 1.0f / 1.15f));
             scrollX = before * stepW - (e.position.x - (float) keyW);
         }
         else if (e.mods.isShiftDown() || std::abs (w.deltaX) > std::abs (w.deltaY))
@@ -592,7 +593,8 @@ public:
     void fitAll()
     {
         layout();
-        stepW = juce::jlimit (8.0f, 80.0f, (float) (getWidth() - keyW - 12) / (float) juce::jmax (1, steps()));
+        stepW = juce::jlimit (8.0f, 240.0f, (float) (getWidth() - keyW - 12) / (float) juce::jmax (1, steps()));
+        fittedSteps = steps();
         scrollX = 0.0f;
         // Centre the notes vertically (or the middle of the range).
         int low = noteRange, high = 0;
@@ -820,6 +822,7 @@ private:
     std::vector<int> chordPreview;
     std::vector<bool> glide;
     float stepW = 0.0f, scrollX = 0.0f, scrollY = 0.0f;
+    int fittedSteps = -1;
     int playhead = -1, grabbed = -1, downStep = 0, downPitch = 0, previewPitch = -1, pressedKey = -1, dragLane = -1;
     bool laneValue = false;
     Drag dragMode = Drag::None;
@@ -836,10 +839,7 @@ public:
         addAndMakeVisible (grid);
         grid.onClose = [this] { if (onClose) onClose(); };
 
-        for (int t : rackOrder)
-            if (machineDef (t).kind != MachineKind::Drum) machineBox.addItem (utf8 (machineDef (t).name), t + 1);
-        machineBox.setSelectedId (machineType + 1, juce::dontSendNotification);
-        machineBox.onChange = [this] { grid.setMachine (machineBox.getSelectedId() - 1); grid.fitAll(); };
+        refreshMachines();
         machineBox.setTooltip (utf8 ("La machine dont tu écris les notes"));
         addAndMakeVisible (machineBox);
 
@@ -867,7 +867,13 @@ public:
             if (! poly) stackBox.setSelectedId (1, juce::sendNotificationSync);
         };
         updateStack();
-        machineBox.onChange = [this, updateStack] { grid.setMachine (machineBox.getSelectedId() - 1); grid.fitAll(); updateStack(); };
+        machineBox.onChange = [this, updateStack]
+        {
+            if (machineBox.getSelectedId() <= 0) return;
+            grid.setMachine (machineBox.getSelectedId() - 1);
+            grid.fitAll();
+            updateStack();
+        };
 
         auto button = [this] (IconButton& b, const char* tip, std::function<void()> action)
         {
@@ -889,6 +895,16 @@ public:
 
     std::function<void()> onClose;
     PianoRollGrid& getGrid() { return grid; }
+
+    // The synths of the rack (the machine being edited is always listed).
+    void refreshMachines()
+    {
+        machineBox.clear (juce::dontSendNotification);
+        for (int t : rackOrder)
+            if (machineDef (t).kind != MachineKind::Drum && (processor.isShown (t) || t == grid.machine()))
+                machineBox.addItem (utf8 (machineDef (t).name), t + 1);
+        machineBox.setSelectedId (grid.machine() + 1, juce::dontSendNotification);
+    }
 
     void paint (juce::Graphics& g) override
     {

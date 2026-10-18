@@ -933,6 +933,12 @@ void MainView::timerCallback()
         if (processor.isShown (t)) mask |= 1ull << t;
     if (mask != lastShownMask || scrollToMachine >= 0)
     {
+        if (pianoRoll != nullptr)
+        {
+            // The piano roll follows the rack: closed when its machine leaves, list of synths kept up to date.
+            if (! processor.isShown (pianoRoll->getGrid().machine())) closePianoRoll();
+            else pianoRoll->refreshMachines();
+        }
         lastShownMask = mask;
         layoutRack();
     }
@@ -961,14 +967,20 @@ void MainView::timerCallback()
             if (panel->isVisible()) panel->setPlayhead (step);
     }
 
+    // Note and chord names depend on the key, the scale and each synth's octave and chord type.
     int labelHash = processor.currentKey() + 12 * processor.currentScale();
-    for (int t : { TB303, SH101, ModelD, Juno106, JP8000 })
-        labelHash = labelHash * 31 + (int) processor.apvts.getRawParameterValue (pid::synth (t, 0))->load() * 16
-                  + (int) processor.apvts.getRawParameterValue (pid::synth (t, 1))->load();
+    for (int t = 0; t < numMachines; ++t)
+    {
+        const auto& def = machineDef (t);
+        if (def.kind == MachineKind::Drum) continue;
+        labelHash = labelHash * 31 + (int) processor.apvts.getRawParameterValue (pid::synth (t, 0))->load() * 16;
+        if (def.kind == MachineKind::Poly) labelHash += (int) processor.apvts.getRawParameterValue (pid::synth (t, 1))->load();
+    }
 
     const int version = processor.patternVersion.load();
     if (version != lastVersion || labelHash != lastLabelHash)
     {
+        if (pianoRoll != nullptr && labelHash != lastLabelHash) pianoRoll->getGrid().repaint();
         lastVersion = version;
         lastLabelHash = labelHash;
         for (auto* panel : panels)
