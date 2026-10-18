@@ -42,8 +42,8 @@ public:
     void filesDropped (const juce::StringArray& files, int x, int y) override;
     void refreshSampleNames();
 
-    // Switches between the step keys and the piano roll (synths).
-    void setRollMode (bool on);
+    // Opens the piano roll screen for this machine (set by the main view).
+    std::function<void (int machineType)> onOpenRoll;
 
     // Shows the MIDI badge on the machine that receives the keyboard.
     void setMidiTarget (bool isTarget)
@@ -54,8 +54,7 @@ public:
     }
 
 private:
-    bool midiTarget = false, rollMode = false;
-    std::unique_ptr<PianoRoll> roll;
+    bool midiTarget = false;
     std::unique_ptr<juce::FileChooser> chooser;
     void chooseSampleFile (std::function<void (const juce::File&)> then);
     IconButton rollButton { "keys", "PIANO ROLL" };

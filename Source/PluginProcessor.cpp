@@ -253,6 +253,18 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     if (play && hostPpq.hasValue())
         syncToHost (*hostPpq);
 
+    {
+        int start1, size1, start2, size2;
+        previewFifo.prepareToRead (previewFifo.getNumReady(), start1, size1, start2, size2);
+        auto play = [this] (const PreviewNote& n)
+        {
+            if (n.on) machines[(size_t) n.type]->liveNoteOn (n.note, 0.8f);
+            else machines[(size_t) n.type]->liveNoteOff (n.note);
+        };
+        for (int i = 0; i < size1; ++i) play (previewQueue[(size_t) (start1 + i)]);
+        for (int i = 0; i < size2; ++i) play (previewQueue[(size_t) (start2 + i)]);
+        previewFifo.finishedRead (size1 + size2);
+    }
     handleMidi (midi);
     midi.clear();
 
@@ -636,6 +648,15 @@ int TechMachineProcessor::midiTargetMachine() const
     for (int candidate : rackOrder)
         if (isShown (candidate)) return candidate;
     return -1;
+}
+
+void TechMachineProcessor::previewNote (int type, int midiNote, bool on)
+{
+    int start1, size1, start2, size2;
+    previewFifo.prepareToWrite (1, start1, size1, start2, size2);
+    if (size1 > 0) previewQueue[(size_t) start1] = { type, midiNote, on };
+    else if (size2 > 0) previewQueue[(size_t) start2] = { type, midiNote, on };
+    previewFifo.finishedWrite (size1 + size2);
 }
 
 void TechMachineProcessor::setRecordNotes (bool on)
@@ -1035,16 +1056,21 @@ std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
         e->setAttribute ("on", encodeBools (m->track.on));
         e->setAttribute ("slide", encodeBools (m->track.slide));
 
-        juce::StringArray notes, chords;
+        juce::StringArray notes, chords, ties;
         bool anyChord = false;
         for (auto& n : m->track.note) notes.add (juce::String (n.load()));
-        for (auto& c : m->track.chord)
+        for (int i = 0; i < maxSteps; ++i)
         {
-            chords.add (juce::String::toHexString ((juce::int64) c.load()));
-            anyChord = anyChord || c.load() != 0;
+            chords.add (juce::String::toHexString ((juce::int64) m->track.chord[(size_t) i].load()));
+            ties.add (juce::String::toHexString ((juce::int64) m->track.tie[(size_t) i].load()));
+            anyChord = anyChord || m->track.chord[(size_t) i].load() != 0;
         }
         e->setAttribute ("note", notes.joinIntoString (","));
-        if (anyChord) e->setAttribute ("chord", chords.joinIntoString (","));
+        if (anyChord)
+        {
+            e->setAttribute ("chord", chords.joinIntoString (","));
+            e->setAttribute ("tie", ties.joinIntoString (","));
+        }
 
         if (m->type == Sampler)
             for (int i = 0; i < numPads; ++i)
@@ -1104,8 +1130,11 @@ void TechMachineProcessor::restoreProjectXml (const juce::XmlElement& source)
                 }
             }
             auto chords = juce::StringArray::fromTokens (e->getStringAttribute ("chord"), ",", {});
+            auto ties = juce::StringArray::fromTokens (e->getStringAttribute ("tie"), ",", {});
             for (int i = 0; i < maxSteps && i < chords.size(); ++i)
                 m->track.chord[(size_t) i] = (std::uint64_t) chords[i].getHexValue64() & ((1ull << noteRange) - 1);
+            for (int i = 0; i < maxSteps && i < ties.size(); ++i)
+                m->track.tie[(size_t) i] = (std::uint64_t) ties[i].getHexValue64() & ((1ull << noteRange) - 1);
         }
     }
     xml.removeChildElement (patterns, true);

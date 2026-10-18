@@ -437,6 +437,7 @@ MainView::MainView (TechMachineProcessor& p)
     {
         auto* panel = panels.add (new MachinePanel (processor, t, viewPage));
         panel->onLayoutChange = [this] { layoutRack(); };
+        panel->onOpenRoll = [this] (int t) { openPianoRoll (t); };
         content.addChildComponent (panel);
     }
 
@@ -518,6 +519,23 @@ void MainView::toggleFullScreen()
     }
     if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
         desktop.setKioskModeComponent (window, false);
+}
+
+void MainView::openPianoRoll (int machineType)
+{
+    pianoRoll = std::make_unique<PianoRollEditor> (processor, machineType);
+    juce::Component::SafePointer<MainView> safe (this);
+    pianoRoll->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->closePianoRoll(); }); };
+    addAndMakeVisible (*pianoRoll);
+    pianoRoll->setBounds (rack.getBounds().expanded (0, 4));
+    pianoRoll->getGrid().fitAll();
+    pianoRoll->getGrid().grabKeyboardFocus();
+}
+
+void MainView::closePianoRoll()
+{
+    pianoRoll.reset();
+    grabKeyboardFocus();
 }
 
 void MainView::showAudioSettings()
@@ -890,6 +908,12 @@ void MainView::timerCallback()
         lastMidiTarget = target;
         for (auto* panel : panels) panel->setMidiTarget (panel->type == target);
     }
+    if (pianoRoll != nullptr)
+    {
+        auto& grid = pianoRoll->getGrid();
+        grid.setPlayhead (processor.currentStep.load());
+        if (processor.patternVersion.load() != grid.knownVersion) grid.reload();
+    }
     if (processor.sampleVersion.load() != lastSampleVersion)
     {
         lastSampleVersion = processor.sampleVersion.load();
@@ -1122,6 +1146,7 @@ void MainView::resized()
     layoutRack();
 
     startScreen.setBounds (getLocalBounds());
+    if (pianoRoll != nullptr) pianoRoll->setBounds (rack.getBounds().expanded (0, 4));
 }
 
 //==============================================================================

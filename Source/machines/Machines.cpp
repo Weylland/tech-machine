@@ -323,6 +323,34 @@ public:
     void onStep (const StepInfo& s) override
     {
         const auto st = (size_t) s.step, prev = (size_t) s.prevStep;
+
+        // Notes written in the piano roll: each one starts, goes on (tie) and stops on its own.
+        const std::uint64_t mask = track.on[st] ? track.chord[st].load() : 0;
+        if (mask != 0 || written != 0)
+        {
+            const std::uint64_t continuing = written & mask & (track.on[prev] ? track.tie[prev].load() : 0);
+            releaseNotes (written & ~continuing);
+            written = 0;
+            if (mask != 0)
+            {
+                const int base = machineBaseNote (def, s.key, octave);
+                int count = 0;
+                for (int n = 0; n < noteRange; ++n) count += (int) ((mask >> n) & 1u);
+                const float velocity = (track.accent[st] ? 1.0f : 0.8f) * 1.6f / std::sqrt ((float) juce::jmax (1, count));
+                for (int n = 0; n < noteRange; ++n)
+                {
+                    if (! ((mask >> n) & 1u) || ((continuing >> n) & 1u)) continue;
+                    writtenNote[n] = base + snapToScale (s.scale, n);
+                    startVoice (writtenNote[n], velocity);
+                }
+                written = mask;
+                endingAtGate = mask & ~track.tie[st].load();
+                gateOpen = false;
+                gateCountdown = juce::jmax (1, (int) (s.stepSamples * gateFraction));
+                return;
+            }
+        }
+
         const bool held = gateOpen && track.on[prev] && track.slide[prev] && track.on[st]
                        && track.note[prev].load() == track.note[st].load() && track.chord[prev].load() == track.chord[st].load();
         if (held)
@@ -366,6 +394,12 @@ public:
     {
         if (gateCountdown > 0 && --gateCountdown == 0)
         {
+            if (written != 0)
+            {
+                releaseNotes (endingAtGate);
+                written &= ~endingAtGate;
+                return;
+            }
             releaseAll();
             gateOpen = false;
         }
@@ -376,6 +410,7 @@ public:
         releaseAll();
         gateOpen = false;
         gateCountdown = 0;
+        written = 0;
     }
 
     void render (Frame& f) override
@@ -470,6 +505,17 @@ private:
         for (auto& v : voices)
             if (v->isActive()) v->release();
     }
+
+    void releaseNotes (std::uint64_t bits)
+    {
+        for (int n = 0; n < noteRange; ++n)
+            if ((bits >> n) & 1u)
+                for (auto& v : voices)
+                    if (v->isActive() && v->note == writtenNote[n]) v->release();
+    }
+
+    std::uint64_t written = 0, endingAtGate = 0;   // piano roll notes sounding, and those that stop at the end of this step
+    int writtenNote[noteRange] {};
 
     bool gateOpen = false;
     unsigned int ageCounter = 0;

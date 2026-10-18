@@ -64,6 +64,7 @@ public:
     void setMidiTarget (int machineType) { midiTarget = machineType; }
     int midiTargetMachine() const;
     void setRecordNotes (bool on);
+    void previewNote (int machineType, int midiNote, bool on);   // plays a note right away (piano roll)
     bool isRecordingNotes() const { return recordNotes.load(); }
     void startMidiLearn (const juce::String& paramId);
     void forgetMidiLearn (const juce::String& paramId);
@@ -187,6 +188,10 @@ private:
     std::atomic<juce::RangedAudioParameter*> learnTarget { nullptr };
     std::array<std::atomic<juce::RangedAudioParameter*>, 128> ccMap {};
     int recordStart[128] {};
+
+    struct PreviewNote { int type = 0, note = 0; bool on = false; };
+    std::array<PreviewNote, 64> previewQueue {};
+    juce::AbstractFifo previewFifo { 64 };
 
     std::array<std::atomic<const techno::SampleData*>, numPads> sampleSlots {};
     std::vector<std::unique_ptr<techno::SampleData>> sampleStore;   // kept until the end: the audio thread may still play an old sound

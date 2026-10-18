@@ -22,6 +22,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           " · EFFECTS" },
         { " » avant de continuer ?",
           "” before continuing?" },
+        { "1 mesure",
+          "1 bar" },
         { "1. Ouvre un PROJET EXEMPLE (menu PROJET › Exemples, ou l'écran d'accueil) pour entendre ce que la machine sait faire, ou pars d'un PROJET VIDE.\n"
           "\n2. Ajoute des machines avec « + MACHINE » : une boîte à rythmes, une basse, des accords… Elles arrivent vides.\n"
           "\n3. Clique sur les cases pour placer des sons. Chaque colonne est un « pas » : 16 pas = 1 mesure = 4 temps. Sur les notes et les accords, glisse vers le haut ou le bas pour changer la hauteur. Sur la batterie, clic droit (ou molette) sur une case = roulement ×2, ×3, ×4 (les charlestons rapides du trap).\n"
@@ -94,6 +96,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\nDésactive-le pour modifier tranquillement une mesure pendant que les autres jouent.",
           "On: the display automatically jumps to the bar being played.\n"
           "\nTurn it off to edit one bar calmly while the others play." },
+        { "Affiche toute la séquence",
+          "Shows the whole sequence" },
         { "Afficher la mesure ",
           "Show bar " },
         { "Agogo : cloche africaine/brésilienne.",
@@ -430,6 +434,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Click: mute / unmute this sound (the LED goes off when muted)" },
         { "Clic : son on / off · Clic droit ou molette : roulement ×2, ×3, ×4",
           "Click: sound on / off · Right-click or wheel: roll ×2, ×3, ×4" },
+        { "Clic = poser · glisser = déplacer · bord droit = allonger · clic droit ou double-clic = effacer · Ctrl+glisser = sélectionner · Alt+glisser = copier · flèches = déplacer / transposer (Maj = mesure / octave) · Ctrl+molette = zoom · Maj+molette = défiler",
+          "Click = place · drag = move · right edge = lengthen · right-click or double-click = erase · Ctrl+drag = select · Alt+drag = copy · arrows = move / transpose (Shift = bar / octave) · Ctrl+wheel = zoom · Shift+wheel = scroll" },
         { "Clic d'attaque : plus haut = début plus net et audible sur de petites enceintes.",
           "Attack click: higher = sharper start, audible on small speakers." },
         { "Clic d'attaque : plus il est haut, plus le kick est percutant et ressort dans le mix.",
@@ -438,6 +444,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Attack click." },
         { "Clic.",
           "Click." },
+        { "Clique dans la grille pour poser une note, glisse vers la droite pour l'allonger.",
+          "Click in the grid to place a note, drag right to lengthen it." },
         { "Clique pour comprendre à quoi ça sert",
           "Click to find out what it does" },
         { "Clique sur le nom pour couper ce son sans effacer ses notes. Clique à nouveau pour le remettre.\n"
@@ -608,6 +616,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "DJEMBE SLAP" },
         { "DJEMBÉ TONE",
           "DJEMBE TONE" },
+        { "DUPLIQUER",
+          "DUPLICATE" },
         { "DURÉE",
           "LENGTH" },
         { "Darbouka, coup grave au centre : « doum ».",
@@ -628,6 +638,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\nÇa remplace les réglages du son, pas tes notes. Tu peux ensuite tourner les boutons pour l'adapter.",
           "Ready-made sounds for this machine: the most famous ones (DX7 electric piano, 303 acid, trance supersaw, gospel organ, trap 808…) or, on a drum machine, kits (hard techno, trap, lo-fi, dub…).\n"
           "\nIt replaces the sound settings, not your notes. You can then turn the knobs to adjust it." },
+        { "Descend les notes sélectionnées (ou toutes) d'une octave",
+          "Moves the selected notes (or all of them) down one octave" },
         { "Descente : un balayage qui retombe vers le grave, juste après un drop ou à la fin d'une partie.",
           "Downlifter: a sweep falling back down, right after a drop or at the end of a section." },
         { "Deux accords par mesure",
@@ -710,10 +722,14 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Chop a loop over the 8 pads…" },
         { "Désaccorde légèrement deux couches du son pour l'épaissir (effet chorus).",
           "Slightly detunes two layers of the sound to thicken it (chorus effect)." },
+        { "EFFACER",
+          "ERASE" },
         { "EFFETS & MIX",
           "EFFECTS & MIX" },
         { "ENREG. MIDI",
           "REC MIDI" },
+        { "Efface les notes sélectionnées  (Suppr)",
+          "Erases the selected notes  (Delete)" },
         { "Effets de ce son",
           "Effects for this sound" },
         { "Effets sonores · risers, impacts, sirène, air horn, vinyle",
@@ -752,6 +768,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Export stopped" },
         { "Exporter en WAV",
           "Export to WAV" },
+        { "FERMER",
+          "CLOSE" },
         { "FILTRE",
           "FILTER" },
         { "FILTRE DJ",
@@ -1030,6 +1048,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Chicago and New York house: swinging groove, clap on 2 and 4, open hat on the off-beats, funky chords and bass. Suggested tempo: 118-128, with swing." },
         { "La jungle : breakbeats découpés et rejoués très vite, sub-basse profonde héritée du reggae, ambiance sombre ou planante. Tempo conseillé : 160-170.",
           "Jungle: chopped breakbeats replayed very fast, deep sub-bass inherited from reggae, dark or floating mood. Suggested tempo: 160-170." },
+        { "La machine dont tu écris les notes",
+          "The machine whose notes you are writing" },
         { "La machine qui a inventé l'acid house. Un seul oscillateur, un filtre résonant qui « miaule », un accent et un slide (glissé entre deux notes). Ratée à sa sortie, elle est devenue une légende en 1987 quand les DJ de Chicago l'ont détournée.\n"
           "\nLe secret de l'acid : fais jouer une boucle, puis tourne doucement FILTRE et RÉSO pendant que ça tourne. Ajoute des ACCENTS (notes qui claquent) et des SLIDES (glissés).\n"
           "\nRangées : NOTES (clique pour activer, glisse vers le haut/bas pour changer la note), ACCENT, SLIDE.",
@@ -1292,6 +1312,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Length of the echo." },
         { "Longueur de la séquence",
           "Sequence length" },
+        { "Longueur des nouvelles notes (elle suit aussi la dernière note que tu as allongée)",
+          "Length of new notes (it also follows the last note you lengthened)" },
         { "Lydien",
           "Lydian" },
         { "MAILLOCHE",
@@ -1300,6 +1322,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "HAMMERS" },
         { "MASTER",
           "MASTER" },
+        { "MESURE",
+          "BAR" },
         { "MESURE ",
           "BAR " },
         { "MESURES",
@@ -1348,6 +1372,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Slow modulation of the square wave width: makes the sound alive and thick." },
         { "Moins de notes",
           "Fewer notes" },
+        { "Monte les notes sélectionnées (ou toutes) d'une octave",
+          "Moves the selected notes (or all of them) up one octave" },
         { "Montre le niveau de sortie. Si la barre est souvent tout en haut, baisse un peu le volume des machines.",
           "Shows the output level. If the bar often hits the top, turn the machines down a little." },
         { "Montée de bruit et de son qui grimpe vers l'aigu : annonce l'arrivée du refrain ou du drop.",
@@ -1439,6 +1465,10 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\nVary a little: changes a few notes or hits without breaking the idea.\n"
           "\nMore notes / Fewer notes: makes the part busier or sparser.\n"
           "\nEverything can be undone with Ctrl+Z." },
+        { "OCTAVE +",
+          "OCTAVE +" },
+        { "OCTAVE −",
+          "OCTAVE −" },
         { "ONDE",
           "WAVE" },
         { "OUVRIR UN PROJET…",
@@ -1477,6 +1507,12 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\nYou can remove one at any time with its ✕: its settings and notes are kept if you add it back." },
         { "Ouvre le dossier où se trouve ton dernier enregistrement.",
           "Opens the folder that contains your latest recording." },
+        { "Ouvre un grand écran pour écrire les notes comme dans les logiciels de musique : les hauteurs de bas en haut, toute la séquence de gauche à droite.\n"
+          "\nClique pour poser une note (glisse vers la droite pour l'allonger), fais glisser une note pour la déplacer, tire son bord droit pour changer sa durée, clic droit ou double-clic pour l'effacer. Ctrl+glisser sélectionne plusieurs notes, les flèches les déplacent ou les transposent, Ctrl+D les duplique.\n"
+          "\nSur les synthés polyphoniques, chaque note a sa propre durée et le mode « Poser : un accord » place un accord juste en un clic. Les lignes grisées sont hors de la gamme choisie. Échap ou FERMER pour revenir au rack.",
+          "Opens a big screen to write notes like in music software: pitches from bottom to top, the whole sequence from left to right.\n"
+          "\nClick to place a note (drag right to lengthen it), drag a note to move it, pull its right edge to change its length, right-click or double-click to erase it. Ctrl+drag selects several notes, the arrows move or transpose them, Ctrl+D duplicates them.\n"
+          "\nOn polyphonic synths every note has its own length, and the “Place: a chord” mode places a chord that fits in one click. Greyed-out rows are outside the chosen scale. Esc or CLOSE to go back to the rack." },
         { "Ouvrir un projet Tech Machine",
           "Open a Tech Machine project" },
         { "Ouvrir…",
@@ -1485,8 +1521,6 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Where and how the string is plucked: dark (with the thumb) on the left, bright (with a pick) on the right." },
         { "PAS",
           "STEPS" },
-        { "PAS À PAS",
-          "STEP EDIT" },
         { "PERCUSSIONS",
           "PERCUSSION" },
         { "PLEIN ÉCRAN",
@@ -1591,6 +1625,12 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "More notes" },
         { "Pompe (sidechain)",
           "Pump (sidechain)" },
+        { "Poser : un accord",
+          "Place: a chord" },
+        { "Poser : un accord de 7e",
+          "Place: a 7th chord" },
+        { "Poser : une note",
+          "Place: a note" },
         { "Pousse le signal dans le filtre pour le faire saturer, comme quand on monte les volumes du mixeur du Minimoog. Plus = basse plus grasse et agressive.",
           "Pushes the signal into the filter to saturate it, like turning up the Minimoog's mixer. More = fatter, more aggressive bass." },
         { "Profondeur de l'enveloppe sur le filtre : à chaque note, le filtre s'ouvre puis se referme. C'est ce qui fait le « wow-wow » de l'acid. Monte-le avec la résonance pour un son très acide.",
@@ -1645,6 +1685,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "FAMOUS RHYTHMS" },
         { "Racine en croches",
           "Root in 8th notes" },
+        { "Recopie les notes sélectionnées (ou toutes) juste après elles  (Ctrl+D)",
+          "Copies the selected notes (or all of them) right after themselves  (Ctrl+D)" },
         { "Reese (drum & bass)",
           "Reese (drum & bass)" },
         { "Reggae (bubble)",
@@ -1669,6 +1711,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Remove the machine" },
         { "Retrouve exactement ce que tu faisais la dernière fois.",
           "Pick up exactly where you left off last time." },
+        { "Revenir au rack  (Échap)",
+          "Back to the rack  (Esc)" },
         { "Rhodes = doux, rond et cristallin. Wurlitzer = plus sale et nasillard. Clavinet = funky et percussif. Clavecin = baroque et brillant.",
           "Rhodes = soft, round and crystal-clear. Wurlitzer = dirtier and nasal. Clavinet = funky and percussive. Harpsichord = baroque and bright." },
         { "Rhodes brillant",
@@ -1831,6 +1875,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Trance synth · inspired by the Roland JP-8000 (1996)" },
         { "Synthés",
           "Synths" },
+        { "Sélectionne toutes les notes  (Ctrl+A)",
+          "Selects all the notes  (Ctrl+A)" },
         { "TAILLE REVERB",
           "REVERB SIZE" },
         { "TEMPO DAW (SYNC)",
@@ -1845,6 +1891,10 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "TONE" },
         { "TONALITÉ",
           "KEY" },
+        { "TOUT SÉLECTIONNER",
+          "SELECT ALL" },
+        { "TOUT VOIR",
+          "SHOW ALL" },
         { "TRÉMOLO",
           "TREMOLO" },
         { "Tabla, grand tambour (bayan) : le « ge » grave dont la note remonte.",
@@ -2000,6 +2050,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\nComme le vrai, la bande dure 8 secondes : une note tenue plus longtemps s'éteint toute seule. Le bouton BANDE fait onduler la hauteur.",
           "A keyboard where each key plays a recorded tape: flutes, strings, choirs, cello, brass. The sound of the Beatles (“Strawberry Fields”), progressive rock, psych rock and a lot of lo-fi.\n"
           "\nLike the real one, the tape lasts 8 seconds: a note held longer fades out by itself. The WOW knob makes the pitch waver." },
+        { "Un clic pose une note, ou un accord entier qui sonne juste dans la gamme (synthés polyphoniques)",
+          "One click places a note, or a whole chord that fits the scale (polyphonic synths)" },
         { "Un pad du sampler. Glisse un fichier audio (WAV, AIFF, FLAC, OGG) sur cette rangée pour le charger, ou passe par le menu ⋯. HAUTEUR = joue plus grave ou plus aigu, DURÉE = quelle part du son est jouée, TIMBRE = filtre (à fond = son d'origine).",
           "A sampler pad. Drop an audio file (WAV, AIFF, FLAC, OGG) on this row to load it, or use the ⋯ menu. PITCH = play lower or higher, LENGTH = how much of the sound plays, TONE = filter (full = original sound)." },
         { "Un projet tout neuf : aucune machine, aucun effet. Ajoute ensuite les machines que tu veux.",
@@ -2010,12 +2062,6 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\nChoisis la voyelle de DÉPART et d'ARRIVÉE, puis la VITESSE de la bouche.",
           "A synth whose sound goes through a “mouth” shaping vowels: each note glides from one vowel to another (“wah”, “ee-oh”). The sound of Roger Troutman, West Coast G-funk, Daft Punk and electronic funk.\n"
           "\nChoose the START and END vowel, then the mouth SPEED." },
-        { "Une autre façon d'écrire les notes : une grille avec les hauteurs (de bas en haut) et les pas (de gauche à droite), comme dans les logiciels de musique.\n"
-          "\nClique pour poser une note, glisse vers la droite pour l'allonger, clic droit (ou re-clic) pour l'effacer. Les lignes grisées sont hors de la gamme choisie.\n"
-          "\nSur les synthés polyphoniques, tu peux empiler plusieurs notes au même pas pour écrire tes propres accords. Le bouton PAS À PAS revient aux cases habituelles.",
-          "Another way to write notes: a grid with pitches (bottom to top) and steps (left to right), like in music software.\n"
-          "\nClick to place a note, drag right to lengthen it, right-click (or click again) to erase it. Greyed-out rows are outside the chosen scale.\n"
-          "\nOn polyphonic synths you can stack several notes on the same step to write your own chords. The STEP EDIT button goes back to the usual cells." },
         { "Une batterie acoustique synthétisée avec le grain des samplers des années 90 (E-mu SP-1200, Akai MPC). C'est le son des breakbeats découpés de la jungle, de la drum & bass et du breakbeat.\n"
           "\nLe bouton CRUSH (dans les effets) est déjà monté pour donner ce côté « samplé » 12 bits. Pour un vrai son jungle, choisis le style Jungle ou Drum & Bass : les rythmes typiques sont générés automatiquement.",
           "An acoustic drum kit synthesized with the grain of 90s samplers (E-mu SP-1200, Akai MPC). It's the sound of the chopped breakbeats of jungle, drum & bass and breakbeat.\n"

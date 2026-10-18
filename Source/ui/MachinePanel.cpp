@@ -158,9 +158,7 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
             }
         }
 
-        roll = std::make_unique<PianoRoll> (processor, type, page, skin, [this] (int c) { return cellX (c); }, cellW);
-        addChildComponent (*roll);
-        rollButton.onClick = [this] { setRollMode (! rollMode); };
+        rollButton.onClick = [this] { if (onOpenRoll) onOpenRoll (type); };
         addHeaderButton (rollButton, "machine.roll");
 
         // Selectors first, then the knobs or faders.
@@ -482,14 +480,12 @@ void MachinePanel::setPlayhead (int step)
 {
     const int column = step - page * pageSteps;
     ledStrip.setStep (column >= 0 && column < pageSteps ? column : -1);
-    if (roll != nullptr) roll->setPlayhead (step);
     for (auto* cell : cells) cell->setPlayhead (stepFor (cell->column) == step);
 }
 
 void MachinePanel::refreshCells()
 {
     repaint();
-    if (roll != nullptr) roll->repaint();
 }
 
 std::array<int, 3> MachinePanel::synthRowY() const
@@ -500,7 +496,7 @@ std::array<int, 3> MachinePanel::synthRowY() const
 int MachinePanel::sequencerBottom() const
 {
     if (isDrum()) return drumTop + (numRows() + 1) * drumRowH + 18;
-    const int stripTop = rollMode ? headerH + 30 + PianoRoll::preferredHeight() + 30 : synthRowY()[(size_t) (isPoly() ? 1 : 2)] + 26 + 30;
+    const int stripTop = synthRowY()[(size_t) (isPoly() ? 1 : 2)] + 26 + 30;
     const int stripW = cellX (15) + cellW - (side() + 10);
     return stripTop + boxTitle + layoutFlow (stripItems, { 0, 0, stripW - 2 * boxPad, 0 }, false) + 18;
 }
@@ -576,13 +572,6 @@ void MachinePanel::resized()
         if (! inHeader) c->setVisible (showBody);
     }
     if (collapsed) return;
-    if (roll != nullptr)
-    {
-        roll->setVisible (rollMode);
-        for (auto& row : rows)
-            for (auto* cell : row) cell->setVisible (! rollMode);
-        for (auto* info : rowInfoButtons) info->setVisible (! rollMode);
-    }
 
     const int labelX = side() + 14;
     const int available = getWidth() - side() - rightX() - 12;
@@ -621,33 +610,12 @@ void MachinePanel::resized()
             layoutRow (r, y[(size_t) r], heights[r]);
         }
 
-        int stripTop = y[(size_t) (isPoly() ? 1 : 2)] + 26 + 30;
-        if (roll != nullptr)
-        {
-            const int rollX = side() + 10;
-            roll->setBounds (rollX, headerH + 30, cellX (15) + cellW + 6 - rollX, PianoRoll::preferredHeight());
-            roll->gridLeft = cellX (0) - rollX - 4;
-            if (rollMode) stripTop = roll->getBottom() + 30;
-        }
+        const int stripTop = y[(size_t) (isPoly() ? 1 : 2)] + 26 + 30;
         soundBox = { rightX(), headerH + 18, available, getHeight() - headerH - 30 };
         stripBox = { side() + 10, stripTop, cellX (15) + cellW - (side() + 10), getHeight() - stripTop - 12 };
         layoutFlow (soundItems, soundBox.reduced (boxPad, 0).withTrimmedTop (boxTitle), true);
         layoutFlow (stripItems, stripBox.reduced (boxPad, 0).withTrimmedTop (boxTitle), true);
     }
-}
-
-void MachinePanel::setRollMode (bool on)
-{
-    rollMode = on;
-    rollButton.setButtonText (on ? utf8 ("PAS À PAS") : juce::String ("PIANO ROLL"));
-    rollButton.setIcon (on ? "patterns" : "keys");
-    for (auto& row : rows)
-        for (auto* cell : row) cell->setVisible (! on && ! collapsed);
-    for (auto* info : rowInfoButtons) info->setVisible (! on && ! collapsed);
-    if (roll != nullptr) roll->setVisible (on && ! collapsed);
-    if (onLayoutChange) onLayoutChange();
-    resized();
-    repaint();
 }
 
 void MachinePanel::paintOverChildren (juce::Graphics& g)
@@ -725,7 +693,7 @@ void MachinePanel::paint (juce::Graphics& g)
         const auto y = synthRowY();
         const char* labels[3] { isPoly() ? "ACCORDS" : "NOTES", isPoly() ? "TENIR" : "ACCENT", "SLIDE" };
         const int heights[3] { 56, 26, 26 };
-        for (int r = 0; r < (int) rows.size() && ! rollMode; ++r)
+        for (int r = 0; r < (int) rows.size(); ++r)
         {
             g.setColour (r == 0 ? skin.text : skin.textDim);
             g.setFont (paint::condensed (r == 0 ? 15.0f : 13.0f));

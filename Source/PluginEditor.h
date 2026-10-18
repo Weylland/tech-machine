@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "ui/MachinePanel.h"
+#include "ui/PianoRoll.h"
 #include "ui/Theme.h"
 #include "ui/Widgets.h"
 
@@ -111,6 +112,9 @@ private:
     void toggleFullScreen();
     void toggleLanguage();
     void showAudioSettings();
+    void openPianoRoll (int machineType);
+    void closePianoRoll();
+    std::unique_ptr<techno::PianoRollEditor> pianoRoll;
     void setPage (int newPage);
     void layoutRack();
     techno::InfoButton& addInfo (const techno::HelpText&);
