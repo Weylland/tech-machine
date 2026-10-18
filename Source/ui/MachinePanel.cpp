@@ -189,6 +189,29 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
         }
     }
 
+    // Settings of a whole drum machine (the sampler character): a SON box under the pads.
+    if (isDrum())
+    {
+        for (int i = 0; i < (int) def.params.size(); ++i)
+        {
+            const auto& param = def.params[(size_t) i];
+            const HelpText h { utf8 (param.label), utf8 (param.help) };
+            if (param.choices.empty())
+            {
+                auto* knob = soundControls.add (new Knob (state, pid::synth (type, i), utf8 (param.label), h));
+                soundItems.push_back ({ knob, juce::jmax (knobW, ControlLabel::widthFor (utf8 (param.label)) + 4), knobH });
+                addAndMakeVisible (knob);
+            }
+            else
+            {
+                auto* choice = new ChoiceControl (state, pid::synth (type, i), utf8 (param.label), param.choices, h);
+                soundControls.add (choice);
+                soundItems.push_back ({ choice, juce::jlimit (choiceW, 230, choice->preferredWidth() + 4), knobH });
+                addAndMakeVisible (choice);
+            }
+        }
+    }
+
     struct StripDef { const char* suffix; const char* label; const char* helpKey; bool bipolar; };
     const StripDef stripDefs[] {
         { "accent", "ACCENT", "strip.accent", false }, { "drive", "DISTO", "strip.drive", false },
@@ -497,7 +520,13 @@ std::array<int, 3> MachinePanel::synthRowY() const
 
 int MachinePanel::sequencerBottom() const
 {
-    if (isDrum()) return drumTop + (numRows() + 1) * drumRowH + 18;
+    if (isDrum())
+    {
+        const int grid = drumTop + (numRows() + 1) * drumRowH + 18;
+        if (soundItems.empty()) return grid;
+        const int width = cellX (15) + cellW - (side() + 10);
+        return grid + boxTitle + layoutFlow (soundItems, { 0, 0, width - 2 * boxPad, 0 }, false) + 22;
+    }
     const int stripTop = synthRowY()[(size_t) (isPoly() ? 1 : 2)] + 26 + 30;
     const int stripW = cellX (15) + cellW - (side() + 10);
     return stripTop + boxTitle + layoutFlow (stripItems, { 0, 0, stripW - 2 * boxPad, 0 }, false) + 18;
@@ -562,6 +591,7 @@ void MachinePanel::resized()
         header.removeFromRight (10);
     }
 
+    subtitleRight = header.getRight() - 6;
     const auto modelWidth = (int) juce::GlyphArrangement::getStringWidth (paint::display (30.0f), utf8 (skin.model));
     const auto brandWidth = (int) juce::GlyphArrangement::getStringWidth (paint::condensed (13.0f), utf8 (skin.brand));
     machineInfo.setBounds (side() + 18 + modelWidth + 12 + brandWidth + 10, 13, 16, 16);
@@ -601,6 +631,14 @@ void MachinePanel::resized()
         stripBox = { stripX, headerH + 18, available - 4 * drumColumnW - fxW - 14, getHeight() - headerH - 30 };
         layoutFlow (stripItems, stripBox.reduced (boxPad, 0).withTrimmedTop (boxTitle), true);
         soundBox = {};
+        if (! soundItems.empty())
+        {
+            const int top = drumTop + (numRows() + 1) * drumRowH + 18;
+            const int width = cellX (15) + cellW - (side() + 10);
+            const int height = boxTitle + layoutFlow (soundItems, { 0, 0, width - 2 * boxPad, 0 }, false) + 8;
+            soundBox = { side() + 10, top, width, height };
+            layoutFlow (soundItems, soundBox.reduced (boxPad, 0).withTrimmedTop (boxTitle), true);
+        }
     }
     else
     {
@@ -662,7 +700,7 @@ void MachinePanel::paint (juce::Graphics& g)
     g.drawText (utf8 (skin.brand), s + 18 + (int) modelWidth + 12, 13, 400, 16, juce::Justification::centredLeft);
     g.setColour (skin.bandText.withAlpha (0.55f));
     g.setFont (paint::font (11.0f, false));
-    g.drawText (utf8 (def.subtitle), s + 18, 34, 600, 14, juce::Justification::centredLeft);
+    g.drawFittedText (utf8 (def.subtitle), s + 18, 34, juce::jmax (60, subtitleRight - (s + 18)), 14, juce::Justification::centredLeft, 1, 0.85f);
 
     if (collapsed) return;
 

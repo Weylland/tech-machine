@@ -624,10 +624,12 @@ void MainView::showAddMenu()
         }
         menu.addSubMenu (utf8 (title) + (shown > 0 ? "  (" + juce::String (shown) + ")" : juce::String()), sub);
     };
-    section ("Batteries et percussions", { TR909, TR808, LinnDrum, TR707, CR78, MPC, AcousticKit, Simmons, BreakKit, Percussion, WorldPerc, SoundFx });
+    section ("Batteries et percussions", { TR909, TR808, TR606, LinnDrum, TR707, DigitalKit, CR78, RhythmBox, MPC, AcousticKit, Simmons,
+                                            SynthDrums, BreakKit, Percussion, WorldPerc, SoundFx });
     section ("Tes propres sons", { Sampler });
     section ("Basses", { TB303, SH101, ModelD, Sub808, EBass, Wobble });
-    section ("Synthés", { Hoover, Juno106, JP8000, Poly80, Edm, DX7, M1, Talkbox });
+    section ("Synthés", { Hoover, Juno106, JP8000, Poly80, CS80, Edm, DX7, LaSynth, Wavetable, M1, SemiMod, Chip, Talkbox, Vocoder });
+    section ("Sons à part", { Ether, WestCoast });
     section ("Claviers et cloches", { Piano, EPiano, Organ, Mallets });
     section ("Orchestre, voix et instruments", { Strings, Mellotron, Orchestra, Brass, Winds, Choir, Pluck });
     menu.addSeparator();

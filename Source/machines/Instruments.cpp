@@ -1,5 +1,7 @@
 #include "Factories.h"
 #include "SynthMachines.h"
+#include "../dsp/VintageVoices.h"
+#include "../dsp/Wavetables.h"
 
 namespace techno
 {
@@ -251,6 +253,7 @@ private:
     void applyParams() override
     {
         shared.type = (int) values[pMallets::Type];
+        { static constexpr float gains[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.63f }; trimFor (gains, values[pMallets::Type]); }
         shared.brightness = values[pMallets::Brightness];
         shared.decay = values[pMallets::Decay];
         shared.release = values[pMallets::Release];
@@ -281,6 +284,7 @@ private:
     void applyParams() override
     {
         shared.type = (int) values[pPluck::Type];
+        { static constexpr float gains[] { 1, 1, 1.6f, 1, 1, 1, 1.4f, 1, 1, 1, 1, 1, 1 }; trimFor (gains, values[pPluck::Type]); }
         shared.brightness = values[pPluck::Brightness];
         shared.decay = values[pPluck::Decay];
         shared.release = values[pPluck::Release];
@@ -384,6 +388,12 @@ public:
         }
     }
 
+    void prepare (float sampleRate) override
+    {
+        PolyMachine::prepare (sampleRate);
+        chorus.prepare (sampleRate);
+    }
+
 private:
     void applyParams() override
     {
@@ -393,13 +403,23 @@ private:
         shared.cutoff = values[pP80::Cutoff];
         shared.reso = values[pP80::Reso];
         shared.env = values[pP80::Env];
+        shared.model = (int) values[pP80::Model];
+        { static constexpr float gains[] { 1, 1, 0.68f, 1.48f, 1, 1, 0.7f, 1 }; trimFor (gains, values[pP80::Model]); }
+        chorusAmount = poly80Model (shared.model).chorus;
         for (auto* v : polyVoices)
             v->setEnvelope (knobTime (values[pP80::Attack], 0.001f, 3.0f), knobTime (values[pP80::Decay], 0.005f, 4.0f),
                             values[pP80::Sustain], knobTime (values[pP80::Release], 0.005f, 5.0f));
     }
 
+    void postProcess (float& left, float& right) override
+    {
+        if (chorusAmount > 0.0f) chorus.process (left, right, chorusAmount, 0.55f);
+    }
+
     Poly80Params shared;
     std::vector<Poly80Voice*> polyVoices;
+    StereoChorus chorus;
+    float chorusAmount = 0.0f;
 };
 
 // Supersaw voices with a sidechain-like volume pump locked to the beats.
@@ -492,6 +512,7 @@ private:
     void applyParams() override
     {
         shared.type = (int) values[pMello::Type];
+        { static constexpr float gains[] { 1, 1.64f, 0.2f, 1, 1 }; trimFor (gains, values[pMello::Type]); }
         shared.tone = values[pMello::Tone];
         shared.wow = values[pMello::Wow];
         hiss = values[pMello::Noise];
@@ -529,6 +550,7 @@ private:
     void applyParams() override
     {
         shared.type = (int) values[pEP::Type];
+        { static constexpr float gains[] { 1, 1, 2.7f, 2.07f }; trimFor (gains, values[pEP::Type]); }
         shared.tone = values[pEP::Tone];
         shared.decay = values[pEP::Decay];
         shared.release = values[pEP::Release];
@@ -563,6 +585,7 @@ private:
     void applyParams() override
     {
         shared.type = (int) values[pBrass::Type];
+        { static constexpr float gains[] { 1, 1, 1.68f, 1, 1, 1 }; trimFor (gains, values[pBrass::Type]); }
         shared.brightness = values[pBrass::Brightness];
         shared.attack = values[pBrass::Attack];
         shared.release = values[pBrass::Release];
@@ -609,6 +632,7 @@ private:
     void applyParams() override
     {
         shared.type = (int) values[pOrch::Type];
+        { static constexpr float gains[] { 1, 3.2f, 1, 0.52f, 1.4f }; trimFor (gains, values[pOrch::Type]); }
         shared.attack = values[pOrch::Attack];
         shared.release = values[pOrch::Release];
         shared.brightness = values[pOrch::Brightness];
@@ -616,6 +640,258 @@ private:
     }
 
     OrchestraParams shared;
+};
+
+class ChipMachine : public PolyMachine
+{
+public:
+    ChipMachine() : PolyMachine (Chip)
+    {
+        gateFraction = 0.7f;
+        for (int i = 0; i < 6; ++i)
+        {
+            auto v = std::make_unique<ChipVoice> (shared);
+            chipVoices.push_back (v.get());
+            voices.push_back (std::move (v));
+        }
+    }
+
+    // In arpeggio mode only one note of the chord sounds at a time, cycling very fast, as on the old chips.
+    void render (Frame& f) override
+    {
+        if (arpMode == 0)
+        {
+            PolyMachine::render (f);
+            return;
+        }
+        if (--orderCountdown <= 0)
+        {
+            orderCountdown = 64;
+            active.clear();
+            for (auto& v : voices)
+                if (v->isActive()) active.push_back (v.get());
+            std::sort (active.begin(), active.end(), [] (const PolyVoice* a, const PolyVoice* b) { return a->note < b->note; });
+        }
+        if ((arpCountdown -= 1.0f) <= 0.0f)
+        {
+            arpCountdown += fs * (arpMode == 1 ? 0.04f : 0.02f);
+            ++arpIndex;
+        }
+        const PolyVoice* selected = active.empty() ? nullptr : active[(size_t) (arpIndex % (int) active.size())];
+        const float boost = std::sqrt ((float) juce::jmax (1, (int) active.size()));
+        float l0 = 0, r0 = 0, l1 = 0, r1 = 0;
+        for (auto& v : voices)
+        {
+            if (! v->isActive()) continue;
+            float a = 0, b = 0, c = 0, d = 0;
+            v->process (a, b);
+            v->process (c, d);
+            if (v.get() != selected) continue;
+            l0 += a * boost; r0 += b * boost; l1 += c * boost; r1 += d * boost;
+        }
+        f.left = decimatorL.process (l0, l1) * outputTrim;
+        f.right = decimatorR.process (r0, r1) * outputTrim;
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.wave = (int) values[pChip::Wave];
+        { static constexpr float gains[] { 1, 1, 1, 1.7f, 1.7f, 1.26f }; trimFor (gains, values[pChip::Wave]); }
+        shared.pwm = values[pChip::Pwm];
+        shared.vibrato = values[pChip::Vibrato];
+        shared.lofi = values[pChip::LoFi];
+        arpMode = (int) values[pChip::Arp];
+        for (auto* v : chipVoices)
+            v->setEnvelope (knobTime (values[pChip::Decay], 0.01f, 2.0f), values[pChip::Sustain], knobTime (values[pChip::Release], 0.005f, 2.0f));
+    }
+
+    ChipParams shared;
+    std::vector<ChipVoice*> chipVoices;
+    std::vector<const PolyVoice*> active;
+    int arpMode = 1, arpIndex = 0, orderCountdown = 0;
+    float arpCountdown = 0;
+    Decimator2x decimatorL, decimatorR;
+};
+
+class WavetableMachine : public PolyMachine
+{
+public:
+    WavetableMachine() : PolyMachine (Wavetable)
+    {
+        gateFraction = 0.75f;
+        for (int i = 0; i < 8; ++i)
+        {
+            auto v = std::make_unique<WavetableVoice> (shared);
+            waveVoices.push_back (v.get());
+            voices.push_back (std::move (v));
+        }
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.table = (int) values[pWave::Table];
+        { static constexpr float gains[] { 1.36f, 1.16f, 1.03f, 0.78f, 0.7f, 0.54f, 0.68f, 0.72f }; trimFor (gains, values[pWave::Table]); }
+        shared.position = values[pWave::Position];
+        shared.sweep = values[pWave::Sweep];
+        shared.motion = values[pWave::Motion];
+        shared.cutoff = values[pWave::Cutoff];
+        shared.reso = values[pWave::Reso];
+        shared.decaySeconds = knobTime (values[pWave::Decay], 0.005f, 4.0f);
+        for (auto* v : waveVoices)
+            v->setEnvelope (knobTime (values[pWave::Attack], 0.001f, 3.0f), shared.decaySeconds,
+                            values[pWave::Sustain], knobTime (values[pWave::Release], 0.005f, 5.0f));
+    }
+
+    WaveParams shared;
+    std::vector<WavetableVoice*> waveVoices;
+};
+
+class LaMachine : public PolyMachine
+{
+public:
+    LaMachine() : PolyMachine (LaSynth)
+    {
+        gateFraction = 0.8f;
+        for (int i = 0; i < 8; ++i) voices.push_back (std::make_unique<LaVoice> (shared));
+    }
+
+    void prepare (float sampleRate) override
+    {
+        PolyMachine::prepare (sampleRate);
+        chorus.prepare (sampleRate);
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.type = (int) values[pLA::Type];
+        { static constexpr float gains[] { 1.12f, 1.65f, 0.66f, 1.58f, 1.1f, 1.45f, 1.26f, 0.9f }; trimFor (gains, values[pLA::Type]); }
+        shared.layer = values[pLA::Layer];
+        shared.brightness = values[pLA::Brightness];
+        shared.attack = values[pLA::Attack];
+        shared.release = values[pLA::Release];
+        chorusAmount = values[pLA::Chorus];
+    }
+
+    void postProcess (float& left, float& right) override { chorus.process (left, right, chorusAmount, 0.7f); }
+
+    LaParams shared;
+    StereoChorus chorus;
+    float chorusAmount = 0.6f;
+};
+
+class CS80Machine : public PolyMachine
+{
+public:
+    CS80Machine() : PolyMachine (CS80)
+    {
+        gateFraction = 0.85f;
+        for (int i = 0; i < 8; ++i) voices.push_back (std::make_unique<CS80Voice> (shared));
+    }
+
+    void onStep (const StepInfo& s) override
+    {
+        shared.accent = track.accent[(size_t) s.step].load();
+        PolyMachine::onStep (s);
+    }
+
+    void liveNoteOn (int note, float velocity) override
+    {
+        shared.accent = velocity > 0.85f;
+        PolyMachine::liveNoteOn (note, velocity);
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.type = (int) values[pCS::Type];
+        { static constexpr float gains[] { 0.8f, 1.12f, 1, 0.75f, 1.7f }; trimFor (gains, values[pCS::Type]); }
+        shared.brilliance = values[pCS::Brilliance];
+        shared.reso = values[pCS::Reso];
+        shared.attack = values[pCS::Attack];
+        shared.release = values[pCS::Release];
+        shared.touch = values[pCS::Touch];
+        shared.bend = values[pCS::Bend];
+        shared.vibrato = values[pCS::Vibrato];
+    }
+
+    CS80Params shared;
+};
+
+class WestCoastMachine : public PolyMachine
+{
+public:
+    WestCoastMachine() : PolyMachine (WestCoast)
+    {
+        gateFraction = 0.6f;
+        for (int i = 0; i < 8; ++i) voices.push_back (std::make_unique<WestVoice> (shared));
+    }
+
+private:
+    void applyParams() override
+    {
+        shared.ratio = (int) values[pWest::Ratio];
+        shared.gate = (int) values[pWest::Gate];
+        shared.fm = values[pWest::Fm];
+        shared.fold = values[pWest::Fold];
+        shared.symmetry = values[pWest::Symmetry];
+        shared.decay = values[pWest::Decay];
+    }
+
+    WestParams shared;
+};
+
+class VocoderMachine : public PolyMachine
+{
+public:
+    VocoderMachine() : PolyMachine (Vocoder)
+    {
+        gateFraction = 0.9f;
+        for (int i = 0; i < 8; ++i)
+        {
+            auto v = std::make_unique<CarrierVoice> (pulseMix);
+            carrierVoices.push_back (v.get());
+            voices.push_back (std::move (v));
+        }
+    }
+
+    void prepare (float sampleRate) override
+    {
+        PolyMachine::prepare (sampleRate);
+        vocoder.prepare (sampleRate);
+    }
+
+    // Each new note: the voice says its word again.
+    void onStep (const StepInfo& s) override
+    {
+        const auto st = (size_t) s.step, prev = (size_t) s.prevStep;
+        const bool held = track.on[prev] && track.slide[prev] && track.note[prev].load() == track.note[st].load();
+        if (track.on[st] && ! held) vocoder.restart (random);
+        PolyMachine::onStep (s);
+    }
+
+    void liveNoteOn (int note, float velocity) override
+    {
+        vocoder.restart (random);
+        PolyMachine::liveNoteOn (note, velocity);
+    }
+
+private:
+    void applyParams() override
+    {
+        pulseMix = values[pVoc::Carrier];
+        vocoder.set ((int) values[pVoc::Words], values[pVoc::Speed], values[pVoc::Sibilance], values[pVoc::Shift]);
+        for (auto* v : carrierVoices) v->setRelease (knobTime (values[pVoc::Release], 0.01f, 3.0f));
+    }
+
+    void postProcess (float& left, float& right) override { vocoder.process (left, right); }
+
+    float pulseMix = 0.3f;
+    std::vector<CarrierVoice*> carrierVoices;
+    SpeechVocoder vocoder;
+    juce::Random random { 0x7ec4 };   // fixed seed: the same project always sounds the same
 };
 } // namespace
 
@@ -642,6 +918,12 @@ std::unique_ptr<Machine> createInstrumentMachine (int type)
         case Brass:     return std::make_unique<BrassMachine>();
         case Winds:     return std::make_unique<WindMachine>();
         case Orchestra: return std::make_unique<OrchestraMachine>();
+        case Chip:      return std::make_unique<ChipMachine>();
+        case Wavetable: return std::make_unique<WavetableMachine>();
+        case LaSynth:   return std::make_unique<LaMachine>();
+        case CS80:      return std::make_unique<CS80Machine>();
+        case WestCoast: return std::make_unique<WestCoastMachine>();
+        case Vocoder:   return std::make_unique<VocoderMachine>();
         default:        break;
     }
     jassertfalse;

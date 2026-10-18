@@ -131,7 +131,7 @@ private:
         float driveAmount = 0, crushAmount = 0, echoSend = 0, reverbSend = 0, target = 0, panLeft = 1, panRight = 1;
     };
 
-    using Snapshot = std::array<techno::TrackData, techno::numMachines>;
+    using Snapshot = std::vector<techno::TrackData>;   // one per machine, on the heap: it is large
     class PatternAction;
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();

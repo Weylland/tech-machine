@@ -37,16 +37,21 @@ protected:
                                : std::max (1, (int) (s.stepSamples * gateFraction));
     }
 
+    // Each sound of a selector at the same loudness: one gain per choice, applied to the machine's output.
+    template <size_t N>
+    void trimFor (const float (&gains)[N], float choice) { outputTrim = gains[(size_t) juce::jlimit (0, (int) N - 1, (int) choice)]; }
+
     std::vector<std::atomic<float>*> params;
     std::vector<float> values;
     int octave = 2, gateCountdown = 0;
-    float gateFraction = 0.5f;
+    float gateFraction = 0.5f, outputTrim = 1.0f;
 };
 
 class MonoMachine : public SynthMachine
 {
 public:
-    MonoMachine (int machineType, std::unique_ptr<MonoVoice> v, float gateLength = 0.5f) : SynthMachine (machineType), voice (std::move (v))
+    MonoMachine (int machineType, std::unique_ptr<MonoVoice> v, float gateLength = 0.5f, int typeParam = -1, std::vector<float> typeGains = {})
+        : SynthMachine (machineType), voice (std::move (v)), typeIndex (typeParam), gains (std::move (typeGains))
     {
         gateFraction = gateLength;
     }
@@ -75,7 +80,7 @@ public:
     {
         const float a = voice->process();
         const float b = voice->process();
-        f.left = f.right = decimator.process (a, b);
+        f.left = f.right = decimator.process (a, b) * outputTrim;
     }
 
     void stop() override
@@ -105,9 +110,16 @@ public:
     }
 
 private:
-    void applyParams() override { voice->setParams (values.data()); }
+    void applyParams() override
+    {
+        voice->setParams (values.data());
+        if (typeIndex >= 0 && ! gains.empty())
+            outputTrim = gains[(size_t) juce::jlimit (0, (int) gains.size() - 1, (int) values[(size_t) typeIndex])];
+    }
 
     std::unique_ptr<MonoVoice> voice;
+    int typeIndex;
+    std::vector<float> gains;
     Decimator2x decimator;
     int held[16] {}, heldCount = 0;
 };
@@ -218,6 +230,8 @@ public:
         f.left = decimatorL.process (l0, l1);
         f.right = decimatorR.process (r0, r1);
         postProcess (f.left, f.right);
+        f.left *= outputTrim;
+        f.right *= outputTrim;
     }
 
     void liveNoteOn (int note, float velocity) override { startVoice (note, 0.5f + velocity * 0.7f); }

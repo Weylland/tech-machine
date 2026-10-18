@@ -667,6 +667,12 @@ std::vector<MachineDef> buildDefs()
             { "decay", "DECAY", 0.4f, decayHelp, {} },
             { "sustain", "SUSTAIN", 0.7f, sustainHelp, {} },
             { "release", "RELEASE", 0.3f, releaseHelp, {} },
+            { "model", "MODÈLE", 0.0f,
+              "Le synthé polyphonique imité. Chacun a sa couleur : Prophet-5 / OB-X = crémeux, Jupiter-8 = rond et luxueux, "
+              "Polysix = chorus d'ensemble, JX = net et brillant, OB-8 / OB-6 = large et cuivré, Prophet-6 = grain saturé, "
+              "minilogue = moderne et nerveux, PolyBrute / Muse = trois oscillateurs, énorme.",
+              { "Prophet-5 / OB-X", "Jupiter-8", "Polysix", "JX-3P / JX-10", "OB-8 / OB-6", "Prophet-6 / Prophet '08",
+                "minilogue / Take 5", "PolyBrute / Moog Muse" } },
         } });
 
     defs.push_back ({ M1, "m1", "M1 ROMPLER", "Sons de la house des années 90 · inspiré du Korg M1 (1988)", MachineKind::Poly,
@@ -909,8 +915,288 @@ std::vector<MachineDef> buildDefs()
             "Glisse un fichier audio (WAV, AIFF, FLAC ou OGG) sur une rangée, ou utilise le menu ⋯.\n\n"
             "« Découper une boucle » coupe un fichier en 8 morceaux égaux, un par pad, et les place pour rejouer la boucle : "
             "il ne reste plus qu'à les mélanger pour créer un nouveau rythme, comme sur une MPC.",
-            pads, {} });
+            pads,
+            {
+                { "mode", "CARACTÈRE", 0.0f,
+                  "Le grain des samplers d'époque, appliqué à tous les pads.\n\n"
+                  "Original = le son tel quel. 8 bits = le grain dur des premiers samplers (Fairlight, Emulator, Mirage). "
+                  "12 bits = le son du hip-hop des années 90 (SP-1200, S612). 16 bits vintage = la chaleur des S900 et MPC60. "
+                  "Lo-fi = sourd, compressé et craquant comme une SP-404. Granulaire = le son devient un nuage de petits "
+                  "grains : DURÉE l'étire sans changer sa hauteur, HAUTEUR change la note sans changer sa durée (Roland P-6).",
+                  { "Original", "8 bits (Fairlight, Emulator)", "12 bits (SP-1200)", "16 bits vintage (S900, MPC60)",
+                    "Lo-fi (SP-404)", "Granulaire (P-6)" } },
+                { "texture", "TEXTURE", 0.5f,
+                  "Dosage du caractère : plus de grain, de souffle ou de craquements. En granulaire : la taille des grains "
+                  "(à gauche = petits grains qui scintillent, à droite = gros grains plus doux).", {} },
+            } });
     }
+
+    defs.push_back ({ Chip, "chip", "8-BIT", "Chiptune · inspiré de la puce SID du Commodore 64 et de la SidStation", MachineKind::Poly,
+        0xff57d9ff, 24,
+        "Le son des jeux vidéo des années 80 : des ondes carrées et triangulaires toutes simples, un bruit qui crépite, et "
+        "surtout les arpèges ultra-rapides qui font sonner trois notes avec une seule voix.\n\n"
+        "Parfait pour la chiptune, l'électro rétro, la synthwave et les clins d'œil aux jeux vidéo.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "wave", "ONDE", 1.0f,
+              "La forme d'onde de la puce. Carré 50 % = creux et rond, 25 % et 12 % = de plus en plus nasillard (le son typique "
+              "des jeux), Triangle = doux, en escalier (les basses des consoles), Dent de scie = mordant, Bruit = percussions et explosions.",
+              { "Carré 50 %", "Carré 25 %", "Carré 12 %", "Triangle", "Dent de scie", "Bruit" } },
+            { "arp", "ARPÈGE", 1.0f,
+              "Les vieilles puces ne jouaient qu'une note à la fois : pour faire un accord, elles enchaînaient ses notes à toute vitesse. "
+              "Accord normal = les notes sonnent ensemble. Rapide et Très rapide = le fameux « brrr » des musiques de jeux.",
+              { "Accord normal", "Arpège rapide", "Arpège très rapide" } },
+            { "pwm", "PWM", 0.3f, "Fait bouger la largeur du carré en continu : le son « tourne » comme sur un Commodore 64.", {} },
+            { "decay", "DECAY", 0.4f, decayHelp, {} },
+            { "sustain", "SUSTAIN", 0.6f, sustainHelp, {} },
+            { "release", "RELEASE", 0.15f, releaseHelp, {} },
+            { "vibrato", "VIBRATO", 0.2f, "Le vibrato qui arrive sur les notes tenues, comme dans les musiques de jeux.", {} },
+            { "lofi", "LO-FI", 0.3f, "Moins de bits : le son devient plus granuleux et « numérique ».", {} },
+        } });
+
+    defs.push_back ({ SemiMod, "semimod", "SEMI-MOD", "Semi-modulaire · inspiré des ARP 2600, Odyssey, MS-20, VCS 3 et MiniBrute", MachineKind::Mono,
+        0xffff7a3d, 12,
+        "Les synthés « à câbles » des années 70 et leurs héritiers : deux oscillateurs, un modulateur en anneau (le son métallique "
+        "des films de science-fiction) et des filtres de caractère qui sifflent et hurlent.\n\n"
+        "Il fait des leads perçants, des basses sales, des bruitages et des sons de robots. "
+        "Rangées : NOTES, ACCENT, SLIDE (glissé vers la note suivante).",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "model", "MODÈLE", 0.0f,
+              "Le synthé imité. ARP 2600 = filtre propre et précis. Odyssey = l'oscillateur synchronisé qui « crie » quand le filtre "
+              "s'ouvre. MS-20 = le filtre qui hurle quand on monte la résonance. VCS 3 = instable, métallique, très science-fiction. "
+              "MiniBrute = moderne et brut, avec le BRUTE FACTOR qui sature tout.",
+              { "ARP 2600", "ARP Odyssey", "Korg MS-20", "EMS VCS 3 / Synthi", "Arturia MiniBrute" } },
+            { "wave", "ONDE", 0.0f, "De la dent de scie (à gauche, brillante) au carré (à droite, plus creux).", {} },
+            { "osc2", "OSC 2", 0.5f, "Volume du second oscillateur, légèrement désaccordé : épaissit le son.", {} },
+            { "cutoff", "FILTRE", 0.5f, cutoffHelp, {} },
+            { "reso", "RÉSO", 0.35f, resoHelp, {} },
+            { "env", "ENV", 0.5f, envHelp, {} },
+            { "attack", "ATTACK", 0.0f, attackHelp, {} },
+            { "decay", "DECAY", 0.4f, decayHelp, {} },
+            { "sustain", "SUSTAIN", 0.4f, sustainHelp, {} },
+            { "release", "RELEASE", 0.2f, releaseHelp, {} },
+            { "ring", "ANNEAU", 0.0f, "Modulateur en anneau : multiplie les deux oscillateurs. Son de cloche métallique, de robot ou de soucoupe volante.", {} },
+            { "overdrive", "SATURATION", 0.2f, "Fait saturer le filtre (sur le MiniBrute : le BRUTE FACTOR). Un peu = chaud, beaucoup = sauvage.", {} },
+            { "glide", "GLIDE", 0.25f, "Durée du glissé entre deux notes reliées par un SLIDE.", {} },
+        } });
+
+    defs.push_back ({ Wavetable, "wavetable", "WAVETABLE", "Tables d'ondes · inspiré des PPG Wave, Microwave, Prophet VS et Wavestation", MachineKind::Poly,
+        0xff8a7dff, 24,
+        "Au lieu d'une onde fixe, chaque voix lit une « table » de dizaines de formes d'onde et passe de l'une à l'autre : le son "
+        "change de couleur en permanence, d'un timbre doux à un timbre numérique et métallique.\n\n"
+        "C'est le son des années 80 numériques (PPG, Microwave), des nappes qui bougent (Wavestation) et de beaucoup de musique électronique actuelle.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "table", "TABLE", 0.0f,
+              "La collection de formes d'onde lue par la voix. PPG = numérique et brillant. Microwave = largeur d'impulsion. "
+              "Voix = des voyelles « a-é-i-o-ou ». Cloches = métallique. Vectoriel (Prophet VS) = passe de la sinusoïde à la scie, "
+              "au carré et à une onde numérique. Séquence (Wavestation) = enchaîne des ondes en rythme. Analogique = de la scie au carré. "
+              "Orgue numérique = des registres qui changent.",
+              { "PPG numérique", "Microwave (impulsion)", "Voix (voyelles)", "Cloches et métal", "Vectoriel (Prophet VS)",
+                "Séquence d'ondes (Wavestation)", "Analogique (scie → carré)", "Orgue numérique" } },
+            { "position", "POSITION", 0.3f, "L'endroit de la table où la voix lit : chaque position est un timbre différent. Tourne-le pendant que ça joue !", {} },
+            { "sweep", "BALAYAGE", 0.4f, "À chaque note, la position part plus loin dans la table puis revient : le timbre bouge au début de la note.", {} },
+            { "motion", "MOUVEMENT", 0.2f, "Fait voyager la position lentement et en continu (en Séquence : la vitesse d'enchaînement des ondes).", {} },
+            { "cutoff", "FILTRE", 0.8f, cutoffHelp, {} },
+            { "reso", "RÉSO", 0.1f, resoHelp, {} },
+            { "attack", "ATTACK", 0.05f, attackHelp, {} },
+            { "decay", "DECAY", 0.5f, decayHelp, {} },
+            { "sustain", "SUSTAIN", 0.7f, sustainHelp, {} },
+            { "release", "RELEASE", 0.35f, releaseHelp, {} },
+        } });
+
+    defs.push_back ({ LaSynth, "la", "LA SYNTH", "Synthèse LA · inspirée du Roland D-50 (1987), des JD-800 et JV-1080", MachineKind::Poly,
+        0xff4fd1c5, 24,
+        "L'astuce du D-50 : une attaque très réaliste (un coup de marteau, de cloche, de souffle) suivie d'une nappe de synthé. "
+        "Le résultat est le son de la fin des années 80 : nappes de verre, cloches qui scintillent, pizzicatos numériques.\n\n"
+        "Parfait pour la pop 80s, la new age, la house des débuts et les ambiances.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "type", "SON", 0.0f,
+              "Le son. Fantasia = cloches et nappe, le plus célèbre. Pizzagogo = pizzicato et cloche. Danse numérique = attaque "
+              "soufflée et rythmique. Staccato = notes courtes de marimba. Voix de verre = chœur cristallin. Nappe JD = nappe "
+              "brillante des années 90. Cuivres LA = cuivres numériques. Piano numérique = le piano des expandeurs JV et SY.",
+              { "Fantasia (cloches + nappe)", "Pizzagogo (pizz + cloche)", "Danse numérique (souffle)", "Staccato (marimba)",
+                "Voix de verre", "Nappe JD", "Cuivres LA", "Piano numérique (JV / SY)" } },
+            { "layer", "ATTAQUE", 0.6f, "Volume de l'attaque (la cloche, le marteau, le souffle) par rapport à la nappe.", {} },
+            { "brightness", "BRILLANCE", 0.5f, "Ouvre le filtre de la nappe : plus brillante et plus présente.", {} },
+            { "attack", "ATTACK", 0.2f, "Temps que met la nappe à arriver derrière l'attaque.", {} },
+            { "release", "RELEASE", 0.4f, releaseHelp, {} },
+            { "chorus", "CHORUS", 0.6f, "Le chorus intégré du D-50 : élargit et fait scintiller le son.", {} },
+        } });
+
+    defs.push_back ({ CS80, "cs80", "CS-80", "Synthé polyphonique expressif · inspiré du Yamaha CS-80 (1977)", MachineKind::Poly,
+        0xffe04a3a, 24,
+        "Le synthé de Vangelis (Blade Runner, Les Chariots de feu) : des cuivres immenses qui gonflent, des nappes veloutées, "
+        "des notes qui glissent et vibrent. Chaque voix a deux couches, un filtre passe-haut et un passe-bas.\n\n"
+        "Joue fort (ACCENT) : le son devient plus brillant, comme sur l'original qui réagissait au toucher.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "type", "SON", 0.0f,
+              "Le son. Cuivres Blade Runner = le cuivre qui gonfle de Vangelis. Nappe veloutée = douce et chaude. Cordes = ensemble "
+              "de cordes. Cloches = le modulateur en anneau du CS-80. Lead expressif = solo qui chante.",
+              { "Cuivres Blade Runner", "Nappe veloutée", "Cordes", "Cloches (anneau)", "Lead expressif" } },
+            { "brilliance", "BRILLANCE", 0.5f, "Ouvre le filtre : du feutré (à gauche) au brillant (à droite).", {} },
+            { "reso", "RÉSO", 0.2f, resoHelp, {} },
+            { "attack", "ATTACK", 0.35f, attackHelp, {} },
+            { "release", "RELEASE", 0.5f, releaseHelp, {} },
+            { "touch", "TOUCHER", 0.5f, "Combien les notes accentuées deviennent plus fortes et plus brillantes (le toucher du clavier).", {} },
+            { "bend", "BEND", 0.3f, "Les notes arrivent par en dessous et retombent quand on les relâche, comme avec le ruban du CS-80.", {} },
+            { "vibrato", "VIBRATO", 0.3f, "Vibrato des notes tenues.", {} },
+        } });
+
+    defs.push_back ({ Ether, "ether", "ÉTHER", "Inspiré du thérémine (1920), des ondes Martenot (1928) et du monotron", MachineKind::Mono,
+        0xff9ef0c8, 24,
+        "Les tout premiers instruments électroniques : le thérémine, joué sans le toucher, et les ondes Martenot, avec leur ruban. "
+        "Le son glisse toujours d'une note à l'autre et chante avec un large vibrato : celui des films de science-fiction des années 50 "
+        "et de beaucoup de musiques de film.\n\n"
+        "Le monotron est son petit cousin moderne, à ruban lui aussi.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "type", "INSTRUMENT", 0.0f,
+              "L'instrument. Thérémine = voix fantomatique. Ondes « onde » = pure. Ondes « creux » = creuse, comme un bois. "
+              "Ondes « gambe » = nasale, comme une viole. Ondes « palme » = avec le halo métallique de son haut-parleur à cordes. "
+              "Monotron = petit synthé à ruban qui grince.",
+              { "Thérémine", "Ondes Martenot — onde", "Ondes Martenot — creux", "Ondes Martenot — gambe", "Ondes Martenot — palme",
+                "Monotron" } },
+            { "glide", "GLIDE", 0.4f, "Le temps du glissé d'une note à l'autre : c'est la signature de ces instruments.", {} },
+            { "vibrato", "VIBRATO", 0.5f, "Profondeur du vibrato, la main qui tremble.", {} },
+            { "rate", "VITESSE", 0.5f, "Vitesse du vibrato.", {} },
+            { "tone", "TIMBRE", 0.5f, "Plus doux (à gauche) ou plus riche et brillant (à droite). Sur le monotron : la résonance du filtre.", {} },
+            { "attack", "ATTACK", 0.25f, attackHelp, {} },
+            { "release", "RELEASE", 0.35f, releaseHelp, {} },
+        } });
+
+    defs.push_back ({ WestCoast, "westcoast", "WEST COAST", "Synthèse « côte Ouest » · inspirée du Buchla 100 (1965)", MachineKind::Poly,
+        0xffffd23f, 24,
+        "L'autre école des synthés modulaires, née en Californie : pas de filtre classique mais un oscillateur modulé en "
+        "fréquence, un « wavefolder » qui plie l'onde pour la rendre plus riche, et une « porte basse fréquence » (LPG) qui "
+        "donne des notes rondes et boisées, comme des bongos électroniques.\n\n"
+        "Le son des pionniers (Suzanne Ciani), de l'ambient et des musiques expérimentales.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 0.0f, chordHelp, chordChoices() },
+            { "ratio", "RAPPORT", 0.0f,
+              "Rapport entre l'oscillateur modulateur et la note. 1:1 et 2:1 = sons musicaux, 3:2 = creux, 7:4 = métallique, "
+              "Libre = inharmonique, comme une cloche ou un gong.",
+              { "1:1", "2:1", "3:2", "1:2", "7:4 (métal)", "Libre (cloche)" } },
+            { "gate", "PORTE", 0.0f,
+              "La « porte basse fréquence » qui fait sonner la note. LPG = volume et filtre ensemble (le son Buchla, rond et percussif). "
+              "Volume seul = plus claquant. Filtre seul = la note tient tant qu'elle est jouée.",
+              { "LPG (volume + filtre)", "Volume seul", "Filtre seul" } },
+            { "fm", "FM", 0.3f, "Quantité de modulation de fréquence : ajoute des harmoniques et du mordant.", {} },
+            { "fold", "PLIAGE", 0.4f, "Le wavefolder : plie l'onde sur elle-même. Plus on tourne, plus le son devient riche et brillant.", {} },
+            { "symmetry", "SYMÉTRIE", 0.5f, "Décale le pliage : change la couleur des harmoniques.", {} },
+            { "decay", "DECAY", 0.4f, "Durée de la note dans la porte (LPG) : court = bongo, long = cloche qui résonne.", {} },
+        } });
+
+    defs.push_back ({ Vocoder, "vocoder", "VOCODER", "Vocodeur · inspiré des Korg VC-10, Roland VP-330 et du microKORG", MachineKind::Poly,
+        0xff5cf2a6, 24,
+        "La voix robot de l'électro, de la disco et de la French touch : un synthé qui « parle ». Ici, la voix est fabriquée par "
+        "la machine elle-même : choisis les mots et elle les prononce sur tes accords.\n\n"
+        "À chaque note jouée, la voix recommence son mot.",
+        {},
+        {
+            { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+            { "chord", "ACCORD", 1.0f, chordHelp, chordChoices() },
+            { "words", "MOTS", 0.0f,
+              "Ce que dit le robot. Chœur robot = un « aaah » tenu, pour les nappes. Au hasard = des voyelles qui changent à chaque note.",
+              { "Robot", "Techno", "Électro", "Oh yeah", "A-ou-i-o", "Chœur robot (aaah)", "Au hasard" } },
+            { "speed", "DÉBIT", 0.4f, "Vitesse à laquelle le robot prononce ses mots.", {} },
+            { "carrier", "ONDE", 0.3f, "Le son du synthé qui « chante » : de la dent de scie (à gauche) au carré (à droite).", {} },
+            { "sibilance", "SOUFFLE", 0.4f, "Les « s » et « t » de la voix, les consonnes qui la rendent compréhensible.", {} },
+            { "shift", "TAILLE", 0.5f, "Change la taille de la bouche : à gauche = voix de géant, à droite = voix de souris.", {} },
+            { "release", "RELEASE", 0.3f, releaseHelp, {} },
+        } });
+
+    defs.push_back ({ TR606, "tr606", "606", "Boîte à rythmes · inspirée de la Roland TR-606 Drumatix (1981)", MachineKind::Drum,
+        0xffd9d4c4, 0,
+        "La petite sœur argentée de la 808, faite pour accompagner la TB-303. Son analogique sec et fin : un kick court, une "
+        "caisse claire claquante, des charlestons métalliques qui grésillent.\n\n"
+        "Le son de l'acid, de l'électro minimaliste et de l'EBM.",
+        {
+            row ("bd", "KICK", Role::Kick, 0.85f, 0.35f, 0.5f, "Kick 606 : court et sec.", "Clic d'attaque."),
+            row ("sd", "SNARE", Role::Snare, 0.7f, 0.35f, 0.6f, "Caisse claire 606 : beaucoup de bruit brillant.", "Part du bruit."),
+            row ("lt", "LOW TOM", Role::LowTom, 0.6f, 0.4f, 0.4f, "Tom grave.", "Attaque."),
+            row ("ht", "HI TOM", Role::HighTom, 0.6f, 0.4f, 0.4f, "Tom aigu.", "Attaque."),
+            row ("ch", "HAT", Role::ClosedHat, 0.5f, 0.25f, 0.5f, "Charleston fermé : le grésillement typique de la 606.", "Brillance."),
+            row ("oh", "OPEN HAT", Role::OpenHat, 0.45f, 0.4f, 0.5f, "Charleston ouvert.", "Brillance."),
+            row ("cy", "CYMBAL", Role::Cymbal, 0.4f, 0.5f, 0.5f, "Cymbale.", "Brillance."),
+        },
+        {} });
+
+    defs.push_back ({ RhythmBox, "rhythmbox", "RHYTHM BOX", "Boîtes à rythmes vintage · Wurlitzer Side Man, Rhythm Ace, Donca-Matic", MachineKind::Drum,
+        0xffc98a4b, 0,
+        "Les toutes premières boîtes à rythmes, faites pour accompagner les organistes : des sons doux et feutrés, des bongos, "
+        "des claves, une cymbale lointaine. Leur charme rétro est très apprécié en lo-fi, en pop psychédélique et en électro vintage.\n\n"
+        "Le son de la soul du début des années 70 (Sly & The Family Stone, Timmy Thomas).",
+        {
+            row ("bd", "KICK", Role::Kick, 0.8f, 0.4f, 0.4f, "Grosse caisse douce, sans clic.", "Rondeur."),
+            row ("sd", "SNARE", Role::Snare, 0.6f, 0.35f, 0.5f, "Caisse claire « tchk », comme un balai.", "Brillance."),
+            row ("rs", "RIM", Role::Rim, 0.45f, 0.3f, 0.5f, "Coup de bord.", "Brillance."),
+            row ("ch", "HAT", Role::ClosedHat, 0.45f, 0.3f, 0.5f, "Charleston fermé, feutré.", "Brillance."),
+            row ("cy", "CYMBAL", Role::Cymbal, 0.4f, 0.5f, 0.4f, "Cymbale lointaine.", "Brillance."),
+            row ("cl", "CLAVES", Role::Claves, 0.45f, 0.3f, 0.5f, "Claves en bois.", "Hauteur."),
+            row ("bl", "BONGO LOW", Role::LowBongo, 0.5f, 0.3f, 0.5f, "Bongo grave.", "Claque."),
+            row ("bh", "BONGO HIGH", Role::HighBongo, 0.5f, 0.3f, 0.5f, "Bongo aigu.", "Claque."),
+            row ("cg", "CONGA", Role::LowConga, 0.5f, 0.35f, 0.5f, "Conga.", "Claque."),
+            row ("gu", "GUIRO", Role::Guiro, 0.4f, 0.35f, 0.5f, "Guiro qui racle.", "Brillance."),
+            row ("ma", "MARACAS", Role::Shaker, 0.4f, 0.3f, 0.5f, "Maracas.", "Brillance."),
+        },
+        {} });
+
+    defs.push_back ({ DigitalKit, "digital", "DIGITAL KIT", "Boîtes à rythmes numériques · inspirées des TR-505, TR-626 et SR-16", MachineKind::Drum,
+        0xff7fb2ff, 0,
+        "Les boîtes à rythmes à samples bon marché de la fin des années 80 et des années 90 : des sons courts, nets et un peu "
+        "granuleux (peu de bits), avec des percussions latines. Le son de la house de garage, du freestyle, de la pop et des "
+        "démos de home studio.\n\n"
+        "TIMBRE sur chaque son règle aussi le grain numérique.",
+        {
+            row ("bd", "KICK", Role::Kick, 0.85f, 0.4f, 0.5f, "Kick numérique court.", "Grain."),
+            row ("sd", "SNARE", Role::Snare, 0.7f, 0.4f, 0.5f, "Caisse claire numérique.", "Grain."),
+            row ("rs", "RIM", Role::Rim, 0.5f, 0.3f, 0.5f, "Rimshot.", "Brillance."),
+            row ("cp", "CLAP", Role::Clap, 0.6f, 0.4f, 0.5f, "Clap.", "Couleur."),
+            row ("ch", "HAT", Role::ClosedHat, 0.45f, 0.3f, 0.5f, "Charleston fermé.", "Brillance."),
+            row ("oh", "OPEN HAT", Role::OpenHat, 0.4f, 0.4f, 0.5f, "Charleston ouvert.", "Brillance."),
+            row ("lt", "LOW TOM", Role::LowTom, 0.55f, 0.4f, 0.4f, "Tom grave.", "Attaque."),
+            row ("ht", "HI TOM", Role::HighTom, 0.55f, 0.4f, 0.4f, "Tom aigu.", "Attaque."),
+            row ("cb", "COWBELL", Role::Cowbell, 0.4f, 0.35f, 0.5f, "Cowbell.", "Couleur."),
+            row ("ti", "TIMBALE", Role::HighTimbale, 0.5f, 0.4f, 0.6f, "Timbale.", "Claque."),
+            row ("ag", "AGOGO", Role::Agogo, 0.4f, 0.4f, 0.5f, "Cloche agogo.", "Hauteur."),
+            row ("cr", "CRASH", Role::Crash, 0.4f, 0.6f, 0.5f, "Crash.", "Brillance."),
+            row ("rd", "RIDE", Role::Ride, 0.4f, 0.5f, 0.5f, "Ride.", "Brillance."),
+        },
+        {} });
+
+    defs.push_back ({ SynthDrums, "synthdrums", "SYNTH DRUMS", "Percussions de synthèse · inspirées de l'ER-1, du Machinedrum et du Syntakt", MachineKind::Drum,
+        0xffff4fd8, 0,
+        "Des percussions fabriquées de toutes pièces par synthèse FM et modulation en anneau : des kicks qui claquent, des toms "
+        "qui plongent, des bips, des cloches métalliques et des « zaps ». Le son de la techno minimale, de l'IDM et de l'électro.\n\n"
+        "HAUTEUR, DURÉE et TIMBRE transforment complètement chaque son : n'hésite pas à les tourner.",
+        {
+            row ("bd", "KICK FM", Role::Kick, 0.85f, 0.4f, 0.4f, "Kick de synthèse : une sinusoïde qui plonge.", "Claquant de l'attaque (FM)."),
+            row ("sd", "SNARE", Role::Snare, 0.7f, 0.35f, 0.5f, "Caisse claire : un ton modulé en anneau et du bruit.", "Part du bruit."),
+            row ("t1", "TOM FM", Role::LowTom, 0.6f, 0.45f, 0.5f, "Tom qui plonge, avec de la FM.", "Quantité de FM."),
+            row ("bp", "BLIP", Role::Perc, 0.5f, 0.2f, 0.5f, "Petit bip électronique.", "Quantité de FM."),
+            row ("cl", "CLANG", Role::Cowbell, 0.45f, 0.35f, 0.5f, "Cloche métallique en anneau.", "Métal."),
+            row ("cp", "CLAP", Role::Clap, 0.6f, 0.4f, 0.5f, "Clap électronique.", "Couleur."),
+            row ("ch", "HAT", Role::ClosedHat, 0.45f, 0.25f, 0.5f, "Charleston en FM, métallique.", "Brillance."),
+            row ("oh", "OPEN HAT", Role::OpenHat, 0.4f, 0.4f, 0.5f, "Charleston ouvert en FM.", "Brillance."),
+            row ("zp", "ZAP", Role::Rim, 0.5f, 0.25f, 0.5f, "Le « piou » laser des boîtes électro.", "Hauteur de départ."),
+        },
+        {} });
 
     return defs;
 }

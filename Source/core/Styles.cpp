@@ -1491,6 +1491,17 @@ void generate (Track& track, const MachineDef& def, const GenerateContext& ctx, 
         case EPiano:  chordLine (line, ctx, pickOne (style.chordModes, r), r); break;
         case Brass:   chordLine (line, ctx, style.chordRhythms.empty() ? ChordMode::Pad : ChordMode::Stabs, r); break;
         case Mallets: singableMelody (line, ctx, r); break;
+        case Chip:
+        case Wavetable: chordLine (line, ctx, pickOne (style.chordModes, r), r); break;
+        case LaSynth:
+        case Vocoder: chordLine (line, ctx, ChordMode::Pad, r); break;
+        case CS80:    chordLine (line, ctx, style.chordRhythms.empty() ? ChordMode::Pad : ChordMode::Stabs, r); break;
+        case SemiMod:
+            if (style.leadOn101) leadLine (line, ctx, pickOne (style.leadModes, r), r);
+            else bassLine (line, ctx, pickOne (style.bassModes, r), r);
+            break;
+        case Ether:   singableMelody (line, ctx, r); break;
+        case WestCoast: leadLine (line, ctx, LeadMode::Arp, r); break;
         case Pluck:
         {
             const auto& modes = style.chordModes;

@@ -19,6 +19,7 @@ public:
     virtual void trigger (float velocity, const DrumSettings&) = 0;
     virtual float process() = 0;
     virtual void choke() {}
+    virtual void setMachineParams (const float* /*values*/) {}   // settings of the whole machine (sampler character)
 
 protected:
     float fs = 44100.0f;
