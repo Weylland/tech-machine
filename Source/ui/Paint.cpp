@@ -546,6 +546,29 @@ void icon (Graphics& g, const juce::String& name, Rect r, Colour colour)
             g.drawLine (corner.x, corner.y, corner.x, corner.y + dy, t);
         }
     }
+    else if (name == "gear")
+    {
+        const auto c = b.getCentre();
+        const float t = juce::jmax (1.4f, s * 0.1f);
+        for (int i = 0; i < 8; ++i)
+        {
+            const float a = (float) i * juce::MathConstants<float>::pi / 4.0f;
+            g.drawLine (c.x + std::cos (a) * s * 0.22f, c.y + std::sin (a) * s * 0.22f,
+                        c.x + std::cos (a) * s * 0.4f, c.y + std::sin (a) * s * 0.4f, t * 1.4f);
+        }
+        g.drawEllipse (Rect (s * 0.5f, s * 0.5f).withCentre (c), t);
+        g.fillEllipse (Rect (s * 0.16f, s * 0.16f).withCentre (c));
+    }
+    else if (name == "globe")
+    {
+        const auto c = b.getCentre();
+        const float t = juce::jmax (1.2f, s * 0.08f), r = s * 0.38f;
+        g.drawEllipse (Rect (2.0f * r, 2.0f * r).withCentre (c), t);
+        g.drawEllipse (Rect (r, 2.0f * r).withCentre (c), t);
+        g.drawLine (c.x - r, c.y, c.x + r, c.y, t);
+        g.drawLine (c.x - r * 0.85f, c.y - r * 0.5f, c.x + r * 0.85f, c.y - r * 0.5f, t);
+        g.drawLine (c.x - r * 0.85f, c.y + r * 0.5f, c.x + r * 0.85f, c.y + r * 0.5f, t);
+    }
     else if (name == "patterns")
     {
         const float cell = s * 0.22f, gap = s * 0.1f, x0 = b.getX() + s * 0.13f, y0 = b.getY() + s * 0.13f;

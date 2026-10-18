@@ -8,7 +8,8 @@ namespace
 constexpr Role K = Role::Kick, S = Role::Snare, C = Role::Clap, R = Role::Rim, H = Role::ClosedHat, O = Role::OpenHat,
                Y = Role::Ride, Cb = Role::Cowbell, Cl = Role::Claves, Sh = Role::Shaker, Lt = Role::LowTom, Ht = Role::HighTom,
                Lc = Role::LowConga, Hc = Role::HighConga, Ag = Role::Agogo, Tb = Role::Tambourine, Sn = Role::Snap,
-               Th = Role::HighTimbale;
+               Th = Role::HighTimbale, Lb = Role::LowBongo, Hb = Role::HighBongo, Tl = Role::LowTimbale, Tr = Role::Triangle,
+               Gu = Role::Guiro;
 
 const char* const classics = "Incontournables";
 const char* const urban = "Hip-hop · Trap · R&B";
@@ -16,6 +17,7 @@ const char* const funk = "Funk · Disco · Pop · Rock";
 const char* const club = "House · Techno";
 const char* const breaks = "Breaks · Drum & Bass · Électro";
 const char* const world = "Latin · Afro · Reggae";
+const char* const percussion = "Percussions";
 const char* const bassLines = "Lignes de basse";
 const char* const chordParts = "Accords";
 const char* const leads = "Mélodies et arpèges";
@@ -90,6 +92,16 @@ std::vector<Pattern> build()
         drums (world, "Dancehall", 100, { { K, "x..x....x..x...." }, { S, "....x..x....x..." }, { H, "x.x.x.x.x.x.x.x." } }),
         drums (world, "Son clave 3-2 (salsa)", 95, { { Cl, "x..x..x...x.x..." }, { K, "......x.......x." }, { Lc, "......x.......x." }, { Hc, "....x.x.....x.x." }, { Cb, "x.x.x.x.x.x.x.x." } }),
         drums (world, "Tresillo", 100, { { K, "x..x..x.x..x..x." }, { Cl, "x..x..x........." }, { Sh, "x.x.x.x.x.x.x.x." } }),
+
+        drums (percussion, "Tumbao (salsa)", 95, { { Hc, "..x...x...x...x." }, { Lc, "......xx......xx" }, { Cb, "x.x.x.x.x.x.x.x." }, { Cl, "x..x..x...x.x..." } }),
+        drums (percussion, "Martillo (bongos)", 95, { { Hb, "x.x.x.x.x.x.x.x." }, { Lb, "......x.......x." }, { Gu, "x...x.x.x...x.x." } }),
+        drums (percussion, "Batucada (samba)", 100, { { Lc, "....x.......x..." }, { Hc, "..x...x...x...x." }, { Ag, "x.x..x.x..x.x..." }, { Sh, "Xxxxxxxxxxxxxxxx" }, { Tb, ".x.x.x.x.x.x.x.x" } }),
+        drums (percussion, "Afro House", 122, { { Lc, "x..x..x...x..x.." }, { Hc, "...x..x.x.....x." }, { Sh, "x.xxx.xxx.xxx.xx" }, { Ag, "x..x..x....x..x." } }),
+        drums (percussion, "Reggaeton", 95, { { Th, "............x.xx" }, { Hb, "...x..x....x..x." }, { Sh, "x.x.x.x.x.x.x.x." }, { Lc, "x.......x......." } }),
+        drums (percussion, "Shaker et tambourin", 120, { { Sh, "XxxxXxxxXxxxXxxx" }, { Tb, "....x.......x..." } }),
+        drums (percussion, "Bossa nova", 130, { { Sh, "xxxxxxxxxxxxxxxx" }, { Cl, "x..x..x...x..x.." }, { Tr, "..x...x...x...x." } }),
+        drums (percussion, "Cascara (timbales)", 100, { { Th, "x.xx.x.xx.x.x.xx" }, { Tl, "......x.......x." }, { Cb, "x...x...x...x..." } }),
+        drums (percussion, "Congas house", 124, { { Hc, "..x...x...x..xx." }, { Lc, "x.....x.x......." }, { Sh, ".x.x.x.x.x.x.x.x" } }),
 
         melodic (P::Bass, bassLines, "Racine en croches", "0.0.0.0.0.0.0.0."),
         melodic (P::Bass, bassLines, "Contretemps (techno, trance)", "..0...0...0...0."),
@@ -171,6 +183,14 @@ std::vector<PatternKind> patternKindsFor (const MachineDef& def)
         case MachineKind::Poly: return { PatternKind::Chords, PatternKind::Lead };
     }
     return {};
+}
+
+float patternCoverage (const MachineDef& def, const Pattern& pattern)
+{
+    if (pattern.kind != PatternKind::Drums || pattern.drums.empty()) return 1.0f;
+    int found = 0;
+    for (auto& line : pattern.drums) found += rowForRole (def, line.role) >= 0 ? 1 : 0;
+    return (float) found / (float) pattern.drums.size();
 }
 
 void applyPattern (Track& t, const MachineDef& def, const GenerateContext& ctx, const Pattern& pattern)

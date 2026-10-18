@@ -38,4 +38,7 @@ std::vector<const char*> patternCategories (PatternKind kind);
 std::vector<PatternKind> patternKindsFor (const MachineDef& def);
 
 void applyPattern (Track& track, const MachineDef& def, const GenerateContext& ctx, const Pattern& pattern);
+
+// Share of a drum pattern's parts that this kit can play (1 = every part has a sound). Always 1 for melodic patterns.
+float patternCoverage (const MachineDef& def, const Pattern& pattern);
 } // namespace techno

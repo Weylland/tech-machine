@@ -1,5 +1,10 @@
 #include "PluginEditor.h"
 
+#if JucePlugin_Build_Standalone
+ #include <juce_audio_utils/juce_audio_utils.h>
+ #include <juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h>
+#endif
+
 using namespace techno;
 
 namespace
@@ -332,10 +337,6 @@ MainView::MainView (TechMachineProcessor& p)
     styleButton (recordButton, juce::Colour (0xff4a2a2e));
     recordButton.onClick = [this] { toggleRecord(); };
     recInfo = &addInfo (help ("rec"));
-    styleButton (folderButton, juce::Colour (0xff3a3b40));
-    folderButton.onClick = [this] { processor.getLastRecording().revealToUser(); };
-    folderButton.setTooltip (help ("files").body);
-    folderButton.setVisible (false);
 
     addAndMakeVisible (lcd);
     lcdInfo = &addInfo (help ("tempo"));
@@ -473,9 +474,14 @@ MainView::MainView (TechMachineProcessor& p)
     fullScreenButton.setVisible (! processor.isHosted());
 
     styleButton (languageButton, juce::Colour (0xff3a3b40));
-    languageButton.setButtonText (language() == Language::French ? "FR | en" : "fr | EN");
+    languageButton.setButtonText (language() == Language::French ? juce::String::fromUTF8 ("FRANÇAIS") : juce::String ("ENGLISH"));
     languageButton.onClick = [this] { toggleLanguage(); };
     languageButton.setTooltip (utf8 ("Langue de l'interface : français ou anglais"));
+
+    styleButton (audioButton, juce::Colour (0xff3a3b40));
+    audioButton.onClick = [this] { showAudioSettings(); };
+    audioButton.setTooltip (utf8 ("Carte son, pilote ASIO, taille du tampon (latence) et clavier ou contrôleur MIDI"));
+    audioButton.setVisible (! processor.isHosted());
 
     disableKeyboardFocus (*this);
     setWantsKeyboardFocus (true);
@@ -493,6 +499,14 @@ void MainView::toggleFullScreen()
     }
     if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
         desktop.setKioskModeComponent (window, false);
+}
+
+void MainView::showAudioSettings()
+{
+#if JucePlugin_Build_Standalone
+    if (auto* holder = juce::StandalonePluginHolder::getInstance())
+        holder->showAudioSettingsDialog();
+#endif
 }
 
 void MainView::toggleLanguage()
@@ -543,7 +557,7 @@ void MainView::toggleRecord()
         processor.stopRecording();
         showInfo (utf8 ("Enregistrement terminé"),
                   utf8 ("Ton morceau est enregistré ici :\n\n") + processor.getLastRecording().getFullPathName()
-                      + utf8 ("\n\nClique sur FICHIERS pour ouvrir le dossier."),
+                      + utf8 ("\n\nPour retrouver tes enregistrements : menu PROJET › Dossier des enregistrements."),
                   recordButton);
         return;
     }
@@ -612,6 +626,7 @@ void MainView::showProjectMenu()
     menu.addItem (item (5, utf8 ("Enregistrer sous…"), utf8 ("Ctrl+Maj+S")));
     menu.addSeparator();
     menu.addSubMenu (utf8 ("Exporter en WAV"), exportMenu);
+    menu.addItem (item (6, utf8 ("Dossier des enregistrements"), {}, processor.getLastRecording().existsAsFile()));
 
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (projectButton), [this, recentFiles] (int r)
     {
@@ -620,6 +635,7 @@ void MainView::showProjectMenu()
         else if (r == 3) openProject();
         else if (r == 4) saveProject();
         else if (r == 5) saveProjectAs();
+        else if (r == 6) processor.getLastRecording().revealToUser();
         else if (r >= 100 && r < 100 + recentFiles.size()) askThen ([this, f = juce::File (recentFiles[r - 100])] { openProjectFile (f); });
         else if (r >= 200 && r < 200 + (int) examples().size()) loadExample (r - 200);
         else if (r > 300 && r <= 308) exportWav (r - 300);
@@ -914,7 +930,6 @@ void MainView::timerCallback()
     const bool blink = (juce::Time::getMillisecondCounter() / 500) % 2 == 0;
     recordButton.setColour (juce::TextButton::buttonColourId,
                             recording ? (blink ? juce::Colour (0xffd8303f) : juce::Colour (0xff6a1a22)) : juce::Colour (0xff4a2a2e));
-    folderButton.setVisible (processor.getLastRecording().existsAsFile() && ! recording);
 
     const auto title = utf8 ("Tech Machine  —  ") + processor.projectName() + (processor.isDirty() ? juce::String::fromUTF8 ("  •") : juce::String());
     if (title != lastTitle)
@@ -954,9 +969,9 @@ void MainView::paint (juce::Graphics& g)
     g.drawText ("TECH", consoleArea.getX() + 26, consoleArea.getY() + 12, 80, 30, juce::Justification::centredLeft);
     g.setColour (colours::accent);
     g.drawText ("MACHINE", consoleArea.getX() + 26 + 70, consoleArea.getY() + 12, 140, 30, juce::Justification::centredLeft);
-    g.setColour (colours::dim);
-    g.setFont (paint::condensed (12.0f));
-    g.drawText (juce::String::fromUTF8 ("GROOVEBOX  ·  v") + JucePlugin_VersionString, consoleArea.getX() + 27, consoleArea.getY() + 40, 200, 14, juce::Justification::centredLeft);
+    g.setColour (colours::text.withAlpha (0.75f));
+    g.setFont (paint::condensed (15.0f));
+    g.drawText (juce::String::fromUTF8 ("GROOVEBOX  ·  v") + JucePlugin_VersionString, consoleArea.getX() + 27, consoleArea.getY() + 40, 200, 16, juce::Justification::centredLeft);
     g.setColour (colours::accent);
     g.fillRect (consoleArea.getX() + 27, consoleArea.getY() + 56, 150, 2);
 
@@ -992,26 +1007,22 @@ void MainView::resized()
     recordButton.setBounds (376, cy + 14, 84, 48);
     recInfo->setBounds (recordButton.getRight() + 2, cy + 14, 15, 15);
 
-    lcd.setBounds (482, cy + 10, 330, consoleH - 20);
+    lcd.setBounds (482, cy + 10, 300, consoleH - 20);
     lcdInfo->setBounds (lcd.getRight() + 2, cy + 12, 15, 15);
 
     int x = lcd.getRight() + 26;
-    genreBox.setBounds (x, cy + 32, 170, 32);
+    genreBox.setBounds (x, cy + 32, 150, 32);
     genreInfo->setBounds (genreBox.getRight() - 15, cy + 13, 15, 15);
     x = genreBox.getRight() + 12;
-    keyBox.setBounds (x, cy + 32, 72, 32);
+    keyBox.setBounds (x, cy + 32, 74, 32);
     keyInfo->setBounds (keyBox.getRight() - 15, cy + 13, 15, 15);
     x = keyBox.getRight() + 12;
-    scaleBox.setBounds (x, cy + 32, 196, 32);
+    scaleBox.setBounds (x, cy + 32, 158, 32);
     scaleInfo->setBounds (scaleBox.getRight() - 15, cy + 13, 15, 15);
     x = scaleBox.getRight() + 12;
-    swingKnob->setBounds (x, cy + 8, 66, 66);
+    swingKnob->setBounds (x, cy + 10, 60, 62);
     x = swingKnob->getRight() + 10;
-    guideButton.setBounds (consoleArea.getRight() - 16 - 44, cy + 14, 44, 48);
-    fullScreenButton.setBounds (guideButton.getX() - 4 - 36, cy + 14, 36, 22);
-    languageButton.setBounds (guideButton.getX() - 4 - 64, cy + 40, 64, 22);
-    if (fullScreenButton.isVisible()) fullScreenButton.setBounds (guideButton.getX() - 4 - 64, cy + 14, 64, 22);
-    surpriseButton.setBounds (x, cy + 14, juce::jmin (170, languageButton.getX() - 24 - x), 48);
+    surpriseButton.setBounds (x, cy + 14, juce::jmin (190, consoleArea.getRight() - 34 - x), 48);
     surpriseInfo->setBounds (surpriseButton.getRight() + 2, cy + 14, 15, 15);
 
     // Row 2: project, undo, pattern length and pages, rack.
@@ -1029,20 +1040,30 @@ void MainView::resized()
     for (auto& page : pageButtons) { page.setBounds (x, y2, 36, 28); x += 39; }
     followButton.setBounds (x + 2, y2, 82, 28);
     pageInfo->setBounds (followButton.getRight() + 2, y2 + 7, 15, 15);
-    folderButton.setBounds (pageInfo->getRight() + 14, y2, 110, 28);
 
     addInfoButton->setBounds (consoleArea.getRight() - 16 - 15, y2 + 7, 15, 15);
     addButton.setBounds (addInfoButton->getX() - 4 - 150, y2, 150, 28);
+    guideButton.setBounds (addButton.getX() - 12 - 44, y2, 44, 28);
 
     // Master strip.
     masterArea = { 10, getHeight() - masterH - 6, w - 20, masterH };
     masterInfo->setBounds (masterArea.getX() + 142, masterArea.getY() + 20, 15, 15);
     vu.setBounds (masterArea.getX() + 168, masterArea.getY() + 12, 170, masterArea.getHeight() - 24);
     meterInfo->setBounds (vu.getRight() + 3, masterArea.getY() + 12, 15, 15);
+    // Settings column at the right of the master strip.
+    {
+        auto column = juce::Rectangle<int> (masterArea.getRight() - 16 - 168, masterArea.getY() + 12, 168, masterArea.getHeight() - 24);
+        const int h = (column.getHeight() - 8) / 3;
+        audioButton.setBounds (column.removeFromTop (h));
+        column.removeFromTop (4);
+        fullScreenButton.setBounds (column.removeFromTop (h));
+        column.removeFromTop (4);
+        languageButton.setBounds (column.removeFromTop (h));
+    }
     int mx = vu.getRight() + 30;
     for (int i = 0; i < masterControls.size(); ++i)
     {
-        const int width = i == 0 ? 130 : 92;
+        const int width = i == 0 ? 130 : 88;
         masterControls[i]->setBounds (mx, masterArea.getY() + (i == 0 ? 30 : 14), width - 6, i == 0 ? 52 : 86);
         mx += width;
     }

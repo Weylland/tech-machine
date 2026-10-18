@@ -308,12 +308,12 @@ void MachinePanel::showPatternMenu()
             juce::PopupMenu sub;
             for (auto& p : patterns())
             {
-                if (p.kind != kind || p.category != category) continue;
+                if (p.kind != kind || p.category != category || patternCoverage (def, p) < 0.75f) continue;
                 items.push_back (&p);
                 const juce::String name = utf8 (p.name);
                 sub.addItem ((int) items.size(), p.bpm > 0 ? name + "   (" + juce::String (p.bpm) + " BPM)" : name);
             }
-            menu.addSubMenu (utf8 (category), sub);
+            if (sub.getNumItems() > 0) menu.addSubMenu (utf8 (category), sub);
         }
     }
     menu.addSeparator();

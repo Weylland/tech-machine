@@ -562,6 +562,42 @@ bool onlyScattered (const char* pattern)
     return true;
 }
 
+// The closest sounds to use when a kit lacks one, best first.
+std::vector<Role> fallbacksFor (Role role)
+{
+    using R = Role;
+    switch (role)
+    {
+        case R::Snare:       return { R::Clap, R::Snap };
+        case R::Clap:        return { R::Snap, R::Snare };
+        case R::Snap:        return { R::Clap, R::Snare };
+        case R::Rim:         return { R::Claves, R::Snap, R::Perc, R::Snare };
+        case R::ClosedHat:   return { R::Shaker, R::Tambourine };
+        case R::OpenHat:     return { R::ClosedHat, R::Shaker };
+        case R::Ride:        return { R::Cymbal, R::Crash, R::ClosedHat };
+        case R::Crash:       return { R::Cymbal, R::Ride };
+        case R::Cymbal:      return { R::Crash, R::Ride };
+        case R::Shaker:      return { R::Tambourine, R::ClosedHat };
+        case R::Tambourine:  return { R::Shaker, R::ClosedHat };
+        case R::Cowbell:     return { R::Agogo, R::Claves, R::Rim };
+        case R::Agogo:       return { R::Cowbell, R::Claves };
+        case R::Claves:      return { R::Rim, R::Perc, R::Cowbell };
+        case R::Perc:        return { R::Claves, R::Rim, R::Cowbell };
+        case R::Triangle:    return { R::Agogo, R::Cowbell, R::Claves };
+        case R::Guiro:       return { R::Shaker, R::Tambourine };
+        case R::LowTom:      return { R::LowConga, R::MidTom, R::HighTom };
+        case R::MidTom:      return { R::LowTom, R::HighTom, R::LowConga };
+        case R::HighTom:     return { R::HighConga, R::MidTom, R::LowTom };
+        case R::LowConga:    return { R::LowTom, R::HighConga, R::LowBongo };
+        case R::HighConga:   return { R::HighTom, R::LowConga, R::HighBongo };
+        case R::LowBongo:    return { R::HighBongo, R::HighConga, R::MidTom };
+        case R::HighBongo:   return { R::LowBongo, R::HighConga, R::HighTom };
+        case R::LowTimbale:  return { R::HighTimbale, R::MidTom, R::LowTom };
+        case R::HighTimbale: return { R::LowTimbale, R::HighTom, R::Cowbell };
+        default:             return {};
+    }
+}
+
 int rowFor (const MachineDef& def, Role role)
 {
     auto find = [&def] (Role r)
@@ -572,23 +608,8 @@ int rowFor (const MachineDef& def, Role role)
     };
 
     if (const int row = find (role); row >= 0) return row;
-    if (role == Role::Clap && find (Role::Ghost) >= 0) return find (Role::Snare);
-    if (role == Role::Cymbal) return find (Role::Crash);
-    if (role == Role::Crash) return find (Role::Cymbal);
-    if (role == Role::Snap) return find (Role::Clap);
-    if (role == Role::Clap) return find (Role::Snap);
-    if (role == Role::Tambourine) return find (Role::Shaker);
-
-    static constexpr std::pair<Role, Role> pairs[] {
-        { Role::LowConga, Role::HighConga }, { Role::LowBongo, Role::HighBongo }, { Role::LowTimbale, Role::HighTimbale },
-        { Role::LowConga, Role::LowTom }, { Role::HighConga, Role::HighTom }, { Role::HighTimbale, Role::HighTom },
-        { Role::LowTimbale, Role::MidTom }, { Role::Agogo, Role::Cowbell },
-    };
-    for (auto& [a, b] : pairs)
-    {
-        if (role == a) if (const int row = find (b); row >= 0) return row;
-        if (role == b) if (const int row = find (a); row >= 0) return row;
-    }
+    for (const Role other : fallbacksFor (role))
+        if (const int row = find (other); row >= 0) return row;
     return -1;
 }
 
@@ -668,6 +689,10 @@ void drums (Track& t, const MachineDef& def, const GenerateContext& ctx, juce::R
     {
         const int row = rowFor (def, part.role);
         if (row < 0) return;
+        const Role rowRole = def.rows[(size_t) row].role;
+        if (rowRole != part.role)
+            for (auto& other : ctx.style.drums)
+                if (other.role == rowRole) return;
         const char* pattern = pickOne (part.variants, r);
 
         // Scattered percussion becomes an evenly spread (Euclidean) rhythm that avoids the kicks.
@@ -729,8 +754,8 @@ void drums (Track& t, const MachineDef& def, const GenerateContext& ctx, juce::R
     const int sd = rowFor (def, Role::Snare), gs = rowFor (def, Role::Ghost);
     for (int s = 0; s < ctx.steps; ++s)
     {
-        if (ch >= 0 && oh >= 0 && t.hits[(size_t) oh][(size_t) s]) t.hits[(size_t) ch][(size_t) s] = false;
-        if (sd >= 0 && gs >= 0 && t.hits[(size_t) sd][(size_t) s]) t.hits[(size_t) gs][(size_t) s] = false;
+        if (ch >= 0 && oh >= 0 && ch != oh && t.hits[(size_t) oh][(size_t) s]) t.hits[(size_t) ch][(size_t) s] = false;
+        if (sd >= 0 && gs >= 0 && sd != gs && t.hits[(size_t) sd][(size_t) s]) t.hits[(size_t) gs][(size_t) s] = false;
     }
     t.tile (ctx.steps);
 }

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(TechMachine VERSION 0.5.0)
+project(TechMachine VERSION 0.6.0)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_CXX_STANDARD 17)
@@ -12,7 +12,7 @@ juce_add_plugin(TechMachine
     COMPANY_NAME "Nicolas Samier"
     PRODUCT_NAME "Tech Machine"
     IS_SYNTH TRUE
-    NEEDS_MIDI_INPUT FALSE
+    NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE
     PLUGIN_MANUFACTURER_CODE Nsmr
     PLUGIN_CODE Tchm
@@ -44,6 +44,14 @@ target_compile_definitions(TechMachine PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0)
+
+# ASIO drivers (Windows): the Steinberg ASIO SDK, used under its GPLv3 option, is fetched by build.bat into tools/asiosdk.
+set(ASIO_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tools/asiosdk/common")
+if(WIN32 AND EXISTS "${ASIO_SDK_DIR}/iasiodrv.h")
+    target_compile_definitions(TechMachine PUBLIC JUCE_ASIO=1)
+    target_include_directories(TechMachine PRIVATE "${ASIO_SDK_DIR}")
+    message(STATUS "ASIO support enabled")
+endif()
 
 target_link_libraries(TechMachine
     PRIVATE
