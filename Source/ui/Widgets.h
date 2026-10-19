@@ -145,6 +145,23 @@ inline MidiLearnHooks& midiLearnHooks()
     return hooks;
 }
 
+// Text button with a menu on right click (the part buttons A to H).
+class MenuTextButton : public juce::TextButton
+{
+public:
+    std::function<void()> onRightClick;
+
+    void mouseDown (const juce::MouseEvent& e) override
+    {
+        if (e.mods.isPopupMenu())
+        {
+            if (onRightClick) onRightClick();
+            return;
+        }
+        juce::TextButton::mouseDown (e);
+    }
+};
+
 // Set by the editor: told when the user turns a knob (to record its moves into the steps).
 inline std::function<void (const juce::String& paramId, float value)>& knobMovedHook()
 {

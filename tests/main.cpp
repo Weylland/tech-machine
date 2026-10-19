@@ -712,6 +712,13 @@ static int test_ui (int argc, char** argv)
                     if (panel->type == TR909 && panel->onOpenAutomation) panel->onOpenAutomation (TR909);
                 savePng (ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f), "ui_automation_" + tag);
                 auditLayout (*ed, theme, "automation " + tag, issues);
+                p.setSong ({ { 0, 1 }, { 1, 4 }, { 2, 2 }, { 1, 4 } });
+                if (auto* view = findMainView (*ed))
+                    for (auto* c : view->getChildren())
+                        if (auto* b = dynamic_cast<techno::IconButton*> (c); b != nullptr && b->getButtonText() == utf8 ("MORCEAU") && b->onClick) b->onClick();
+                pumpTimers();
+                savePng (ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f), "ui_song_" + tag);
+                auditLayout (*ed, theme, "song " + tag, issues);
             }
         }
     }
@@ -1539,10 +1546,141 @@ static int test_automation (int argc, char** argv)
     return failures;
 }
 
+
+// Song: parts hold their own patterns, switch on time, follow the song list, are saved, copied, cleared and undone.
+static int test_parts (int argc, char** argv)
+{
+    juce::ignoreUnused (argc, argv);
+    int failures = 0;
+    auto expect = [&] (bool ok, const char* what)
+    {
+        if (! ok) ++failures;
+        printf ("  %-66s %s\n", what, ok ? "ok" : "FAIL");
+    };
+    auto setUp = [] (TechMachineProcessor& p)
+    {
+        p.newProject();
+        p.setShown (TR909, true);
+        p.setShown (TB303, true);
+        p.setBars (1);
+        p.setParam (pid::bpm, 120.0f);
+        // Part A: kick only. Part B: the 303 only.
+        for (int st = 0; st < maxSteps; st += 4) p.machine (TR909).track.hits[0][(size_t) st] = true;
+        p.selectPart (1);
+        for (int st = 0; st < maxSteps; ++st) { p.machine (TB303).track.on[(size_t) st] = true; p.machine (TB303).track.note[(size_t) st] = st % 3; }
+        p.selectPart (0);
+    };
+
+    TechMachineProcessor p;
+    setUp (p);
+    expect (p.currentPart() == 0 && p.machine (TR909).track.hits[0][0] && ! p.machine (TB303).track.on[0], "part A shows its own notes");
+    p.selectPart (1);
+    expect (p.machine (TB303).track.on[0] && ! p.machine (TR909).track.hits[0][0], "part B shows its own notes");
+    p.selectPart (0);
+    expect (! p.isPartEmpty (1) && p.isPartEmpty (2) && ! p.isProjectEmpty(), "empty and filled parts are told apart");
+
+    // Switching while playing waits for the end of the loop.
+    p.setPlayConfigDetails (0, 2, 48000.0, 480);
+    p.prepareToPlay (48000.0, 480);
+    p.playing = true;
+    juce::AudioBuffer<float> block (2, 480);
+    juce::MidiBuffer midi;
+    for (int i = 0; i < 10; ++i) p.processBlock (block, midi);   // 4800 samples: step 0 of 16 (6000 samples per step)
+    p.selectPart (1);
+    expect (p.currentPart() == 0 && p.cuedPartIndex() == 1, "while playing, the new part waits");
+    int switchedAt = -1;
+    for (int i = 10; i < 220 && switchedAt < 0; ++i)
+    {
+        p.processBlock (block, midi);
+        if (p.currentPart() == 1) switchedAt = (i + 1) * 480;
+    }
+    expect (switchedAt > 16 * 6000 && switchedAt <= 16 * 6000 + 480, "it starts exactly at the end of the loop");
+
+    // Song: A x1, B x2, then back to A.
+    {
+        TechMachineProcessor q;
+        setUp (q);
+        q.setSong ({ { 0, 1 }, { 1, 2 } });
+        q.setSongMode (true);
+        q.setPlayConfigDetails (0, 2, 48000.0, 480);
+        q.prepareToPlay (48000.0, 480);
+        q.playing = true;
+        juce::String order;
+        int lastLoop = -1;
+        for (int i = 0; i < 4 * 200 + 20; ++i)
+        {
+            q.processBlock (block, midi);
+            const int loop = (i * 480) / (16 * 6000);
+            if (loop != lastLoop && (i * 480) % (16 * 6000) > 960) { order << partName (q.currentPart()); lastLoop = loop; }
+        }
+        printf ("    loops played: %s\n", order.toRawUTF8());
+        expect (order.startsWith ("ABBA"), "the song plays A, B, B, then starts again");
+        expect (std::abs (q.songSeconds() - 3.0 * 16 * 15.0 / 120.0) < 0.001, "song length = 3 loops");
+    }
+
+    // Saved and read back with the song
+    const auto file = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_song.techmachine");
+    {
+        TechMachineProcessor a;
+        setUp (a);
+        a.setSong ({ { 1, 3 }, { 0, 1 } });
+        a.setSongMode (true);
+        a.saveProject (file);
+        TechMachineProcessor b;
+        b.loadProject (file);
+        expect (b.song().size() == 2 && b.song()[0].part == 1 && b.song()[0].repeats == 3 && b.isSongMode(), "song saved and read back");
+        b.selectPart (1);
+        expect (b.machine (TB303).track.on[0] && ! b.machine (TR909).track.hits[0][0], "part B saved and read back");
+        a.selectPart (0);
+        b.selectPart (0);
+        expect (fingerprint (a, 8.0) == fingerprint (b, 8.0), "same song after save + load");
+        file.deleteFile();
+    }
+
+    // Copy, clear, undo in another part
+    {
+        TechMachineProcessor q;
+        setUp (q);
+        q.copyPart (1, 2);
+        expect (! q.isPartEmpty (2), "copy B into C");
+        q.clearPart (2);
+        expect (q.isPartEmpty (2), "clear C");
+        q.undoManager.beginNewTransaction();
+        q.beginPatternEdit();
+        q.machine (TR909).track.hits[1][0] = true;   // a snare in A
+        q.selectPart (1);
+        q.undoManager.undo();
+        q.selectPart (0);
+        expect (! q.machine (TR909).track.hits[1][0] && q.machine (TR909).track.hits[0][0], "undo after switching part goes back in the right part");
+    }
+
+    // Export in song mode: the whole song
+    {
+        TechMachineProcessor q;
+        setUp (q);
+        q.setSong ({ { 0, 2 }, { 1, 2 } });
+        q.setSongMode (true);
+        const auto wav = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_song.wav");
+        TechMachineProcessor::exportWav (*q.createProjectXml(), wav, 1, {});
+        juce::AudioFormatManager formats;
+        formats.registerBasicFormats();
+        std::unique_ptr<juce::AudioFormatReader> reader (formats.createReaderFor (wav));
+        const double seconds = reader != nullptr ? (double) reader->lengthInSamples / reader->sampleRate : 0.0;
+        reader.reset();
+        wav.deleteFile();
+        printf ("    exported %.2f s\n", seconds);
+        expect (std::abs (seconds - (4.0 * 2.0 + 2.5)) < 0.05, "song mode export: 4 loops + the tail");
+    }
+
+    printf ("parts: %d failures\n", failures);
+    return failures;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
     { "automation", test_automation },
+    { "parts", test_parts },
     { "host", test_host },
     { "levels", test_levels },
     { "examples", test_examples },
@@ -1591,7 +1729,7 @@ static int check (char** argv)
     chaosIterations = 8;
     char* none[] { argv[0], nullptr };
     int failures = 0;
-    for (auto run : { test_params, test_project, test_propagate, test_automation, test_ui, test_chaos, test_french })
+    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_ui, test_chaos, test_french })
         failures += run (1, none);
     printf ("\ncheck: %d failures\n", failures);
     return failures;

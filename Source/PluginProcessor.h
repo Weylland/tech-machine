@@ -71,6 +71,22 @@ public:
     bool isRecordingNotes() const { return recordNotes.load(); }
     std::atomic<int> midiActivity { 0 };
 
+    // Song: 8 parts (A to H), each holding every machine's pattern, and the list of parts to play in order.
+    static constexpr int numParts = 8, maxSongEntries = 64;
+    struct SongEntry { int part = 0, repeats = 1; };
+    int currentPart() const { return activePart.load(); }
+    int cuedPartIndex() const { return cuedPart.load(); }           // waiting for the end of the loop, -1 = none
+    void selectPart (int part);                                     // at once when stopped, at the end of the loop when playing
+    bool isPartEmpty (int part) const;
+    void copyPart (int from, int to);
+    void clearPart (int part);
+    std::vector<SongEntry> song() const;
+    void setSong (const std::vector<SongEntry>&);
+    void setSongMode (bool on);
+    bool isSongMode() const { return songMode.load(); }
+    int songPosition() const { return songEntry.load(); }           // entry being played, -1 = none
+    double songSeconds() const;                                     // length of the whole song
+
     // Automation recording: while it is on and the sequencer plays, moving a knob writes its value into the steps.
     void setRecordAutomation (bool on);
     bool isRecordingAutomation() const { return recordAutomation.load(); }
@@ -139,7 +155,11 @@ private:
         float driveAmount = 0, crushAmount = 0, echoSend = 0, reverbSend = 0, target = 0, panLeft = 1, panRight = 1;
     };
 
-    using Snapshot = std::vector<techno::TrackData>;   // one per machine, on the heap: it is large
+    struct Snapshot
+    {
+        int part = 0;
+        std::vector<techno::TrackData> tracks;   // one per machine, on the heap: it is large
+    };
     class PatternAction;
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
@@ -150,7 +170,15 @@ private:
     float stepSeconds() const { return 60.0f / bpmValue / 4.0f; }
 
     Snapshot snapshot() const;
+    Snapshot snapshotOf (int part) const;
+    void beginPartEdit (int part);
     void restore (const Snapshot&);
+    techno::Track& partTrack (int part, int machineType);   // the playing tracks for the current part
+    const techno::Track& partTrack (int part, int machineType) const;
+    void switchPart (int part);                               // any thread
+    void startOfLoop();                                       // audio thread: song and cued part
+    void writeTrackXml (juce::XmlElement&, int machineType, const techno::Track&) const;
+    void readTrackXml (const juce::XmlElement&, int machineType, techno::Track&);
     techno::GenerateContext context() const;
     void chooseProgression();
     void resetParameters();
@@ -194,6 +222,11 @@ private:
     int recordedSemitone (int machineType, int note) const;
     std::atomic<int> midiTarget { -1 };
     std::atomic<bool> recordNotes { false }, recordAutomation { false };
+    std::unique_ptr<std::array<std::array<techno::Track, techno::numMachines>, numParts>> partStore;
+    std::atomic<int> activePart { 0 }, cuedPart { -1 }, songLength { 0 }, songEntry { -1 };
+    std::array<std::atomic<int>, maxSongEntries> songParts {}, songRepeats {};
+    std::atomic<bool> songMode { false };
+    int repeatsLeft = 0;
     std::map<juce::String, std::pair<int, int>> automationIndex;   // parameter id -> (machine, target)
     int recordStart[128] {};
 

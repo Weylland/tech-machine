@@ -98,6 +98,16 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "Des sons tout faits pour cette machine : les plus célèbres (piano électrique du DX7, acid de la 303, supersaw de la trance, "
             "orgue gospel, 808 du trap…) ou, sur une boîte à rythmes, des kits (hard techno, trap, lo-fi, dub…).\n\n"
             "Ça remplace les réglages du son, pas tes notes. Tu peux ensuite tourner les boutons pour l'adapter." } },
+        { "parts", { "Parties",
+            "Un morceau est fait de plusieurs parties : une intro, un couplet, un refrain, un break… Chaque partie (A à H) a "
+            "ses propres notes et sa propre automation, pour toutes les machines ; les sons et les réglages des boutons sont communs.\n\n"
+            "Clique sur une partie pour l'afficher et l'écrire. Pendant la lecture, la nouvelle partie démarre à la fin de la "
+            "boucle en cours (elle clignote en attendant), pour rester en rythme. Clic droit : copier une partie dans une autre "
+            "(pour partir d'une base et la varier) ou l'effacer." } },
+        { "song", { "Morceau",
+            "La liste des parties à jouer dans l'ordre, chacune un certain nombre de fois : par exemple A ×2, B ×4, C ×1, B ×4.\n\n"
+            "MORCEAU ouvre cette liste pour la composer. Avec JOUER LE MORCEAU allumé, la lecture suit la liste au lieu de "
+            "boucler sur une partie, et l'export WAV enregistre tout le morceau." } },
         { "machine.automation", { "Automation",
             "Fait changer les réglages de cette machine au fil des pas : un filtre qui s'ouvre petit à petit, un kick qui "
             "s'allonge à la fin de la mesure, un écho qui n'arrive que sur certaines notes…\n\n"

@@ -9,7 +9,7 @@ using namespace techno;
 
 namespace
 {
-constexpr int consoleH = 118, masterH = 122, railW = 20;
+constexpr int consoleH = 156, masterH = 122, railW = 20;
 const char* const projectExtension = ".techmachine";
 
 void disableKeyboardFocus (juce::Component& c)
@@ -209,6 +209,17 @@ void LcdDisplay::paint (juce::Graphics& g)
         const bool on = step >= 0 && (step % pageSteps) / 4 == beat;
         paint::led (g, { bottom.getX() + 8.0f + (float) beat * 16.0f, bottom.getCentreY() }, 3.5f, amber, on);
     }
+
+    // The part being played (and in song mode, where the song is).
+    juce::String part = partName (processor.currentPart());
+    if (processor.isSongMode() && processor.playing.load() && processor.songPosition() >= 0)
+        part << " " << juce::String (processor.songPosition() + 1) << "/" << juce::String ((int) processor.song().size());
+    g.setFont (paint::condensed (13.0f));
+    const float partWidth = juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), part) + 12.0f;
+    const auto badge = juce::Rectangle<float> (glass.getRight() - partWidth - 8.0f, glass.getY() + 7.0f, partWidth, 17.0f);
+    g.setColour (amber.withAlpha (0.8f));
+    g.drawRoundedRectangle (badge, 3.0f, 1.2f);
+    g.drawText (part, badge, juce::Justification::centred);
 
     for (float y = glass.getY(); y < glass.getBottom(); y += 3.0f)
     {
@@ -496,6 +507,26 @@ MainView::MainView (TechMachineProcessor& p)
     automationRecordInfo = &addInfo (help ("automation.record"));
     knobMovedHook() = [this] (const juce::String& id, float value) { processor.recordKnob (id, value); };
 
+    for (int part = 0; part < TechMachineProcessor::numParts; ++part)
+    {
+        auto& b = partButtons[(size_t) part];
+        b.setButtonText (partName (part));
+        b.setClickingTogglesState (false);
+        b.setTooltip (utf8 ("Partie ") + partName (part) + utf8 (" : clic = la jouer / l'afficher, clic droit = copier ou effacer"));
+        b.onClick = [this, part] { processor.selectPart (part); refreshParts(); };
+        b.onRightClick = [this, part] { showPartMenu (part); };
+        addAndMakeVisible (b);
+    }
+    partsInfo = &addInfo (help ("parts"));
+    songPlayButton.setTooltip (shortHelp (help ("song").body));
+    songPlayButton.onClick = [this] { processor.setSongMode (songPlayButton.getToggleState()); };
+    addAndMakeVisible (songPlayButton);
+    styleButton (songEditButton, juce::Colour (0xff3a3b40));
+    songEditButton.setTooltip (utf8 ("Ouvre la liste des parties du morceau"));
+    songEditButton.onClick = [this] { openSong(); };
+    songInfo = &addInfo (help ("song"));
+    refreshParts();
+
     auto& hooks = midiLearnHooks();
     hooks.learn = [this] (const juce::String& id)
     {
@@ -528,9 +559,66 @@ void MainView::toggleFullScreen()
         desktop.setKioskModeComponent (window, false);
 }
 
+void MainView::openSong()
+{
+    closePianoRoll();
+    closeAutomation();
+    songEditor = std::make_unique<SongEditor> (processor);
+    juce::Component::SafePointer<MainView> safe (this);
+    songEditor->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->closeSong(); }); };
+    addAndMakeVisible (*songEditor);
+    songEditor->setBounds (rack.getBounds().expanded (0, 4));
+    songEditor->grabKeyboardFocus();
+}
+
+void MainView::closeSong()
+{
+    songEditor.reset();
+    grabKeyboardFocus();
+}
+
+void MainView::showPartMenu (int part)
+{
+    juce::PopupMenu copyTo;
+    for (int to = 0; to < TechMachineProcessor::numParts; ++to)
+        if (to != part)
+            copyTo.addItem (100 + to, utf8 ("Partie ") + partName (to) + (processor.isPartEmpty (to) ? utf8 (" (vide)") : juce::String()));
+    juce::PopupMenu menu;
+    menu.addSectionHeader (utf8 ("Partie ") + partName (part));
+    menu.addSubMenu (utf8 ("Copier dans"), copyTo);
+    menu.addItem (1, utf8 ("Effacer cette partie"), ! processor.isPartEmpty (part));
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (partButtons[(size_t) part]), [this, part] (int result)
+    {
+        if (result == 1) processor.clearPart (part);
+        else if (result >= 100) processor.copyPart (part, result - 100);
+        refreshParts();
+    });
+}
+
+// Parts: the one playing is lit, the one waiting for the end of the loop blinks, the empty ones are dim.
+void MainView::refreshParts()
+{
+    const int current = processor.currentPart(), cued = processor.cuedPartIndex();
+    const bool blink = (juce::Time::getMillisecondCounter() / 250) % 2 == 0;
+    const bool checkEmpty = processor.patternVersion.load() != lastPartsVersion;
+    lastPartsVersion = processor.patternVersion.load();
+    for (int part = 0; part < TechMachineProcessor::numParts; ++part)
+    {
+        auto& b = partButtons[(size_t) part];
+        const auto colour = partColour (part);
+        const bool on = part == current || (part == cued && blink);
+        b.setColour (juce::TextButton::buttonColourId, on ? colour.withMultipliedBrightness (0.8f) : juce::Colour (0xff2c2d32));
+        if (checkEmpty)
+            b.setColour (juce::TextButton::textColourOffId, processor.isPartEmpty (part) && part != current ? colours::dim : colours::text);
+    }
+    if (songPlayButton.getToggleState() != processor.isSongMode())
+        songPlayButton.setToggleState (processor.isSongMode(), juce::dontSendNotification);
+}
+
 void MainView::openAutomation (int machineType)
 {
     closePianoRoll();
+    closeSong();
     automationEditor = std::make_unique<AutomationEditor> (processor, machineType);
     juce::Component::SafePointer<MainView> safe (this);
     automationEditor->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->closeAutomation(); }); };
@@ -548,6 +636,7 @@ void MainView::closeAutomation()
 void MainView::openPianoRoll (int machineType)
 {
     closeAutomation();
+    closeSong();
     pianoRoll = std::make_unique<PianoRollEditor> (processor, machineType);
     juce::Component::SafePointer<MainView> safe (this);
     pianoRoll->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->closePianoRoll(); }); };
@@ -947,6 +1036,7 @@ void MainView::timerCallback()
         lastSampleVersion = processor.sampleVersion();
         for (auto* panel : panels) panel->refreshSampleNames();
     }
+    refreshParts();
     if (automationRecordButton.getToggleState() != processor.isRecordingAutomation())
         automationRecordButton.setToggleState (processor.isRecordingAutomation(), juce::dontSendNotification);
     if (midiRecordButton.getToggleState() != processor.isRecordingNotes())
@@ -1098,6 +1188,7 @@ void MainView::paint (juce::Graphics& g)
     g.setFont (paint::condensed (12.0f));
     g.drawText (utf8 ("MESURES"), barButtons[0].getX() - 60, barButtons[0].getY(), 56, barButtons[0].getHeight(), juce::Justification::centredRight);
     g.drawText ("PAGE", pageButtons[0].getX() - 46, pageButtons[0].getY(), 42, pageButtons[0].getHeight(), juce::Justification::centredRight);
+    g.drawText (utf8 ("PARTIES"), partButtons[0].getX() - 70, partButtons[0].getY(), 64, partButtons[0].getHeight(), juce::Justification::centredRight);
 
     paint::plate (g, masterArea.toFloat(), juce::Colour (0xff2e2f35), juce::Colour (0xff1c1d21), 6.0f, true);
     screws (g, masterArea);
@@ -1124,7 +1215,7 @@ void MainView::resized()
     recordButton.setBounds (376, cy + 14, 84, 48);
     recInfo->setBounds (recordButton.getRight() + 2, cy + 14, 15, 15);
 
-    lcd.setBounds (482, cy + 10, narrow ? 270 : 300, consoleH - 20);
+    lcd.setBounds (482, cy + 10, narrow ? 270 : 300, 98);
     lcdInfo->setBounds (lcd.getRight() + 2, cy + 12, 15, 15);
 
     const int gap = narrow ? 10 : 12;
@@ -1163,6 +1254,16 @@ void MainView::resized()
 
     addInfoButton->setBounds (consoleArea.getRight() - 16 - 15, y2 + 7, 15, 15);
     addButton.setBounds (addInfoButton->getX() - 4 - (narrow ? 130 : 150), y2, narrow ? 130 : 150, 28);
+
+    // Row 3: the parts of the song.
+    const int y3 = cy + 118;
+    x = 96;
+    for (auto& part : partButtons) { part.setBounds (x, y3, 40, 28); x += 44; }
+    partsInfo->setBounds (x, y3 + 7, 15, 15);
+    x += 30;
+    songPlayButton.setBounds (x, y3, 170, 28);
+    songEditButton.setBounds (songPlayButton.getRight() + 8, y3, 130, 28);
+    songInfo->setBounds (songEditButton.getRight() + 2, y3 + 7, 15, 15);
     guideButton.setBounds (addButton.getX() - 12 - 44, y2, 44, 28);
 
     // Master strip.
@@ -1200,6 +1301,7 @@ void MainView::resized()
     startScreen.setBounds (getLocalBounds());
     if (pianoRoll != nullptr) pianoRoll->setBounds (rack.getBounds().expanded (0, 4));
     if (automationEditor != nullptr) automationEditor->setBounds (rack.getBounds().expanded (0, 4));
+    if (songEditor != nullptr) songEditor->setBounds (rack.getBounds().expanded (0, 4));
 }
 
 //==============================================================================

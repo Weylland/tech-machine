@@ -155,6 +155,30 @@ struct Track
         }
     }
 
+    void copyFrom (const Track& other)
+    {
+        for (size_t r = 0; r < hits.size(); ++r)
+            for (size_t s = 0; s < (size_t) maxSteps; ++s)
+            {
+                hits[r][s] = other.hits[r][s].load();
+                rolls[r][s] = other.rolls[r][s].load();
+            }
+        for (size_t s = 0; s < (size_t) maxSteps; ++s)
+        {
+            on[s] = other.on[s].load();
+            accent[s] = other.accent[s].load();
+            slide[s] = other.slide[s].load();
+            note[s] = other.note[s].load();
+            chord[s] = other.chord[s].load();
+            tie[s] = other.tie[s].load();
+        }
+        for (size_t l = 0; l < (size_t) maxLockLanes; ++l)
+        {
+            lockTarget[l] = other.lockTarget[l].load();
+            for (size_t s = 0; s < (size_t) maxSteps; ++s) lockValue[l][s] = other.lockValue[l][s].load();
+        }
+    }
+
     bool isEmpty() const
     {
         for (size_t s = 0; s < (size_t) maxSteps; ++s)

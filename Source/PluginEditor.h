@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include "ui/MachinePanel.h"
 #include "ui/AutomationEditor.h"
+#include "ui/SongEditor.h"
 #include "ui/PianoRoll.h"
 #include "ui/Theme.h"
 #include "ui/Widgets.h"
@@ -117,6 +118,11 @@ private:
     void closePianoRoll();
     void openAutomation (int machineType);
     void closeAutomation();
+    void openSong();
+    void closeSong();
+    void showPartMenu (int part);
+    void refreshParts();
+    std::unique_ptr<techno::SongEditor> songEditor;
     std::unique_ptr<techno::PianoRollEditor> pianoRoll;
     std::unique_ptr<techno::AutomationEditor> automationEditor;
     void setPage (int newPage);
@@ -148,6 +154,12 @@ private:
     techno::LedButton midiRecordButton { techno::utf8 ("ENREG. MIDI"), juce::Colour (0xffff3b1f) };
     techno::LedButton automationRecordButton { techno::utf8 ("ENREG. BOUTONS"), juce::Colour (0xffff3b1f) };
     techno::InfoButton* automationRecordInfo = nullptr;
+    std::array<techno::MenuTextButton, TechMachineProcessor::numParts> partButtons;
+    techno::LedButton songPlayButton { techno::utf8 ("JOUER LE MORCEAU"), juce::Colour (0xff3dff6a) };
+    techno::IconButton songEditButton { "patterns", techno::utf8 ("MORCEAU") };
+    techno::InfoButton* partsInfo = nullptr;
+    techno::InfoButton* songInfo = nullptr;
+    int lastPartsVersion = -1;
     int lastMidiMapVersion = 0, lastMidiTarget = -2;
     std::uint64_t lastShownMask = ~0ull;
     int lastSampleVersion = -1;

@@ -10,7 +10,7 @@ using namespace techno;
 class TechMachineProcessor::PatternAction : public juce::UndoableAction
 {
 public:
-    explicit PatternAction (TechMachineProcessor& p) : processor (p), before (p.snapshot()) {}
+    explicit PatternAction (TechMachineProcessor& p, int part) : processor (p), before (p.snapshotOf (part)) {}
 
     bool perform() override
     {
@@ -25,7 +25,7 @@ public:
 
     bool undo() override
     {
-        after = processor.snapshot();
+        after = processor.snapshotOf (before.part);
         processor.restore (before);
         return true;
     }
@@ -38,22 +38,29 @@ private:
     bool performed = false;
 };
 
-TechMachineProcessor::Snapshot TechMachineProcessor::snapshot() const
+TechMachineProcessor::Snapshot TechMachineProcessor::snapshot() const { return snapshotOf (activePart.load()); }
+
+TechMachineProcessor::Snapshot TechMachineProcessor::snapshotOf (int part) const
 {
-    Snapshot s (machines.size());
-    for (size_t t = 0; t < machines.size(); ++t) s[t] = machines[t]->track.snapshot();
+    Snapshot s;
+    s.part = part;
+    s.tracks.resize (machines.size());
+    for (int t = 0; t < numMachines; ++t) s.tracks[(size_t) t] = partTrack (part, t).snapshot();
     return s;
 }
 
+// Undo works in the part where the change was made, even after switching to another one.
 void TechMachineProcessor::restore (const Snapshot& s)
 {
-    for (size_t t = 0; t < machines.size(); ++t) machines[t]->track.restore (s[t]);
+    for (int t = 0; t < numMachines; ++t) partTrack (s.part, t).restore (s.tracks[(size_t) t]);
     touchPattern();
 }
 
-void TechMachineProcessor::beginPatternEdit()
+void TechMachineProcessor::beginPatternEdit() { beginPartEdit (activePart.load()); }
+
+void TechMachineProcessor::beginPartEdit (int part)
 {
-    undoManager.perform (new PatternAction (*this));
+    undoManager.perform (new PatternAction (*this, part));
     dirty = true;
 }
 
@@ -253,8 +260,8 @@ void TechMachineProcessor::pasteMachine (int type)
 
 bool TechMachineProcessor::isProjectEmpty() const
 {
-    for (auto& m : machines)
-        if (! m->track.isEmpty()) return false;
+    for (int part = 0; part < numParts; ++part)
+        if (! isPartEmpty (part)) return false;
     return true;
 }
 

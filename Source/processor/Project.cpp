@@ -34,6 +34,12 @@ void TechMachineProcessor::newProject()
     playing = false;
     samples.clear();
     resetParameters();
+    activePart = 0;
+    cuedPart = -1;
+    for (auto& part : *partStore)
+        for (auto& track : part) track.clear();
+    setSong ({});
+    songMode = false;
     for (auto& m : machines) m->track.clear();
     genreIndex = 0;
     progression = { 0 };
@@ -74,6 +80,90 @@ void TechMachineProcessor::loadExample (int index)
     dirty = false;
 }
 
+// One machine's pattern as XML attributes (and <Lock> children for its automation).
+void TechMachineProcessor::writeTrackXml (juce::XmlElement& e, int type, const Track& track) const
+{
+    const auto& def = machineDef (type);
+    e.setAttribute ("id", def.id);
+    for (size_t r = 0; r < def.rows.size(); ++r)
+    {
+        e.setAttribute ("hits" + juce::String ((int) r), encodeBools (track.hits[r]));
+        juce::String rolls;
+        bool any = false;
+        for (auto& v : track.rolls[r])
+        {
+            rolls << juce::String ((int) v.load());
+            any = any || v.load() > 0;
+        }
+        if (any) e.setAttribute ("rolls" + juce::String ((int) r), rolls);
+    }
+    e.setAttribute ("accent", encodeBools (track.accent));
+    e.setAttribute ("on", encodeBools (track.on));
+    e.setAttribute ("slide", encodeBools (track.slide));
+
+    juce::StringArray notes, chords, ties;
+    bool anyChord = false;
+    for (auto& n : track.note) notes.add (juce::String (n.load()));
+    for (int i = 0; i < maxSteps; ++i)
+    {
+        chords.add (juce::String::toHexString ((juce::int64) track.chord[(size_t) i].load()));
+        ties.add (juce::String::toHexString ((juce::int64) track.tie[(size_t) i].load()));
+        anyChord = anyChord || track.chord[(size_t) i].load() != 0;
+    }
+    e.setAttribute ("note", notes.joinIntoString (","));
+    if (anyChord)
+    {
+        e.setAttribute ("chord", chords.joinIntoString (","));
+        e.setAttribute ("tie", ties.joinIntoString (","));
+    }
+
+    for (size_t l = 0; l < (size_t) maxLockLanes; ++l)
+    {
+        const int target = track.lockTarget[l].load();
+        if (target < 0) continue;
+        juce::StringArray values;
+        for (auto& v : track.lockValue[l]) values.add (v.load() >= 0.0f ? juce::String ((double) v.load(), 9) : juce::String ("-"));   // 9 digits: read back exactly
+        auto* lock = e.createNewChildElement ("Lock");
+        lock->setAttribute ("param", automation::paramId (type, target));
+        lock->setAttribute ("values", values.joinIntoString (","));
+    }
+}
+
+void TechMachineProcessor::readTrackXml (const juce::XmlElement& e, int type, Track& track)
+{
+    const auto& def = machineDef (type);
+    track.clear();
+    for (size_t r = 0; r < def.rows.size(); ++r)
+    {
+        decodeBools (e.getStringAttribute ("hits" + juce::String ((int) r)), track.hits[r]);
+        const auto rolls = e.getStringAttribute ("rolls" + juce::String ((int) r));
+        for (int s = 0; s < maxSteps && s < rolls.length(); ++s)
+            track.rolls[r][(size_t) s] = (std::uint8_t) juce::jlimit (0, 4, (int) (rolls[s] - (juce::juce_wchar) 48));
+    }
+    decodeBools (e.getStringAttribute ("accent"), track.accent);
+    decodeBools (e.getStringAttribute ("on"), track.on);
+    decodeBools (e.getStringAttribute ("slide"), track.slide);
+    auto notes = juce::StringArray::fromTokens (e.getStringAttribute ("note"), ",", {});
+    for (int i = 0; i < maxSteps; ++i)
+        track.note[(size_t) i] = juce::jlimit (0, noteRange - 1, notes[i].getIntValue());
+    for (auto* lock : e.getChildWithTagNameIterator ("Lock"))
+    {
+        const int target = automation::targetFor (type, lock->getStringAttribute ("param"));
+        const int lane = target >= 0 ? track.laneFor (target, true) : -1;
+        if (lane < 0) continue;
+        const auto values = juce::StringArray::fromTokens (lock->getStringAttribute ("values"), ",", {});
+        for (int s = 0; s < maxSteps && s < values.size(); ++s)
+            track.lockValue[(size_t) lane][(size_t) s] = values[s] == "-" ? noLock : values[s].getFloatValue();
+    }
+    auto chords = juce::StringArray::fromTokens (e.getStringAttribute ("chord"), ",", {});
+    auto ties = juce::StringArray::fromTokens (e.getStringAttribute ("tie"), ",", {});
+    for (int i = 0; i < maxSteps && i < chords.size(); ++i)
+        track.chord[(size_t) i] = (std::uint64_t) chords[i].getHexValue64() & ((1ull << noteRange) - 1);
+    for (int i = 0; i < maxSteps && i < ties.size(); ++i)
+        track.tie[(size_t) i] = (std::uint64_t) ties[i].getHexValue64() & ((1ull << noteRange) - 1);
+}
+
+// Part A is written as the machines of <Patterns> (as before the song mode), parts B to H as <Part> elements.
 std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
 {
     auto xml = apvts.copyState().createXml();
@@ -83,57 +173,33 @@ std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
     juce::StringArray prog;
     for (int d : progression) prog.add (juce::String (d));
     patterns->setAttribute ("progression", prog.joinIntoString (","));
+    patterns->setAttribute ("part", activePart.load());
 
-    for (auto& m : machines)
+    for (int t = 0; t < numMachines; ++t)
     {
         auto* e = patterns->createNewChildElement ("Machine");
-        e->setAttribute ("id", m->def.id);
-        for (size_t r = 0; r < m->def.rows.size(); ++r)
-        {
-            e->setAttribute ("hits" + juce::String ((int) r), encodeBools (m->track.hits[r]));
-            juce::String rolls;
-            bool any = false;
-            for (auto& v : m->track.rolls[r])
-            {
-                rolls << juce::String ((int) v.load());
-                any = any || v.load() > 0;
-            }
-            if (any) e->setAttribute ("rolls" + juce::String ((int) r), rolls);
-        }
-        e->setAttribute ("accent", encodeBools (m->track.accent));
-        e->setAttribute ("on", encodeBools (m->track.on));
-        e->setAttribute ("slide", encodeBools (m->track.slide));
-
-        juce::StringArray notes, chords, ties;
-        bool anyChord = false;
-        for (auto& n : m->track.note) notes.add (juce::String (n.load()));
-        for (int i = 0; i < maxSteps; ++i)
-        {
-            chords.add (juce::String::toHexString ((juce::int64) m->track.chord[(size_t) i].load()));
-            ties.add (juce::String::toHexString ((juce::int64) m->track.tie[(size_t) i].load()));
-            anyChord = anyChord || m->track.chord[(size_t) i].load() != 0;
-        }
-        e->setAttribute ("note", notes.joinIntoString (","));
-        if (anyChord)
-        {
-            e->setAttribute ("chord", chords.joinIntoString (","));
-            e->setAttribute ("tie", ties.joinIntoString (","));
-        }
-
-        if (m->type == Sampler)
+        writeTrackXml (*e, t, partTrack (0, t));
+        if (t == Sampler)
             for (int i = 0; i < numPads; ++i)
                 if (const auto pad = samples.describe (i); pad.isNotEmpty()) e->setAttribute ("pad" + juce::String (i), pad);
+    }
+    for (int part = 1; part < numParts; ++part)
+    {
+        if (isPartEmpty (part)) continue;
+        auto* p = patterns->createNewChildElement ("Part");
+        p->setAttribute ("index", part);
+        for (int t = 0; t < numMachines; ++t)
+            if (! partTrack (part, t).isEmpty())
+                writeTrackXml (*p->createNewChildElement ("Machine"), t, partTrack (part, t));
+    }
 
-        for (size_t l = 0; l < (size_t) maxLockLanes; ++l)
-        {
-            const int target = m->track.lockTarget[l].load();
-            if (target < 0) continue;
-            juce::StringArray values;
-            for (auto& v : m->track.lockValue[l]) values.add (v.load() >= 0.0f ? juce::String ((double) v.load(), 9) : juce::String ("-"));   // 9 digits: read back exactly
-            auto* lock = e->createNewChildElement ("Lock");
-            lock->setAttribute ("param", automation::paramId (m->type, target));
-            lock->setAttribute ("values", values.joinIntoString (","));
-        }
+    juce::StringArray entries;
+    for (auto& entry : song()) entries.add (juce::String (entry.part) + "x" + juce::String (entry.repeats));
+    if (! entries.isEmpty() || songMode.load())
+    {
+        auto* songXml = patterns->createNewChildElement ("Song");
+        songXml->setAttribute ("entries", entries.joinIntoString (","));
+        songXml->setAttribute ("on", songMode.load());
     }
     return xml;
 }
@@ -151,51 +217,54 @@ void TechMachineProcessor::restoreProjectXml (const juce::XmlElement& source)
         progression.push_back (juce::jlimit (0, 13, d.getIntValue()));
     if (progression.empty()) progression = { 0 };
 
-    // What the file does not mention starts empty (older files have fewer machines and no sampler).
+    // What the file does not mention starts empty (older files have fewer machines, no sampler and no parts).
+    activePart = 0;
+    cuedPart = -1;
     for (auto& m : machines) m->track.clear();
+    for (auto& part : *partStore)
+        for (auto& track : part) track.clear();
     samples.clear();
 
-    for (auto* e : patterns->getChildIterator())
+    auto machineOf = [] (const juce::XmlElement& e)
     {
-        for (auto& m : machines)
+        for (int t = 0; t < numMachines; ++t)
+            if (e.getStringAttribute ("id") == machineDef (t).id) return t;
+        return -1;
+    };
+    for (auto* e : patterns->getChildWithTagNameIterator ("Machine"))
+    {
+        const int t = machineOf (*e);
+        if (t < 0) continue;
+        readTrackXml (*e, t, machines[(size_t) t]->track);
+        if (t == Sampler)
         {
-            if (e->getStringAttribute ("id") != m->def.id) continue;
-            for (size_t r = 0; r < m->def.rows.size(); ++r)
-            {
-                decodeBools (e->getStringAttribute ("hits" + juce::String ((int) r)), m->track.hits[r]);
-                const auto rolls = e->getStringAttribute ("rolls" + juce::String ((int) r));
-                for (int s = 0; s < maxSteps && s < rolls.length(); ++s)
-                    m->track.rolls[r][(size_t) s] = (std::uint8_t) juce::jlimit (0, 4, (int) (rolls[s] - (juce::juce_wchar) 48));
-            }
-            decodeBools (e->getStringAttribute ("accent"), m->track.accent);
-            decodeBools (e->getStringAttribute ("on"), m->track.on);
-            decodeBools (e->getStringAttribute ("slide"), m->track.slide);
-            auto notes = juce::StringArray::fromTokens (e->getStringAttribute ("note"), ",", {});
-            for (int i = 0; i < maxSteps; ++i)
-                m->track.note[(size_t) i] = juce::jlimit (0, noteRange - 1, notes[i].getIntValue());
-            if (m->type == Sampler)
-            {
-                juce::StringArray pads;
-                for (int i = 0; i < numPads; ++i) pads.add (e->getStringAttribute ("pad" + juce::String (i)));
-                samples.restore (pads);
-            }
-            for (auto* lock : e->getChildWithTagNameIterator ("Lock"))
-            {
-                const int target = automation::targetFor (m->type, lock->getStringAttribute ("param"));
-                const int lane = target >= 0 ? m->track.laneFor (target, true) : -1;
-                if (lane < 0) continue;
-                const auto values = juce::StringArray::fromTokens (lock->getStringAttribute ("values"), ",", {});
-                for (int s = 0; s < maxSteps && s < values.size(); ++s)
-                    m->track.lockValue[(size_t) lane][(size_t) s] = values[s] == "-" ? noLock : values[s].getFloatValue();
-            }
-            auto chords = juce::StringArray::fromTokens (e->getStringAttribute ("chord"), ",", {});
-            auto ties = juce::StringArray::fromTokens (e->getStringAttribute ("tie"), ",", {});
-            for (int i = 0; i < maxSteps && i < chords.size(); ++i)
-                m->track.chord[(size_t) i] = (std::uint64_t) chords[i].getHexValue64() & ((1ull << noteRange) - 1);
-            for (int i = 0; i < maxSteps && i < ties.size(); ++i)
-                m->track.tie[(size_t) i] = (std::uint64_t) ties[i].getHexValue64() & ((1ull << noteRange) - 1);
+            juce::StringArray pads;
+            for (int i = 0; i < numPads; ++i) pads.add (e->getStringAttribute ("pad" + juce::String (i)));
+            samples.restore (pads);
         }
     }
+    for (auto* p : patterns->getChildWithTagNameIterator ("Part"))
+    {
+        const int part = p->getIntAttribute ("index", -1);
+        if (part <= 0 || part >= numParts) continue;
+        for (auto* e : p->getChildWithTagNameIterator ("Machine"))
+            if (const int t = machineOf (*e); t >= 0) readTrackXml (*e, t, (*partStore)[(size_t) part][(size_t) t]);
+    }
+
+    std::vector<SongEntry> entries;
+    bool songOn = false;
+    if (auto* songXml = patterns->getChildByName ("Song"))
+    {
+        for (auto& token : juce::StringArray::fromTokens (songXml->getStringAttribute ("entries"), ",", {}))
+            entries.push_back ({ token.upToFirstOccurrenceOf ("x", false, false).getIntValue(),
+                                 token.fromFirstOccurrenceOf ("x", false, false).getIntValue() });
+        songOn = songXml->getBoolAttribute ("on");
+    }
+    setSong (entries);
+    songMode = songOn && ! entries.empty();
+    songEntry = -1;
+    switchPart (juce::jlimit (0, numParts - 1, patterns->getIntAttribute ("part", 0)));
+
     xml.removeChildElement (patterns, true);
     xml.removeAttribute ("app");
     xml.removeAttribute ("version");
@@ -274,7 +343,9 @@ bool TechMachineProcessor::exportWav (const juce::XmlElement& project, const juc
     offline.prepareToPlay (rate, block);
     offline.playing = true;
 
-    const double loopSeconds = offline.numSteps() * 15.0 / (double) offline.bpm->load();
+    const double loopSeconds = offline.isSongMode() && offline.songLength.load() > 0
+                                   ? offline.songSeconds()
+                                   : offline.numSteps() * 15.0 / (double) offline.bpm->load();
     const int total = (int) ((loopSeconds * loops + 2.5) * rate);
     const int musicEnd = (int) (loopSeconds * loops * rate);
 

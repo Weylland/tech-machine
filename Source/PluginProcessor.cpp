@@ -82,6 +82,7 @@ TechMachineProcessor::TechMachineProcessor()
         s.pan = raw (pid::machine (t, "pan"));
     }
 
+    partStore = std::make_unique<std::array<std::array<Track, numMachines>, numParts>>();
     for (int t = 0; t < numMachines; ++t)
         for (int target = 0; target < automation::targetCount (t); ++target)
             automationIndex[automation::paramId (t, target)] = { t, target };
@@ -228,6 +229,7 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     {
         stepIndex = -1;
         samplesToNextStep = 0.0;
+        songEntry = -1;   // the song starts from its beginning
     }
     if (! play && wasPlaying)
     {
@@ -236,6 +238,8 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
             m->stop();
             m->releaseLocks();
         }
+        cuedPart = -1;
+        songEntry = -1;
         currentStep = -1;
     }
     wasPlaying = play;
@@ -438,7 +442,9 @@ void TechMachineProcessor::syncToHost (double ppq)
 
 void TechMachineProcessor::advanceStep()
 {
+    const bool loopStarts = stepIndex < 0 || stepIndex + 1 >= lengthSteps;
     stepIndex = (stepIndex + 1) % lengthSteps;
+    if (loopStarts) startOfLoop();
     currentStep = stepIndex;
 
     const double nominal = sampleRate * stepSeconds();
