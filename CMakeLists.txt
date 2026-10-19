@@ -33,7 +33,7 @@ juce_add_binary_data(TechMachineFonts SOURCES
     Source/fonts/DejaVuSansCondensed.ttf
     Source/fonts/DejaVuSansCondensed-Bold.ttf)
 
-target_sources(TechMachine PRIVATE
+set(TECHMACHINE_SOURCES
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/processor/Editing.cpp
@@ -57,6 +57,8 @@ target_sources(TechMachine PRIVATE
     Source/machines/SampleBank.cpp
     Source/ui/MachinePanel.cpp
     Source/ui/Paint.cpp)
+
+target_sources(TechMachine PRIVATE ${TECHMACHINE_SOURCES})
 
 target_include_directories(TechMachine PRIVATE Source)
 
@@ -84,3 +86,22 @@ target_link_libraries(TechMachine
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
+
+# Test program: renders, interface audits and regression checks (tests/main.cpp). Run "TechMachineTests check".
+# It compiles the same sources as the plugin (JUCE modules cannot be shared through the plugin target).
+option(TECHMACHINE_TESTS "Build the test program" ON)
+if(TECHMACHINE_TESTS)
+    juce_add_console_app(TechMachineTests PRODUCT_NAME "TechMachineTests")
+    target_sources(TechMachineTests PRIVATE tests/main.cpp ${TECHMACHINE_SOURCES})
+    target_include_directories(TechMachineTests PRIVATE Source tests)
+    target_compile_options(TechMachineTests PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+    target_compile_definitions(TechMachineTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JucePlugin_VersionString="${PROJECT_VERSION}")
+    target_link_libraries(TechMachineTests PRIVATE
+        TechMachineFonts
+        juce::juce_audio_utils
+        juce::juce_audio_formats
+        juce::juce_recommended_config_flags)
+endif()

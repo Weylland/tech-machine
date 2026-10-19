@@ -151,6 +151,18 @@ Résultats :
 Stack : C++17, [JUCE 8](https://juce.com) (sous-module dans `libs/JUCE`), CMake. `build.bat` télécharge aussi
 le SDK ASIO de Steinberg (utilisé sous sa licence GPLv3) pour activer les pilotes ASIO.
 
+### Tests
+
+`build.bat` compile aussi `build\TechMachineTests_artefacts\Release\TechMachineTests.exe` :
+
+- `TechMachineTests check` lance tous les tests automatiques (paramètres et sons d'usine, enregistrement et réouverture
+  des 30 démos, interface sans texte coupé en français et en anglais, propagation des réglages, réglages aléatoires,
+  traductions). Ils tournent aussi sur GitHub, sous Windows et macOS, à chaque modification.
+- `TechMachineTests golden ref.txt` écrit l'empreinte exacte du son de toutes les démos et de tous les sons d'usine :
+  avant / après une modification qui ne doit rien changer au son, les deux fichiers doivent être identiques.
+- Outils de mise au point : `sweep` (chaque réglage aux extrêmes), `chaos`, `choices` (volume de chaque choix),
+  `levels`, `ui` (captures d'écran), `song`…
+
 ## Licence
 
 [GNU AGPL v3](LICENSE), comme la version open source de JUCE.

@@ -1,0 +1,43 @@
+# Builds the test program and runs every automatic check (parameters, presets, projects, interface,
+# propagation, random settings, translations) on Windows and macOS.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build the test program
+        run: cmake --build build --config Release --target TechMachineTests --parallel 4
+
+      - name: Run the checks
+        shell: bash
+        run: |
+          exe=$(find build -type f \( -name TechMachineTests.exe -o -name TechMachineTests \) -perm -u+x | head -1)
+          [ -z "$exe" ] && exe=$(find build -type f -name 'TechMachineTests*' | grep -v '\.\(o\|obj\|pdb\|ilk\)$' | head -1)
+          echo "Running $exe"
+          "$exe" check
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-output-${{ matrix.os }}
+          path: |
+            build/**/TechMachineTests_artefacts/**/*.png
+            build/**/TechMachineTests_artefacts/**/*.txt
