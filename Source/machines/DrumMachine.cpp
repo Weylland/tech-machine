@@ -17,8 +17,19 @@ public:
         {
             voices.push_back (createDrumVoice (def.id, def.rows[(size_t) i].id));
             trims[i] = drumVoiceTrim (def.id, def.rows[(size_t) i].id);
-            if (def.rows[(size_t) i].role == Role::OpenHat) openHatRow = i;
+            const Role role = def.rows[(size_t) i].role;
+            if (role == Role::OpenHat) openHatRow = i;
+            auto first = [i] (int& row) { if (row < 0) row = i; };
+            if (role == Role::Snare) first (snareRow);
+            if (role == Role::Clap) first (clapRow);
+            if (role == Role::HighTom) first (highTomRow);
+            if (role == Role::MidTom) first (midTomRow);
+            if (role == Role::LowTom) first (lowTomRow);
+            if (role == Role::Crash) first (crashRow);
+            if (role == Role::Cymbal) first (cymbalRow);
         }
+        if (snareRow < 0) snareRow = clapRow;
+        if (crashRow < 0) crashRow = cymbalRow;
     }
 
     void bind (juce::AudioProcessorValueTreeState& state) override
@@ -81,12 +92,28 @@ public:
         const auto st = (size_t) s.step;
         const float base = (track.accent[st] ? 1.0f : 1.0f - 0.5f * accentAmount) * velocityScale();
 
+        // FILL: the last beat of the bar is played by the snare and the toms (unless the steps have their own fill).
+        int fillRow = -1, fillRoll = 0;
+        const bool fill = fillPosition >= 12 && snareRow >= 0 && ! hasFillSteps();
+        if (fill) chooseFill (fillPosition - 12, fillRow, fillRoll);
+        if (crashNow && crashRow >= 0 && ! mutes[crashRow]) voices[(size_t) crashRow]->trigger (base, settings[crashRow]);
+
         for (int i = 0; i < numRows; ++i)
         {
-            if (! track.hits[(size_t) i][st] || mutes[i]) continue;
-
             const Role role = def.rows[(size_t) i].role;
+            bool hit = track.hits[(size_t) i][st] && ! silentStep;
+            int roll = track.rolls[(size_t) i][st].load();
+            if (fill)
+            {
+                const bool drumsOfTheFill = i == snareRow || i == highTomRow || i == midTomRow || i == lowTomRow;
+                const bool cymbal = role == Role::ClosedHat || role == Role::OpenHat || role == Role::Ride;
+                if (drumsOfTheFill || cymbal) hit = i == fillRow;
+                if (i == fillRow) roll = fillRoll;
+            }
+            if (! hit || mutes[i]) continue;
+
             float velocity = base;
+            if (fill && i == fillRow) velocity = juce::jmin (1.0f, velocity * (0.8f + 0.1f * (float) (fillPosition - 12)));   // louder towards the end
             if (role == Role::ClosedHat || role == Role::OpenHat || role == Role::Shaker || role == Role::Ride)
                 velocity *= 0.85f + 0.15f * random.nextFloat();
             if (role == Role::ClosedHat && openHatRow >= 0)
@@ -96,7 +123,6 @@ public:
             if (role == Role::Kick) kickHit = true;
 
             // Roll: the sound is repeated 2 to 4 times inside the step.
-            const int roll = track.rolls[(size_t) i][st].load();
             if (roll >= 2)
             {
                 rollInterval[i] = (float) s.stepSamples / (float) roll;
@@ -168,8 +194,30 @@ public:
     }
 
 private:
+    // The drum of each step of the fill (0..3): snare, snare roll, then down the toms; a snare crescendo without toms.
+    void chooseFill (int position, int& row, int& roll) const
+    {
+        const int toms[] { highTomRow >= 0 ? highTomRow : midTomRow, lowTomRow >= 0 ? lowTomRow : midTomRow };
+        const bool withToms = toms[0] >= 0 && toms[1] >= 0 && toms[0] != toms[1];
+        static constexpr int snareRolls[] { 0, 2, 2, 4 };
+        row = snareRow;
+        roll = withToms ? (position == 1 ? 2 : 0) : snareRolls[position];
+        if (withToms && position >= 2) row = toms[position - 2];
+    }
+
+    // Steps programmed to play only during a FILL replace the automatic one.
+    bool hasFillSteps() const
+    {
+        const int lane = track.findLane (automation::stepTarget (def, automation::Condition));
+        if (lane < 0) return false;
+        for (auto& v : track.lockValue[(size_t) lane])
+            if (juce::roundToInt (v.load()) == automation::fillCondition) return true;
+        return false;
+    }
+
     std::vector<std::unique_ptr<DrumVoice>> voices;
     int numRows = 0, openHatRow = -1;
+    int snareRow = -1, clapRow = -1, highTomRow = -1, midTomRow = -1, lowTomRow = -1, crashRow = -1, cymbalRow = -1;
     std::vector<std::atomic<float>*> machineParams;
     std::vector<float> machineValues;
     std::atomic<float>* levelParam[maxDrumRows] {};

@@ -13,6 +13,10 @@ constexpr int noteRange = 36;
 constexpr int maxLockLanes = 8;      // settings of one machine that can change from step to step
 constexpr float noLock = -1.0f;      // a step without a value: the knob rules
 
+// Speed of a track against the main sequence: 16th notes, double, half, triplets of 16ths, triplets of 8ths.
+constexpr int numTrackSpeeds = 5;
+constexpr double trackSpeedFactors[numTrackSpeeds] { 1.0, 2.0, 0.5, 1.5, 0.75 };
+
 // Plain copy of a Track (for undo and copy / paste).
 struct TrackData
 {
@@ -23,6 +27,7 @@ struct TrackData
     std::array<std::uint64_t, maxSteps> chord {}, tie {};
     std::array<int, maxLockLanes> lockTarget {};                               // automation target, -1 = free lane
     std::array<std::array<float, maxSteps>, maxLockLanes> lockValue {};
+    int length = 0, speed = 0;
 
     TrackData()
     {
@@ -36,6 +41,7 @@ struct TrackData
 // (slide = glide for mono synths, hold the chord for poly synths).
 // chord: notes written freely in the piano roll of a poly synth, one bit per semitone; 0 = chord built from note + chord type.
 // tie: for those notes, the ones that go on sounding into the next step (each note has its own length).
+// length: steps before this track starts again (0 = the whole sequence); speed: index in trackSpeedFactors.
 // lockTarget / lockValue: automation. A lane holds one setting of the machine (see core/Automation.h) and a value
 // per step; while a step has a value, it replaces the knob.
 struct Track
@@ -47,8 +53,16 @@ struct Track
     std::array<std::atomic<std::uint64_t>, maxSteps> chord, tie;
     std::array<std::atomic<int>, maxLockLanes> lockTarget;
     std::array<std::array<std::atomic<float>, maxSteps>, maxLockLanes> lockValue;
+    std::atomic<int> length { 0 }, speed { 0 };
 
     Track() { clear(); }
+
+    // Number of steps this track plays before starting again, given the length of the sequence.
+    int stepsIn (int sequenceSteps) const
+    {
+        const int own = length.load();
+        return own > 0 ? (own < maxSteps ? own : maxSteps) : sequenceSteps;
+    }
 
     void clear()
     {
@@ -64,6 +78,8 @@ struct Track
             tie[(size_t) i] = 0;
         }
         clearLocks();
+        length = 0;
+        speed = 0;
     }
 
     void clearLocks()
@@ -131,6 +147,8 @@ struct Track
             d.lockTarget[l] = lockTarget[l].load();
             for (size_t s = 0; s < (size_t) maxSteps; ++s) d.lockValue[l][s] = lockValue[l][s].load();
         }
+        d.length = length.load();
+        d.speed = speed.load();
         return d;
     }
 
@@ -152,6 +170,8 @@ struct Track
             tie[s] = d.tie[s];
         }
         restoreLocks (d);
+        length = d.length;
+        speed = d.speed;
     }
 
     void restoreLocks (const TrackData& d)
@@ -185,6 +205,8 @@ struct Track
             lockTarget[l] = other.lockTarget[l].load();
             for (size_t s = 0; s < (size_t) maxSteps; ++s) lockValue[l][s] = other.lockValue[l][s].load();
         }
+        length = other.length.load();
+        speed = other.speed.load();
     }
 
     bool isEmpty() const

@@ -870,7 +870,7 @@ public:
     {
         const auto st = (size_t) s.step, prev = (size_t) s.prevStep;
         const bool held = track.on[prev] && track.slide[prev] && track.note[prev].load() == track.note[st].load();
-        if (track.on[st] && ! held) vocoder.restart (random);
+        if (track.on[st] && ! held && ! silentStep) vocoder.restart (random);
         PolyMachine::onStep (s);
     }
 

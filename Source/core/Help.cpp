@@ -118,11 +118,32 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "s'allonge à la fin de la mesure, un écho qui n'arrive que sur certaines notes…\n\n"
             "Choisis un réglage, puis dessine sa valeur pas par pas à la souris. Un pas sans valeur suit le bouton. "
             "Tu peux aussi enregistrer en tournant les boutons pendant la lecture (ENREG. BOUTONS, en haut). "
-            "Le bouton AUTOMATION s'allume quand la machine a des réglages automatisés (8 au maximum)." } },
+            "Le bouton AUTOMATION s'allume quand la machine a des réglages automatisés (8 au maximum).\n\n"
+            "En bas de la liste, les réglages du pas lui-même : VÉLOCITÉ (force), CHANCE (un pas à 50 % joue une fois sur deux, "
+            "au hasard), CONDITION (seulement au 4e tour, un tour sur deux, pendant un FILL…) et RETARD (le pas arrive un peu "
+            "plus tard, pour un groove moins carré)." } },
         { "automation.record", { "Enregistrer les boutons",
             "Allume-le, lance la lecture et tourne les boutons d'une machine : leurs mouvements s'écrivent dans les pas, "
             "comme une automation dans un logiciel de musique. Ils se rejouent ensuite à chaque tour.\n\n"
             "Pour corriger ou effacer, ouvre AUTOMATION sur la machine. Tout s'annule avec Ctrl+Z." } },
+        { "arp", { "Arpégiateur",
+            "Au lieu de jouer les notes d'un accord ensemble, l'arpégiateur les joue l'une après l'autre, en boucle, au tempo : "
+            "le son des tubes trance, de la synthwave et de la musique de jeux vidéo.\n\n"
+            "ARPÈGE : l'ordre des notes (montant, descendant, montant puis descendant, au hasard, ou dans l'ordre où tu les "
+            "joues). VITESSE ARP : une note par croche (1/8), par double croche (1/16), en triolets ou par triple croche (1/32). "
+            "OCTAVES ARP : répète les notes une ou deux octaves plus haut.\n\n"
+            "Ça marche avec les accords de la séquence et avec les touches tenues sur un clavier MIDI." } },
+        { "fill", { "Fill",
+            "Un roulement de batterie en un clic : à la fin de la boucle, la caisse claire et les toms jouent un fill sur le "
+            "dernier temps, puis une cymbale crash tombe sur le premier temps suivant. Le bouton s'éteint ensuite tout seul.\n\n"
+            "Raccourci : touche F. Les pas réglés sur la condition « Pendant un FILL » (dans AUTOMATION) jouent aussi à ce "
+            "moment-là ; sur une boîte à rythmes qui en a, ils remplacent le fill automatique." } },
+        { "scenes", { "Scènes",
+            "Pour jouer en live : une scène retient quelles machines sont coupées (MUTE). Coupe par exemple la basse et les "
+            "charleys, puis clique sur une scène vide pour la garder. Plus tard, un clic sur cette scène coupe et relance "
+            "les mêmes machines d'un coup, au début de la mesure suivante pour rester en rythme.\n\n"
+            "Clic droit : remplacer la scène par les machines coupées maintenant, ou l'effacer. Les scènes sont "
+            "enregistrées avec le projet." } },
         { "machine.roll", { "Piano roll",
             "Ouvre un grand écran pour écrire les notes comme dans les logiciels de musique : les hauteurs de bas en haut, "
             "toute la séquence de gauche à droite.\n\n"
@@ -133,7 +154,11 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "en un clic. Les lignes grisées sont hors de la gamme choisie. Échap ou FERMER pour revenir au rack." } },
         { "machine.more", { "Outils",
             "Copier / coller la partie, dupliquer la 1re mesure sur toute la séquence, décaler toute la partie d'un pas "
-            "vers la gauche ou la droite, ou tout effacer." } },
+            "vers la gauche ou la droite, ou tout effacer.\n\n"
+            "LONGUEUR DE CETTE PISTE : la piste repart au début après ce nombre de pas, pendant que les autres continuent. "
+            "Une piste de 3 ou 5 pas contre un kick de 16 crée une polyrythmie qui se décale à chaque tour.\n\n"
+            "VITESSE DE CETTE PISTE : deux fois plus vite (×2), deux fois moins vite (×½) ou en triolets, pour un charleston "
+            "en triolets ou une basse qui roule." } },
         { "drum.fx", { "Effets de ce son",
             "Des effets rien que pour ce son de batterie : disto, filtre, position gauche/droite, envoi dans l'écho et la reverb.\n\n"
             "Exemple : de la disto seulement sur le kick, ou de l'écho seulement sur le rimshot. "

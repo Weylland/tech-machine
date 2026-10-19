@@ -190,6 +190,23 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
                 addAndMakeVisible (control);
             }
         }
+
+        // The arpeggiator, at the end of the sound section like on the real synths.
+        if (hasArpeggiator (def))
+        {
+            struct Arp { const char* suffix; const char* label; const std::vector<const char*>& choices; };
+            const Arp arps[] { { "arp", "ARPÈGE", arpModeNames() }, { "arprate", "VITESSE ARP", arpRateNames() },
+                               { "arpoctaves", "OCTAVES ARP", arpOctaveNames() } };
+            for (auto& a : arps)
+            {
+                auto h = help ("arp");
+                h.title = utf8 (a.label);
+                auto* choice = new ChoiceControl (state, pid::machine (type, a.suffix), utf8 (a.label), a.choices, h);
+                soundControls.add (choice);
+                soundItems.push_back ({ choice, juce::jlimit (choiceW, 230, choice->preferredWidth() + 4), 50 });
+                addAndMakeVisible (choice);
+            }
+        }
     }
 
     // Settings of a whole drum machine (the sampler character): a SON box under the pads.
@@ -241,6 +258,7 @@ MachinePanel::~MachinePanel()
 StepCell& MachinePanel::addCell (int column, int row, StepCell::Mode mode, bool dimmed)
 {
     auto* cell = cells.add (new StepCell (column, row, mode, dimmed));
+    cell->isOutside = [this, column] { return stepFor (column) >= processor.machine (type).track.stepsIn (processor.numSteps()); };
     cell->onEditStart = [this]
     {
         processor.undoManager.beginNewTransaction();
@@ -466,6 +484,18 @@ void MachinePanel::showMoreMenu()
     menu.addItem (5, utf8 ("Décaler d'un pas vers la droite →"));
     menu.addSeparator();
     menu.addItem (6, utf8 ("Tout effacer"));
+
+    // Length and speed of this track: polyrhythms, triplets.
+    const auto& track = processor.machine (type).track;
+    juce::PopupMenu lengths, speeds;
+    lengths.addItem (400, utf8 ("Comme la séquence (") + juce::String (processor.numSteps()) + utf8 (" pas)"), true, track.length.load() == 0);
+    for (int n : { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 24, 28, 32, 48, 64 })
+        lengths.addItem (400 + n, juce::String (n) + utf8 (" pas"), true, track.length.load() == n);
+    const char* const speedNames[numTrackSpeeds] { "Normale (doubles croches)", "Double (×2)", "Moitié (×½)", "Triolets (×1,5)", "Triolets lents (×¾)" };
+    for (int i = 0; i < numTrackSpeeds; ++i) speeds.addItem (500 + i, utf8 (speedNames[i]), true, track.speed.load() == i);
+    menu.addSeparator();
+    menu.addSubMenu (utf8 ("Longueur de cette piste"), lengths);
+    menu.addSubMenu (utf8 ("Vitesse de cette piste"), speeds);
     if (processor.isHosted())
     {
         // Where this machine leaves in the music software.
@@ -495,6 +525,17 @@ void MachinePanel::showMoreMenu()
         if (result >= 300 && result <= 300 + TechMachineProcessor::numAuxOutputs)
         {
             processor.setParam (pid::machine (type, "output"), (float) (result - 300));
+            return;
+        }
+        const auto& t = processor.machine (type).track;
+        if (result >= 400 && result <= 400 + maxSteps)
+        {
+            processor.setTrackTiming (type, result - 400, t.speed.load());
+            return;
+        }
+        if (result >= 500 && result < 500 + numTrackSpeeds)
+        {
+            processor.setTrackTiming (type, t.length.load(), result - 500);
             return;
         }
         switch (result)
@@ -555,6 +596,9 @@ void MachinePanel::nudgeNote (int step, int delta)
 
 void MachinePanel::setPlayhead (int step)
 {
+    if (step == shownStep && page == shownPage) return;
+    shownStep = step;
+    shownPage = page;
     const int column = step - page * pageSteps;
     ledStrip.setStep (column >= 0 && column < pageSteps ? column : -1);
     for (auto* cell : cells) cell->setPlayhead (stepFor (cell->column) == step);
@@ -768,7 +812,13 @@ void MachinePanel::paint (juce::Graphics& g)
     const int labelX = s + 14;
     g.setColour (skin.textDim);
     g.setFont (paint::condensed (12.0f));
-    g.drawText (utf8 ("PAS"), labelX, headerH + 9, labelW, 16, juce::Justification::centredLeft);
+    // A track with its own length or speed says so next to its steps.
+    const auto& track = processor.machine (type).track;
+    juce::String steps = utf8 ("PAS");
+    if (track.length.load() > 0) steps << utf8 (" · ") << track.length.load();
+    const char* const speedMarks[numTrackSpeeds] { "", " · ×2", " · ×½", " · ×1,5", " · ×¾" };
+    steps << utf8 (speedMarks[(size_t) juce::jlimit (0, numTrackSpeeds - 1, track.speed.load())]);
+    g.drawText (steps, labelX, headerH + 9, labelW, 16, juce::Justification::centredLeft);
 
     if (isDrum())
     {

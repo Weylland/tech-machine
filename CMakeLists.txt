@@ -42,6 +42,7 @@ set(TECHMACHINE_SOURCES
     Source/processor/Midi.cpp
     Source/processor/Project.cpp
     Source/processor/Song.cpp
+    Source/processor/Live.cpp
     Source/processor/Sounds.cpp
     Source/processor/Export.cpp
     Source/core/Automation.cpp

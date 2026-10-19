@@ -84,7 +84,7 @@ public:
     {
         voice->syncStep (s.step, s.nominalStepSamples);
         const auto st = (size_t) s.step, prev = (size_t) s.prevStep;
-        if (! track.on[st]) return;
+        if (! track.on[st] || silentStep) return;
 
         const bool glide = track.on[prev] && track.slide[prev];
         if (! glide) noteGain = velocityScale();
@@ -154,6 +154,30 @@ class PolyMachine : public SynthMachine
 public:
     using SynthMachine::SynthMachine;
 
+    void bind (juce::AudioProcessorValueTreeState& state) override
+    {
+        SynthMachine::bind (state);
+        if (! hasArpeggiator (def)) return;
+        arpModeParam = state.getRawParameterValue (pid::machine (type, "arp"));
+        arpRateParam = state.getRawParameterValue (pid::machine (type, "arprate"));
+        arpOctavesParam = state.getRawParameterValue (pid::machine (type, "arpoctaves"));
+    }
+
+    void readParams() override
+    {
+        SynthMachine::readParams();
+        if (arpModeParam == nullptr) return;
+        const int mode = (int) arpModeParam->load();
+        if (mode != arpeggio.mode)
+        {
+            releaseAll();
+            arpeggio.clear();
+        }
+        arpeggio.mode = mode;
+        arpeggio.rate = (int) arpRateParam->load();
+        arpeggio.octaves = (int) arpOctavesParam->load();
+    }
+
     void prepare (float sampleRate) override
     {
         fs = sampleRate;
@@ -167,7 +191,7 @@ public:
         const auto st = (size_t) s.step, prev = (size_t) s.prevStep;
 
         // Notes written in the piano roll: each one starts, goes on (tie) and stops on its own.
-        const std::uint64_t mask = track.on[st] ? track.chord[st].load() : 0;
+        const std::uint64_t mask = track.on[st] && ! silentStep ? track.chord[st].load() : 0;
         if (mask != 0 || written != 0)
         {
             const std::uint64_t continuing = written & mask & (track.on[prev] ? track.tie[prev].load() : 0);
@@ -183,7 +207,7 @@ public:
                 {
                     if (! ((mask >> n) & 1u) || ((continuing >> n) & 1u)) continue;
                     writtenNote[n] = base + snapToScale (s.scale, n);
-                    startVoice (writtenNote[n], velocity);
+                    play (writtenNote[n], velocity);
                 }
                 written = mask;
                 endingAtGate = mask & ~track.tie[st].load();
@@ -193,14 +217,14 @@ public:
             }
         }
 
-        const bool held = gateOpen && track.on[prev] && track.slide[prev] && track.on[st]
+        const bool held = gateOpen && ! silentStep && track.on[prev] && track.slide[prev] && track.on[st]
                        && track.note[prev].load() == track.note[st].load() && track.chord[prev].load() == track.chord[st].load();
         if (held)
         {
             gateCountdown = gateSamples (s);
             return;
         }
-        if (! track.on[st]) return;
+        if (! track.on[st] || silentStep) return;
 
         releaseAll();
         Chord chord;
@@ -215,7 +239,7 @@ public:
 
         // Same loudness whether one note or a five-note chord is played.
         const float velocity = (track.accent[st] ? 1.0f : 0.8f) * 1.6f / std::sqrt ((float) count) * velocityScale();
-        for (int k = 0; k < chord.count; ++k) startVoice (chord.notes[k], velocity);
+        for (int k = 0; k < chord.count; ++k) play (chord.notes[k], velocity);
 
         gateOpen = true;
         gateCountdown = gateSamples (s);
@@ -247,6 +271,7 @@ public:
     void render (Frame& f) override
     {
         applyExpression();
+        if (arpeggio.mode > 0) runArpeggio();
         float l0 = 0, r0 = 0, l1 = 0, r1 = 0;
         for (auto& v : voices)
         {
@@ -261,12 +286,21 @@ public:
         f.right *= outputTrim;
     }
 
-    void liveNoteOn (int note, float velocity) override { startVoice (note, 0.5f + velocity * 0.7f); }
+    void liveNoteOn (int note, float velocity) override
+    {
+        if (arpeggio.mode > 0)
+        {
+            if (arpeggio.held.count == 0) arpeggio.restart = true;
+            arpeggio.held.add (note, 0.5f + velocity * 0.7f);
+            return;
+        }
+        startVoice (note, 0.5f + velocity * 0.7f);
+    }
 
     void liveNoteOff (int note) override
     {
-        for (auto& v : voices)
-            if (v->isActive() && v->note == note) v->release();
+        arpeggio.held.remove (note);
+        releaseNote (note);
     }
 
 protected:
@@ -350,15 +384,139 @@ private:
     {
         for (auto& v : voices)
             if (v->isActive()) v->release();
+        arpeggio.sequenced.clear();
+        arpeggio.restart = true;   // the next chord starts its arpeggio on the beat
     }
 
     void releaseNotes (std::uint64_t bits)
     {
         for (int n = 0; n < noteRange; ++n)
             if ((bits >> n) & 1u)
-                for (auto& v : voices)
-                    if (v->isActive() && v->note == writtenNote[n]) v->release();
+            {
+                releaseNote (writtenNote[n]);
+                arpeggio.sequenced.remove (writtenNote[n]);
+            }
     }
+
+    void releaseNote (int note)
+    {
+        for (auto& v : voices)
+            if (v->isActive() && v->note == note) v->release();
+    }
+
+    // A note of a step: played at once, or given to the arpeggiator.
+    void play (int note, float velocity)
+    {
+        if (arpeggio.mode == 0) startVoice (note, velocity);
+        else arpeggio.sequenced.add (note, velocity);
+    }
+
+    // Arpeggiator: plays the notes held (keyboard first, else the chord of the step) one after the other.
+    struct Arpeggio
+    {
+        struct Notes
+        {
+            static constexpr int capacity = 24;
+            int notes[capacity] {};
+            float velocities[capacity] {};
+            int count = 0;
+
+            void clear() { count = 0; }
+
+            void add (int note, float velocity)
+            {
+                for (int i = 0; i < count; ++i)
+                    if (notes[i] == note) return;
+                if (count == capacity) return;
+                notes[count] = note;
+                velocities[count++] = velocity;
+            }
+
+            void remove (int note)
+            {
+                int k = 0;
+                for (int i = 0; i < count; ++i)
+                    if (notes[i] != note)
+                    {
+                        notes[k] = notes[i];
+                        velocities[k++] = velocities[i];
+                    }
+                count = k;
+            }
+        };
+
+        void clear()
+        {
+            sequenced.clear();
+            held.clear();
+            sounding = -1;
+            restart = true;
+        }
+
+        Notes sequenced, held;
+        int mode = 0, rate = 1, octaves = 0, position = 0, sounding = -1;
+        double countdown = 0.0, gate = 0.0;
+        bool restart = true;
+        juce::Random random { 0xa4be };
+    };
+
+    void runArpeggio()
+    {
+        auto& a = arpeggio;
+        const auto& pool = a.held.count > 0 ? a.held : a.sequenced;
+        if (a.gate > 0.0 && (a.gate -= 1.0) <= 0.0 && a.sounding >= 0)
+        {
+            releaseNote (a.sounding);
+            a.sounding = -1;
+        }
+        if (pool.count == 0)
+        {
+            a.restart = true;
+            return;
+        }
+        if (a.restart)
+        {
+            a.restart = false;
+            a.countdown = 0.0;
+            a.position = 0;
+        }
+        if ((a.countdown -= 1.0) > 0.0) return;
+
+        static constexpr double rateSteps[] { 2.0, 1.0, 2.0 / 3.0, 0.5 };
+        const double interval = juce::jmax (8.0, tempoStepSamples * rateSteps[juce::jlimit (0, 3, a.rate)]);
+        a.countdown += interval;
+        if (a.sounding >= 0) releaseNote (a.sounding);
+
+        // The notes in order (low to high, or as played), repeated an octave higher for each octave.
+        int order[Arpeggio::Notes::capacity];
+        for (int i = 0; i < pool.count; ++i) order[i] = i;
+        if (a.mode != 5)
+            std::sort (order, order + pool.count, [&pool] (int x, int y) { return pool.notes[x] < pool.notes[y]; });
+        const int span = pool.count * (juce::jlimit (0, 2, a.octaves) + 1);
+        int index = 0;
+        switch (a.mode)
+        {
+            case 2: index = span - 1 - a.position % span; break;
+            case 3:
+            {
+                const int period = juce::jmax (1, 2 * span - 2);
+                const int p = a.position % period;
+                index = span == 1 ? 0 : (p < span ? p : period - p);
+                break;
+            }
+            case 4: index = a.random.nextInt (span); break;
+            default: index = a.position % span; break;
+        }
+        ++a.position;
+        const int which = order[index % pool.count];
+        const int note = pool.notes[which] + 12 * (index / pool.count);
+        startVoice (note, pool.velocities[which]);
+        a.sounding = note;
+        a.gate = interval * 0.6;
+    }
+
+    std::atomic<float>* arpModeParam = nullptr, *arpRateParam = nullptr, *arpOctavesParam = nullptr;
+    Arpeggio arpeggio;
 
     std::uint64_t written = 0, endingAtGate = 0;   // piano roll notes sounding, and those that stop at the end of this step
     int writtenNote[noteRange] {};

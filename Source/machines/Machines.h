@@ -91,6 +91,17 @@ public:
     // Velocity of the current step, 1 = normal.
     float velocityScale() const { return setting (automation::velocityTarget (def), automation::normalVelocity) / automation::normalVelocity; }
 
+    // A setting of the step itself (chance, condition, delay), its normal value when the step has none.
+    float stepSetting (int s) const { return setting (automation::stepTarget (def, s), automation::stepNormals[s]); }
+
+    // Sequencer state of this machine (audio thread), and the step it plays for the interface.
+    bool silentStep = false;      // the step does not play this time (chance, condition)
+    int fillPosition = -1;        // step in the bar of a FILL (0..15), -1 = no fill
+    bool crashNow = false;        // first step after a FILL
+    long long lastCount = -1;     // steps played, for a track with its own speed
+    double tempoStepSamples = 5000.0;   // length of a 16th note at the tempo, even when stopped (arpeggiator)
+    std::atomic<int> playStep { -1 };
+
     // A setting as it sounds now: the step's value if it has one, otherwise the knob.
     float setting (int target, float knob) const
     {

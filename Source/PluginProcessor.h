@@ -95,6 +95,20 @@ public:
     void setAutomation (int machineType, int target, int step, float value);   // noLock erases; message thread
     void clearAutomation (int machineType, int target);
 
+    // FILL: the drums play a fill over the last bar of the loop, once, then a crash on the next downbeat.
+    void armFill (bool on) { fillArmed = on; }
+    bool isFillArmed() const { return fillArmed.load(); }
+    bool isFillPlaying() const { return fillPlaying.load(); }
+
+    // Scenes for playing live: which machines are cut. A scene comes in at the start of the next bar.
+    static constexpr int numScenes = 8;
+    void storeScene (int scene);                     // keeps the machines cut now (message thread)
+    void recallScene (int scene);                    // at the next bar while playing, at once when stopped
+    void clearScene (int scene);
+    bool hasScene (int scene) const { return sceneStored[(size_t) scene].load(); }
+    int cuedSceneIndex() const { return cuedScene.load(); }
+    int lastScene() const { return currentScene.load(); }
+
     // Separate outputs in a host: a machine can leave on its own stereo output instead of the master.
     static constexpr int numAuxOutputs = 8;
 
@@ -117,6 +131,7 @@ public:
     static bool deleteUserSound (int machineType, const juce::String& name);
     void resetSound (int machineType);
     void shiftMachine (int machineType, int direction);
+    void setTrackTiming (int machineType, int length, int speed);   // length 0 = the whole sequence; speed: see trackSpeedFactors
     void duplicateFirstBar (int machineType);
     void copyMachine (int machineType);
     void pasteMachine (int machineType);
@@ -167,6 +182,7 @@ private:
     struct Strip
     {
         std::atomic<float>* show, *mute, *solo, *drive, *crush, *filter, *echo, *reverb, *volume, *pan, *output;
+        juce::RangedAudioParameter* muteParameter = nullptr, *soloParameter = nullptr;   // scenes change them on the audio thread
         int bus = 0;   // 0 = master, 1..numAuxOutputs = a separate output of the host
         techno::Crusher crusher;
         techno::DjFilter djFilter;
@@ -188,6 +204,10 @@ private:
     static BusesProperties buses();
     void readStrip (int machineType);
     void advanceStep();
+    void playTrackStep (int machineType, int step, long long round, int steps, double stepSamples, double nominal);
+    void startStep (int machineType);
+    void runOwnClocks();
+    void applyScene (int scene);
     void syncToHost (double ppq);
     float stepSeconds() const { return 60.0f / bpmValue / 4.0f; }
 
@@ -215,9 +235,19 @@ private:
     std::atomic<float>* echoTime, *echoFeedback, *echoLevel, *reverbSize, *reverbLevel, *pumpParam, *djFilterParam, *comp, *disto, *volume;
 
     float sampleRate = 44100.0f, bpmValue = 128.0f, muteCoef = 0.0f;
-    double samplesToNextStep = 0.0;
+    double samplesToNextStep = 0.0, stepLength = 1.0;
     int stepIndex = -1, lengthSteps = 16;
-    bool wasPlaying = false;
+    long long stepCount = -1, loopCount = -1;   // steps and loops since the start (from the host position in a plugin)
+    bool wasPlaying = false, fillOn = false, anyOwnClock = false;
+    std::atomic<bool> fillArmed { false }, fillPlaying { false };
+    juce::Random stepRandom;                    // chance of the steps: the same every time the music starts
+    std::array<techno::StepInfo, techno::numMachines> pendingStep {};
+    std::array<double, techno::numMachines> pendingIn {};   // samples before a delayed step starts, -1 = none
+    std::array<bool, techno::numMachines> ownClock {};      // tracks with their own speed
+
+    std::array<std::array<std::atomic<bool>, techno::numMachines>, numScenes> sceneMutes {};
+    std::array<std::atomic<bool>, numScenes> sceneStored {};
+    std::atomic<int> cuedScene { -1 }, currentScene { -1 };
 
     techno::PingPongDelay delay;
     techno::Pump pump;
@@ -242,7 +272,7 @@ private:
     std::atomic<bool> clockActive { false };
     double clockInterval = 0, samplesSinceClock = 1.0e9, blockStart = 0, lastClock = -1;
     std::vector<float> micInput;   // the audio input of this block (vocoder microphone)
-    int quantizedStep() const;
+    int quantizedStep (int machineType) const;
     void recordNoteOn (int machineType, int note, float velocity);
     void recordNoteOff (int machineType, int note);
     int recordedSemitone (int machineType, int note) const;

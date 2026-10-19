@@ -70,15 +70,34 @@ bool TechMachineProcessor::exportMidi (const juce::File& target) const
         for (size_t loop = 0; loop < parts.size(); ++loop)
         {
             const auto& track = partTrack (parts[loop], t);
+
+            // A track with its own length goes on from loop to loop; one with its own speed has more or fewer steps.
+            const int own = track.stepsIn (steps);
+            const double factor = trackSpeedFactors[(size_t) juce::jlimit (0, numTrackSpeeds - 1, track.speed.load())];
+            const double stepTicks = ticksPerStep / factor;
             const long long first = (long long) loop * steps;
-            for (int s = 0; s < steps; ++s)
+            const auto firstCount = (long long) std::ceil ((double) first * factor - 1.0e-9);
+            const auto endCount = (long long) std::ceil ((double) (first + steps) * factor - 1.0e-9);
+            auto startOf = [&] (long long count) { return juce::exactlyEqual (factor, 1.0) ? tickOf (count) : (double) count * stepTicks; };
+            auto stepValue = [&] (size_t st, int setting)
             {
-                const auto st = (size_t) s, prev = (size_t) ((s + steps - 1) % steps);
-                const long long at = first + s;
-                int velocity = track.accent[st] ? 120 : 96;
-                if (const int lane = track.findLane (automation::velocityTarget (def)); lane >= 0)
-                    if (const float v = track.lockValue[(size_t) lane][st].load(); v >= 0.0f)
-                        velocity = juce::jlimit (1, 127, juce::roundToInt ((float) velocity * v / automation::normalVelocity));
+                if (const int lane = track.findLane (automation::stepTarget (def, setting)); lane >= 0)
+                    if (const float v = track.lockValue[(size_t) lane][st].load(); v >= 0.0f) return v;
+                return automation::stepNormals[setting];
+            };
+
+            for (long long count = firstCount; count < endCount; ++count)
+            {
+                const int s = (int) (count % own);
+                const auto st = (size_t) s, prev = (size_t) ((s + own - 1) % own);
+                const bool notFirst = count > firstCount;
+                // Conditions are followed (no FILL in a file); chance is not: every step that may play is written.
+                if (! automation::conditionPlays (juce::roundToInt (stepValue (st, automation::Condition)), count / own, false)) continue;
+                const double late = stepValue (st, automation::Delay) * 0.5 * stepTicks;
+                const double at = startOf (count) + late;
+                auto endOf = [&] (int length) { return startOf (count + length) + late; };
+                const int velocity = juce::jlimit (1, 127, juce::roundToInt ((float) (track.accent[st] ? 120 : 96)
+                                                                             * stepValue (st, automation::Velocity) / automation::normalVelocity));
                 if (drum)
                 {
                     for (int r = 0; r < (int) def.rows.size(); ++r)
@@ -87,8 +106,8 @@ bool TechMachineProcessor::exportMidi (const juce::File& target) const
                         const int roll = juce::jmax (1, (int) track.rolls[(size_t) r][st].load());
                         for (int k = 0; k < roll; ++k)
                         {
-                            const double from = tickOf (at) + (double) (k * ticksPerStep / roll);
-                            add (gmNoteForRow (def, r), velocity, from, from + ticksPerStep / (2.0 * roll));
+                            const double from = at + (double) k * stepTicks / roll;
+                            add (gmNoteForRow (def, r), velocity, from, from + stepTicks / (2.0 * roll));
                         }
                     }
                     continue;
@@ -96,16 +115,16 @@ bool TechMachineProcessor::exportMidi (const juce::File& target) const
                 if (! track.on[st]) continue;
 
                 // How many steps the note lasts: held (slide / hold) steps with the same note go on.
-                auto lengthFrom = [&] (int start)
+                auto lengthFrom = [&] (int startStep)
                 {
                     int length = 1;
-                    while (length < steps && track.slide[(size_t) ((start + length - 1) % steps)]
-                           && track.on[(size_t) ((start + length) % steps)]
-                           && track.note[(size_t) ((start + length) % steps)].load() == track.note[(size_t) start].load())
+                    while (length < own && track.slide[(size_t) ((startStep + length - 1) % own)]
+                           && track.on[(size_t) ((startStep + length) % own)]
+                           && track.note[(size_t) ((startStep + length) % own)].load() == track.note[(size_t) startStep].load())
                         ++length;
                     return length;
                 };
-                const bool continued = s > 0 && track.on[prev] && track.slide[prev] && track.note[prev].load() == track.note[st].load()
+                const bool continued = notFirst && track.on[prev] && track.slide[prev] && track.note[prev].load() == track.note[st].load()
                                     && track.chord[st].load() == 0;
                 const std::uint64_t mask = track.chord[st].load();
                 if (mask != 0)
@@ -114,28 +133,28 @@ bool TechMachineProcessor::exportMidi (const juce::File& target) const
                     for (int n = 0; n < noteRange; ++n)
                     {
                         if (! ((mask >> n) & 1u)) continue;
-                        const bool tiedIn = s > 0 && track.on[prev] && ((track.tie[prev].load() >> n) & 1u);
+                        const bool tiedIn = notFirst && track.on[prev] && ((track.tie[prev].load() >> n) & 1u);
                         if (tiedIn) continue;
                         int length = 1;
-                        while (s + length < steps && ((track.tie[(size_t) (s + length - 1)].load() >> n) & 1u)) ++length;
-                        add (base + snapToScale (currentScale(), n), velocity, tickOf (at), tickOf (at + length) - ticksPerStep * 0.5);
+                        while (s + length < own && ((track.tie[(size_t) (s + length - 1)].load() >> n) & 1u)) ++length;
+                        add (base + snapToScale (currentScale(), n), velocity, at, endOf (length) - stepTicks * 0.5);
                     }
                     continue;
                 }
                 if (continued) continue;
                 const int length = lengthFrom (s);
-                const bool glidesOut = track.slide[(size_t) ((s + length - 1) % steps)];
-                const double end = tickOf (at + length) - (glidesOut ? -20.0 : ticksPerStep * 0.5);   // a glide overlaps the next note
+                const bool glidesOut = track.slide[(size_t) ((s + length - 1) % own)];
+                const double end = endOf (length) - (glidesOut ? -20.0 : stepTicks * 0.5);   // a glide overlaps the next note
                 const int root = snapToScale (currentScale(), track.note[st].load());
                 if (def.kind == MachineKind::Poly)
                 {
                     int intervals[5];
-                    const int count = chordIntervals (currentScale(), root, chordType, intervals);
-                    for (int k = 0; k < count; ++k) add (base + root + intervals[k], velocity, tickOf (at), end);
+                    const int chordSize = chordIntervals (currentScale(), root, chordType, intervals);
+                    for (int k = 0; k < chordSize; ++k) add (base + root + intervals[k], velocity, at, end);
                 }
                 else
                 {
-                    add (base + root, velocity, tickOf (at), end);
+                    add (base + root, velocity, at, end);
                 }
             }
         }

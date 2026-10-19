@@ -100,9 +100,10 @@ public:
             }
         }
 
-        // The knob's own value: what the steps without a value play.
-        const float knob = automation::isVelocity (type, target) ? automation::normalVelocity
-                                                                 : normalised (processor.apvts.getRawParameterValue (automation::paramId (type, target))->load());
+        // The knob's own value (or the normal value of a step setting): what the steps without a value play.
+        const int stepSetting = automation::stepSettingOf (type, target);
+        const float knob = normalised (stepSetting >= 0 ? automation::stepNormals[stepSetting]
+                                                        : processor.apvts.getRawParameterValue (automation::paramId (type, target))->load());
         const float knobY = yFor (knob);
         g.setColour (colours::dim.withAlpha (0.8f));
         const float dash[] { 6.0f, 5.0f };
@@ -130,15 +131,20 @@ public:
             {
                 g.setColour (colours::text);
                 g.setFont (paint::condensed (11.0f));
-                const auto& names = machineDefParamChoices();
-                const int index = juce::jlimit (0, choices - 1, juce::roundToInt (v));
-                g.drawFittedText (utf8 (names[(size_t) index]), cell.withTop (y - 16.0f).withHeight (14.0f).toNearestInt(),
+                g.drawFittedText (automation::choiceName (type, target, juce::roundToInt (v)), cell.withTop (y - 16.0f).withHeight (14.0f).toNearestInt(),
                                   juce::Justification::centred, 1, 0.7f);
             }
         }
 
+        // A track shorter than the sequence starts again after its last step.
+        if (const int own = track.stepsIn (steps); own < steps)
+        {
+            g.setColour (juce::Colour (0xff101113).withAlpha (0.75f));
+            g.fillRect (juce::Rectangle<float> ((float) area.getX() + (float) own * w, (float) area.getY(), (float) (steps - own) * w, (float) area.getHeight()));
+        }
+
         // Playhead
-        const int step = processor.currentStep.load();
+        const int step = processor.machine (type).playStep.load();
         if (processor.playing.load() && step >= 0 && step < steps)
         {
             g.setColour (juce::Colours::white.withAlpha (0.12f));
@@ -215,11 +221,6 @@ private:
         const int choices = automation::choiceCount (type, target);
         if (choices > 1) return (float) juce::roundToInt (normalisedValue * (float) (choices - 1));
         return juce::jlimit (0.0f, 1.0f, normalisedValue);
-    }
-
-    const std::vector<const char*>& machineDefParamChoices() const
-    {
-        return machineDef (type).params[(size_t) (target - automation::stripCount)].choices;
     }
 
     // Writes the steps under the mouse; a fast drag fills the steps it jumped over.

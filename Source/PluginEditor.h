@@ -161,6 +161,12 @@ private:
     techno::IconButton songEditButton { "patterns", techno::utf8 ("MORCEAU") };
     techno::InfoButton* partsInfo = nullptr;
     techno::InfoButton* songInfo = nullptr;
+    techno::LedButton fillButton { "FILL", juce::Colour (0xffff9a1f) };
+    std::array<techno::MenuTextButton, TechMachineProcessor::numScenes> sceneButtons;
+    techno::InfoButton* fillInfo = nullptr;
+    techno::InfoButton* scenesInfo = nullptr;
+    void showSceneMenu (int scene);
+    void refreshScenes();
     int lastPartsVersion = -1;
     int lastMidiMapVersion = 0, lastMidiTarget = -2;
     std::uint64_t lastShownMask = ~0ull;
@@ -190,7 +196,7 @@ private:
     std::unique_ptr<juce::FileChooser> chooser;
     std::unique_ptr<ExportJob> exportJob;
 
-    int viewPage = 0, lastStep = -1, lastVersion = -1, lastBars = -1, lastLabelHash = -1, lastGenre = -1;
+    int viewPage = 0, lastVersion = -1, lastBars = -1, lastLabelHash = -1, lastGenre = -1;
     int scrollToMachine = -1;
     bool follow = true, focusGrabbed = false;
     juce::String lastTitle;

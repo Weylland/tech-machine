@@ -57,6 +57,7 @@ public:
 
 private:
     bool midiTarget = false;
+    int shownStep = -2, shownPage = -1;
     int subtitleRight = 600;   // the subtitle stops before the header buttons
     bool showBrand = true;
     std::unique_ptr<juce::FileChooser> chooser;

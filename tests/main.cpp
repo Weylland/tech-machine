@@ -1925,27 +1925,7 @@ static int test_expression (int argc, char** argv)
         for (float x : v) sum += (double) x * x;
         return std::sqrt (sum / (double) juce::jmax ((size_t) 1, v.size()));
     };
-    // The pitch of a held note: the first strong repetition (autocorrelation) between 50 and 1000 Hz.
-    auto pitchOf = [&] (const std::vector<float>& v)
-    {
-        const int n = (int) v.size();
-        std::vector<double> c (962, 0.0);
-        double bestValue = -1e9;
-        for (int lag = 47; lag <= 961 && lag < n / 2; ++lag)
-        {
-            double sum = 0.0;
-            for (int i = 0; i + lag < n; ++i) sum += (double) v[(size_t) i] * v[(size_t) (i + lag)];
-            c[(size_t) lag] = sum / (double) (n - lag);
-            bestValue = std::max (bestValue, c[(size_t) lag]);
-        }
-        int best = 48;
-        for (int lag = 48; lag <= 960; ++lag)
-            if (c[(size_t) lag] > 0.85 * bestValue && c[(size_t) lag] >= c[(size_t) lag - 1] && c[(size_t) lag] >= c[(size_t) lag + 1]) { best = lag; break; }
-        const double a = c[(size_t) best - 1], b = c[(size_t) best], d = c[(size_t) best + 1];
-        const double curve = a - 2.0 * b + d;
-        const double shift = std::abs (curve) > 1e-12 ? 0.5 * (a - d) / curve : 0.0;
-        return rate / ((double) best + shift);
-    };
+    auto pitchOf = [&] (const std::vector<float>& v) { return estimatePitch (v, rate); };
     auto setup = [&] (TechMachineProcessor& p, int type, int inputs = 0)
     {
         p.newProject();
@@ -2148,6 +2128,322 @@ static int test_expression (int argc, char** argv)
     return failures;
 }
 
+// Sequencer: length and speed of each track, chance, conditions, delay, FILL, scenes, arpeggiator.
+static int test_sequencer (int argc, char** argv)
+{
+    juce::ignoreUnused (argc, argv);
+    int failures = 0;
+    auto expect = [&] (bool ok, const char* what)
+    {
+        if (! ok) ++failures;
+        printf ("  %-66s %s\n", what, ok ? "ok" : "FAIL");
+    };
+    constexpr double rate = 48000.0;
+    constexpr int bs = 60;            // 100 blocks per step at 120 BPM: the step of each track is read block by block
+    constexpr int stepSamples = 6000;
+
+    auto setup = [&] (TechMachineProcessor& p, std::initializer_list<int> types)
+    {
+        p.newProject();
+        p.setBars (1);
+        p.setParam (pid::bpm, 120.0f);
+        p.setParam (pid::swing, 0.0f);
+        for (int t : types) p.setShown (t, true);
+        p.setPlayConfigDetails (0, 2, rate, bs);
+        p.prepareToPlay (rate, bs);
+    };
+    // Plays a number of samples; returns the left channel and, per block, the step each machine shows.
+    struct Run { std::vector<float> out; std::vector<std::vector<int>> steps; };
+    auto play = [&] (TechMachineProcessor& p, int samples, std::initializer_list<int> watched = {})
+    {
+        Run run;
+        run.steps.resize (watched.size());
+        juce::AudioBuffer<float> block (2, bs);
+        juce::MidiBuffer midi;
+        for (int done = 0; done < samples; done += bs)
+        {
+            block.clear();
+            p.processBlock (block, midi);
+            run.out.insert (run.out.end(), block.getReadPointer (0), block.getReadPointer (0) + bs);
+            size_t k = 0;
+            for (int t : watched) run.steps[k++].push_back (p.machine (t).playStep.load());
+        }
+        return run;
+    };
+    // The steps a track went through, in order (each new step once).
+    auto stepsSeen = [] (const std::vector<int>& perBlock)
+    {
+        std::vector<int> seen;
+        int last = -2;
+        for (int s : perBlock)
+        {
+            if (s != last) { seen.push_back (s); last = s; }
+        }
+        return seen;
+    };
+    auto peakIn = [] (const std::vector<float>& v, size_t from, size_t to)
+    {
+        float peak = 0.0f;
+        for (size_t i = from; i < to && i < v.size(); ++i) peak = std::max (peak, std::abs (v[i]));
+        return peak;
+    };
+    auto firstSound = [] (const std::vector<float>& v, size_t from)
+    {
+        for (size_t i = from; i < v.size(); ++i)
+            if (std::abs (v[i]) > 0.01f) return (long) (i - from);
+        return -1L;
+    };
+
+    // Length: a track of 3 steps against a sequence of 16.
+    {
+        TechMachineProcessor p;
+        setup (p, { TR909, TB303 });
+        p.setTrackTiming (TR909, 3, 0);
+        p.playing = true;
+        auto run = play (p, stepSamples * 16 + bs, { TR909, TB303 });
+        const auto drums = stepsSeen (run.steps[0]), bass = stepsSeen (run.steps[1]);
+        bool cycles = drums.size() == 17;
+        for (size_t i = 0; i < drums.size() && cycles; ++i) cycles = drums[i] == (int) (i % 3);
+        expect (cycles, "a track of 3 steps plays 0 1 2 0 1 2...");
+        expect (bass.size() == 17 && bass.back() == 0, "the other tracks keep the 16 steps of the sequence");
+    }
+
+    // Speeds: double, half, triplets.
+    {
+        const int expected[numTrackSpeeds] { 16, 32, 8, 24, 12 };
+        bool all = true;
+        for (int speed = 1; speed < numTrackSpeeds; ++speed)
+        {
+            TechMachineProcessor p;
+            setup (p, { Juno106 });
+            p.setTrackTiming (Juno106, 0, speed);
+            p.playing = true;
+            auto run = play (p, stepSamples * 16 - bs, { Juno106 });
+            const auto seen = stepsSeen (run.steps[0]);
+            printf ("  speed %d: %d steps in one bar (expected %d)\n", speed, (int) seen.size(), expected[speed]);
+            all = all && (int) seen.size() == expected[speed];
+        }
+        expect (all, "double, half and triplet speeds play the right number of steps");
+    }
+
+    // Chance and condition: a kick on the first step, over 32 loops of one bar.
+    {
+        auto hitsPerLoop = [&] (int setting, float value)
+        {
+            TechMachineProcessor p;
+            setup (p, { TR909 });
+            p.setParam (pid::bpm, 200.0f);   // a step of 3600 samples, a loop of 57600
+            p.machine (TR909).track.hits[0][0] = true;
+            p.setAutomation (TR909, automation::stepTarget (machineDef (TR909), setting), 0, value);
+            p.playing = true;
+            auto run = play (p, 57600 * 32);
+            std::vector<bool> hits;
+            for (size_t loop = 0; loop < 32; ++loop)
+                hits.push_back (peakIn (run.out, loop * 57600, loop * 57600 + 600) > 0.05f);
+            return hits;
+        };
+        auto countOf = [] (const std::vector<bool>& v) { return (int) std::count (v.begin(), v.end(), true); };
+        const auto always = hitsPerLoop (automation::Chance, 1.0f);
+        const auto never = hitsPerLoop (automation::Chance, 0.0f);
+        const auto half = hitsPerLoop (automation::Chance, 0.5f);
+        printf ("  chance: 100%% %d/32, 0%% %d/32, 50%% %d/32\n", countOf (always), countOf (never), countOf (half));
+        expect (countOf (always) == 32 && countOf (never) == 0, "chance 100 % always plays, 0 % never");
+        expect (countOf (half) >= 8 && countOf (half) <= 24, "chance 50 % plays about one loop in two");
+        expect (half == hitsPerLoop (automation::Chance, 0.5f), "the chance gives the same music each time it starts");
+
+        const auto second = hitsPerLoop (automation::Condition, 6.0f);   // Tour 2 sur 2
+        bool odd = true;
+        for (size_t loop = 0; loop < second.size(); ++loop) odd = odd && second[loop] == (loop % 2 == 1);
+        expect (odd, "condition « Tour 2 sur 2 » plays on loops 2, 4, 6...");
+        const auto firstOnly = hitsPerLoop (automation::Condition, 3.0f);
+        expect (countOf (firstOnly) == 1 && firstOnly[0], "condition « Premier tour seulement » plays once");
+        const auto fourth = hitsPerLoop (automation::Condition, 13.0f);  // Tour 4 sur 4
+        expect (countOf (fourth) == 8 && fourth[3] && ! fourth[0], "condition « Tour 4 sur 4 » plays on every 4th loop");
+    }
+
+    // Delay: half a step late at the highest value.
+    {
+        long onsets[2] {};
+        for (int late = 0; late < 2; ++late)
+        {
+            TechMachineProcessor p;
+            setup (p, { TR909 });
+            p.machine (TR909).track.hits[0][4] = true;
+            if (late == 1) p.setAutomation (TR909, automation::stepTarget (machineDef (TR909), automation::Delay), 4, 1.0f);
+            p.playing = true;
+            onsets[late] = firstSound (play (p, stepSamples * 6).out, 0);
+        }
+        printf ("  delay: step heard at %ld samples, delayed at %ld\n", onsets[0], onsets[1]);
+        expect (onsets[0] >= 0 && std::abs (onsets[1] - onsets[0] - stepSamples / 2) <= 2, "the delay moves the step half a step later");
+    }
+
+    // FILL: snare and toms on the last beat of the loop, then a crash; it plays once.
+    {
+        std::vector<float> outs[2];
+        for (int fill = 0; fill < 2; ++fill)
+        {
+            TechMachineProcessor p;
+            setup (p, { TR909 });
+            for (int st : { 0, 4, 8, 12 }) p.machine (TR909).track.hits[0][(size_t) st] = true;
+            p.armFill (fill == 1);
+            p.playing = true;
+            outs[fill] = play (p, stepSamples * 16 * 3).out;
+            if (fill == 1) expect (! p.isFillArmed(), "FILL turns itself off once played");
+        }
+        auto differs = [&] (size_t from, size_t to)
+        {
+            double diff = 0.0;
+            for (size_t i = from; i < to; ++i) diff = std::max (diff, (double) std::abs (outs[0][i] - outs[1][i]));
+            return diff;
+        };
+        const size_t bar = stepSamples * 16;
+        printf ("  fill: difference beats 1-3 %.4f, last beat %.4f, next downbeat %.4f, second loop %.4f\n",
+                differs (0, stepSamples * 12), differs (stepSamples * 12, bar), differs (bar, bar + stepSamples), differs (bar + stepSamples * 4, 2 * bar));
+        expect (differs (0, stepSamples * 12) < 1.0e-6, "nothing changes before the last beat");
+        expect (differs (stepSamples * 12 + 2000, bar) > 0.05, "the last beat plays the fill");
+        expect (differs (bar, bar + stepSamples) > 0.05, "a crash on the next downbeat");
+        expect (differs (2 * bar + stepSamples * 12, 3 * bar) < differs (stepSamples * 12 + 2000, bar) * 0.2,
+                "the next loops play without the fill");
+    }
+
+    // Scenes: they come in at the start of the next bar.
+    {
+        TechMachineProcessor p;
+        setup (p, { TR909, TB303 });
+        auto muted = [&p] (int t) { return p.apvts.getRawParameterValue (pid::machine (t, "mute"))->load() > 0.5f; };
+        p.setParam (pid::machine (TB303, "mute"), 1.0f);
+        p.storeScene (0);
+        p.setParam (pid::machine (TB303, "mute"), 0.0f);
+        p.setParam (pid::machine (TR909, "mute"), 1.0f);
+        p.storeScene (1);
+        expect (p.hasScene (0) && p.hasScene (1) && ! p.hasScene (2), "scenes are stored");
+        p.recallScene (0);
+        play (p, bs);
+        expect (muted (TB303) && ! muted (TR909), "stopped: a scene comes in at once");
+        p.playing = true;
+        play (p, stepSamples * 2);
+        p.recallScene (1);
+        play (p, stepSamples * 4);
+        const bool waits = muted (TB303) && ! muted (TR909) && p.cuedSceneIndex() == 1;
+        play (p, stepSamples * 11);
+        expect (waits && muted (TR909) && ! muted (TB303) && p.lastScene() == 1, "playing: the scene waits for the next bar");
+
+        // Saved with the project, with the length and speed of the tracks.
+        p.setTrackTiming (TB303, 5, 3);
+        const auto file = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_sequencer.tmproj");
+        p.playing = false;
+        play (p, bs);
+        p.saveProject (file);
+        TechMachineProcessor q;
+        q.loadProject (file);
+        file.deleteFile();
+        expect (q.hasScene (0) && q.hasScene (1) && ! q.hasScene (2), "scenes are saved with the project");
+        expect (q.machine (TB303).track.length.load() == 5 && q.machine (TB303).track.speed.load() == 3, "track length and speed are saved");
+        q.newProject();
+        expect (! q.hasScene (0) && q.machine (TB303).track.length.load() == 0, "a new project has no scenes and normal tracks");
+    }
+
+    // In a music software: the tracks follow the position of the song, even when it starts in the middle.
+    {
+        juce::AudioProcessor::setTypeOfNextNewPlugin (juce::AudioProcessor::wrapperType_VST3);
+        TechMachineProcessor host;
+        juce::AudioProcessor::setTypeOfNextNewPlugin (juce::AudioProcessor::wrapperType_Undefined);
+        host.newProject();
+        host.setShown (TR909, true);
+        host.setShown (Juno106, true);
+        host.setTrackTiming (TR909, 3, 0);
+        host.setTrackTiming (Juno106, 0, 1);
+        host.prepareToPlay (rate, bs);
+        FakeHead head;
+        host.setPlayHead (&head);
+        juce::AudioBuffer<float> buffer (host.getTotalNumOutputChannels(), bs);
+        juce::MidiBuffer none;
+        std::vector<int> drums, juno;
+        for (int i = 0; i < 300; ++i)   // from bar 2 (beat 4.0), three steps
+        {
+            head.ppq = 4.0 + (double) i * bs / rate * 2.0;
+            host.processBlock (buffer, none);
+            if (i % 100 == 1)
+            {
+                drums.push_back (host.machine (TR909).playStep.load());
+                juno.push_back (host.machine (Juno106).playStep.load());
+            }
+        }
+        host.setPlayHead (nullptr);
+        printf ("  host from bar 2: 3-step track %d %d %d, double-speed track %d %d %d\n", drums[0], drums[1], drums[2], juno[0], juno[1], juno[2]);
+        expect (drums == std::vector<int> { 1, 2, 0 }, "a track of 3 steps follows the song position (step 16 = its step 1)");
+        expect (juno == std::vector<int> { 0, 2, 4 }, "a double-speed track follows the song position");
+    }
+
+    // MIDI export: a track of 3 steps and a track at double speed.
+    {
+        TechMachineProcessor p;
+        setup (p, { TR909, TB303 });
+        p.machine (TR909).track.hits[0][0] = true;
+        p.setTrackTiming (TR909, 3, 0);
+        auto& bass = p.machine (TB303).track;
+        for (size_t st = 0; st < 16; ++st) bass.on[st] = true;
+        p.setTrackTiming (TB303, 0, 1);
+        const auto file = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_sequencer.mid");
+        p.exportMidi (file);
+        juce::MidiFile midi;
+        juce::FileInputStream in (file);
+        midi.readFrom (in);
+        int kicks = 0, notes = 0;
+        for (int t = 1; t < midi.getNumTracks(); ++t)
+            for (auto* e : *midi.getTrack (t))
+                if (e->message.isNoteOn()) ++(e->message.getChannel() == 10 ? kicks : notes);
+        file.deleteFile();
+        printf ("  MIDI export: %d kicks, %d bass notes\n", kicks, notes);
+        expect (kicks == 6, "a track of 3 steps: 6 kicks in a bar of 16");
+        expect (notes == 32, "a track at double speed: 32 notes in a bar");
+    }
+
+    // Arpeggiator: a held chord is played note by note, up, one note per 16th.
+    {
+        TechMachineProcessor p;
+        setup (p, { Juno106 });
+        p.setMidiTarget (Juno106);
+        p.setParam (pid::machine (Juno106, "arp"), 1.0f);
+        play (p, bs);
+        juce::MidiBuffer chord;
+        for (int note : { 48, 52, 55 }) chord.addEvent (juce::MidiMessage::noteOn (1, note, (juce::uint8) 100), 0);
+        juce::AudioBuffer<float> block (2, bs);
+        p.processBlock (block, chord);
+        const auto out = play (p, stepSamples * 6).out;
+        std::vector<double> pitches;
+        for (int st = 0; st < 6; ++st)
+        {
+            const std::vector<float> window (out.begin() + st * stepSamples + 600, out.begin() + st * stepSamples + 3000);
+            pitches.push_back (estimatePitch (window, rate));
+        }
+        printf ("  arpeggio:");
+        for (double f : pitches) printf (" %.0f", f);
+        printf (" Hz\n");
+        // The estimate may land an octave low (the sub oscillator).
+        auto near = [] (double f, int midi)
+        {
+            const double hz = juce::MidiMessage::getMidiNoteInHertz (midi);
+            return std::abs (f / hz - 1.0) < 0.03 || std::abs (f / (hz * 0.5) - 1.0) < 0.03;
+        };
+        expect (near (pitches[0], 48) && near (pitches[1], 52) && near (pitches[2], 55) && near (pitches[3], 48),
+                "the held chord C E G is played C, E, G, C...");
+
+        p.setParam (pid::machine (Juno106, "arpoctaves"), 1.0f);
+        p.setParam (pid::machine (Juno106, "arp"), 2.0f);   // down
+        play (p, bs);
+        for (int note : { 48, 52, 55 }) chord.addEvent (juce::MidiMessage::noteOn (1, note, (juce::uint8) 100), 0);
+        p.processBlock (block, chord);
+        const auto down = play (p, stepSamples * 3).out;
+        const std::vector<float> firstNote (down.begin() + 600, down.begin() + 3000);
+        printf ("  arpeggio down over 2 octaves starts at %.0f Hz\n", estimatePitch (firstNote, rate));
+        expect (near (estimatePitch (firstNote, rate), 67), "down over two octaves starts on the top G");
+    }
+
+    printf ("sequencer: %d failures\n", failures);
+    return failures;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
@@ -2156,6 +2452,7 @@ static const Mode modes[] {
     { "sounds", test_sounds },
     { "exports", test_exports },
     { "expression", test_expression },
+    { "sequencer", test_sequencer },
     { "host", test_host },
     { "levels", test_levels },
     { "examples", test_examples },
@@ -2204,7 +2501,7 @@ static int check (char** argv)
     chaosIterations = 8;
     char* none[] { argv[0], nullptr };
     int failures = 0;
-    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_expression, test_ui, test_chaos, test_french })
+    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_expression, test_sequencer, test_ui, test_chaos, test_french })
         failures += run (1, none);
     printf ("\ncheck: %d failures\n", failures);
     return failures;

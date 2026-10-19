@@ -73,6 +73,8 @@ TechMachineProcessor::TechMachineProcessor()
         s.show = raw (pid::machine (t, "show"));
         s.mute = raw (pid::machine (t, "mute"));
         s.solo = raw (pid::machine (t, "solo"));
+        s.muteParameter = apvts.getParameter (pid::machine (t, "mute"));
+        s.soloParameter = apvts.getParameter (pid::machine (t, "solo"));
         s.drive = raw (pid::machine (t, "drive"));
         s.crush = raw (pid::machine (t, "crush"));
         s.filter = raw (pid::machine (t, "filter"));
@@ -86,7 +88,7 @@ TechMachineProcessor::TechMachineProcessor()
     partStore = std::make_unique<std::array<std::array<Track, numMachines>, numParts>>();
     for (int t = 0; t < numMachines; ++t)
         for (int target = 0; target < automation::targetCount (t); ++target)
-            if (! automation::isVelocity (t, target)) automationIndex[automation::paramId (t, target)] = { t, target };
+            if (! automation::isStepSetting (t, target)) automationIndex[automation::paramId (t, target)] = { t, target };
 
     name = utf8 ("Sans titre");
     apvts.state.addListener (this);
@@ -144,6 +146,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout TechMachineProcessor::create
         layout.add (knob (pid::machine (t, "pan"), name + " pan", 0.5f, panText));
         layout.add (choice (pid::machine (t, "output"), name + " output",
                             { "Master", "Sortie 2", "Sortie 3", "Sortie 4", "Sortie 5", "Sortie 6", "Sortie 7", "Sortie 8", "Sortie 9" }, 0));
+
+        if (hasArpeggiator (def))
+        {
+            layout.add (choice (pid::machine (t, "arp"), name + " arp", arpModeNames(), 0));
+            layout.add (choice (pid::machine (t, "arprate"), name + " arp rate", arpRateNames(), 1));
+            layout.add (choice (pid::machine (t, "arpoctaves"), name + " arp octaves", arpOctaveNames(), 0));
+        }
 
         if (drum)
         {
@@ -256,12 +265,18 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         playing = play;
     }
     displayBpm = bpmValue;
+    for (auto& m : machines) m->tempoStepSamples = sampleRate * stepSeconds();
 
     if (play && ! wasPlaying)
     {
         stepIndex = -1;
         samplesToNextStep = 0.0;
         songEntry = -1;   // the song starts from its beginning
+        stepCount = loopCount = -1;
+        fillOn = false;
+        stepRandom.setSeed (0x7ec4);
+        pendingIn.fill (-1.0);
+        for (auto& m : machines) m->lastCount = -1;
     }
     if (! play && wasPlaying)
     {
@@ -269,12 +284,19 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         {
             m->stop();
             m->releaseLocks();
+            m->playStep = -1;
         }
+        pendingIn.fill (-1.0);
+        fillOn = false;
+        fillPlaying = false;
         cuedPart = -1;
         songEntry = -1;
         currentStep = -1;
     }
     wasPlaying = play;
+
+    if (const int scene = cuedScene.load(); scene >= 0 && ! play)
+        applyScene (scene);
 
     if (play && hostPpq.hasValue())
         syncToHost (*hostPpq);
@@ -306,6 +328,8 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     }
 
     bool anySolo = false;
+    anyOwnClock = false;
+    ownClock.fill (false);
     for (auto& s : strips)
         anySolo = anySolo || (s.show->load() > 0.5f && s.solo->load() > 0.5f);
 
@@ -320,6 +344,8 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         }
 
         s.audible = s.mute->load() < 0.5f && (! anySolo || s.solo->load() > 0.5f);
+        ownClock[(size_t) t] = machines[(size_t) t]->track.speed.load() != 0;
+        anyOwnClock = anyOwnClock || ownClock[(size_t) t];
         const int bus = (int) s.output->load();
         s.bus = bus > 0 && bus <= numAuxOutputs && auxLeft[(size_t) bus] != nullptr ? bus : 0;
         readStrip (t);
@@ -435,9 +461,14 @@ void TechMachineProcessor::render (float* left, float* right, int numSamples)
         if (wasPlaying)
         {
             if (samplesToNextStep <= 0.0) advanceStep();
+            if (anyOwnClock) runOwnClocks();
             samplesToNextStep -= 1.0;
             for (int t = 0; t < numMachines; ++t)
-                if (strips[(size_t) t].shown) machines[(size_t) t]->tick();
+            {
+                if (! strips[(size_t) t].shown) continue;
+                if (auto& wait = pendingIn[(size_t) t]; wait > 0.0 && (wait -= 1.0) <= 0.0) startStep (t);
+                machines[(size_t) t]->tick();
+            }
         }
 
         const float duck = pump.process (pumpDepth);
@@ -510,22 +541,27 @@ void TechMachineProcessor::syncToHost (double ppq)
     const double sinceStart = secondOfPair ? inPair - (1.0 + sw) : inPair;
     const double untilNext = secondOfPair ? 2.0 - inPair : (1.0 + sw) - inPair;
     const double samplesPerStep = sampleRate * stepSeconds();
-    const int hostStep = (int) (((long long) pair * 2 + (secondOfPair ? 1 : 0)) % lengthSteps);
+    const long long absolute = (long long) pair * 2 + (secondOfPair ? 1 : 0);
+    const int hostStep = (int) (absolute % lengthSteps);
+    stepLength = (secondOfPair ? 1.0 - sw : 1.0 + sw) * samplesPerStep;
 
     if (hostStep == stepIndex)
     {
         samplesToNextStep = untilNext * samplesPerStep;
+        stepCount = absolute;
     }
     else if (sinceStart * samplesPerStep < 1.0)
     {
         // A step starts right now: let render() trigger it on the first sample.
         stepIndex = (hostStep + lengthSteps - 1) % lengthSteps;
+        stepCount = absolute - 1;
         samplesToNextStep = 0.0;
     }
     else
     {
         // Started or jumped in the middle of a step: wait for the next one instead of playing late.
         stepIndex = hostStep;
+        stepCount = absolute;
         currentStep = hostStep;
         samplesToNextStep = untilNext * samplesPerStep;
     }
@@ -535,27 +571,94 @@ void TechMachineProcessor::advanceStep()
 {
     const bool loopStarts = stepIndex < 0 || stepIndex + 1 >= lengthSteps;
     stepIndex = (stepIndex + 1) % lengthSteps;
+    ++stepCount;
+    if (isHosted()) loopCount = stepCount / lengthSteps;
+    else if (loopStarts) ++loopCount;
     if (loopStarts) startOfLoop();
     currentStep = stepIndex;
+
+    // FILL: armed, it plays over the last bar of the loop; the next downbeat brings a crash.
+    const bool crash = loopStarts && fillOn;
+    if (crash) fillArmed = false;
+    fillOn = fillArmed.load() && stepIndex >= lengthSteps - pageSteps;
+    fillPlaying = fillOn;
+    if (stepIndex % pageSteps == 0)
+        if (const int scene = cuedScene.load(); scene >= 0) applyScene (scene);
 
     const double nominal = sampleRate * stepSeconds();
     const double sw = swing->load() * 0.33;
     const double thisStep = stepIndex % 2 == 0 ? nominal * (1.0 + sw) : nominal * (1.0 - sw);
     samplesToNextStep += thisStep;
+    stepLength = thisStep;
 
-    const StepInfo info { stepIndex, (stepIndex + lengthSteps - 1) % lengthSteps, currentKey(), currentScale(), thisStep, nominal };
     for (int t = 0; t < numMachines; ++t)
     {
-        if (! strips[(size_t) t].shown) continue;
+        if (! strips[(size_t) t].shown || ownClock[(size_t) t]) continue;   // a track with its own speed: runOwnClocks()
         auto& m = *machines[(size_t) t];
-        if (m.applyLocks (stepIndex))
+        m.crashNow = crash;
+        if (m.track.length.load() > 0)
         {
-            m.readParams();
-            readStrip (t);
+            const int steps = m.track.stepsIn (lengthSteps);
+            playTrackStep (t, (int) (stepCount % steps), stepCount / steps, steps, thisStep, nominal);
         }
-        m.onStep (info);
-        if (machines[(size_t) t]->takeKick() && strips[(size_t) t].audible)
-            pump.trigger (stepSeconds() * 4.0f);
+        else
+        {
+            playTrackStep (t, stepIndex, loopCount, lengthSteps, thisStep, nominal);
+        }
+    }
+}
+
+// One step of one track: its automation, whether it plays this time (chance, condition), and when (delay).
+void TechMachineProcessor::playTrackStep (int t, int step, long long round, int steps, double stepSamples, double nominal)
+{
+    auto& m = *machines[(size_t) t];
+    if (pendingIn[(size_t) t] > 0.0) startStep (t);   // the delayed step before has not started yet
+    m.playStep = step;
+    if (m.applyLocks (step))
+    {
+        m.readParams();
+        readStrip (t);
+    }
+    m.fillPosition = fillOn ? stepIndex % pageSteps : -1;
+    const int condition = (int) m.stepSetting (automation::Condition);
+    const float chance = m.stepSetting (automation::Chance);
+    m.silentStep = ! automation::conditionPlays (condition, round, fillOn) || (chance < 1.0f && stepRandom.nextFloat() >= chance);
+    pendingStep[(size_t) t] = { step, (step + steps - 1) % steps, currentKey(), currentScale(), stepSamples, nominal };
+
+    const float lateBy = m.stepSetting (automation::Delay);
+    if (lateBy > 0.0f)
+    {
+        pendingIn[(size_t) t] = juce::jmax (1.0, (double) lateBy * 0.5 * stepSamples);   // up to half a step late
+        return;
+    }
+    startStep (t);
+}
+
+void TechMachineProcessor::startStep (int t)
+{
+    pendingIn[(size_t) t] = -1.0;
+    auto& m = *machines[(size_t) t];
+    m.onStep (pendingStep[(size_t) t]);
+    m.crashNow = false;
+    if (m.takeKick() && strips[(size_t) t].audible)
+        pump.trigger (stepSeconds() * 4.0f);
+}
+
+// Tracks at another speed (double, half, triplets) follow the position in the sequence, sample by sample.
+void TechMachineProcessor::runOwnClocks()
+{
+    const double position = (double) stepCount + juce::jlimit (0.0, 0.999999, 1.0 - samplesToNextStep / stepLength);
+    const double nominal = sampleRate * stepSeconds();
+    for (int t = 0; t < numMachines; ++t)
+    {
+        if (! ownClock[(size_t) t] || ! strips[(size_t) t].shown) continue;
+        auto& m = *machines[(size_t) t];
+        const double factor = trackSpeedFactors[(size_t) juce::jlimit (0, numTrackSpeeds - 1, m.track.speed.load())];
+        const auto count = (long long) std::floor (position * factor + 1.0e-9);
+        if (count == m.lastCount || count < 0) continue;
+        m.lastCount = count;
+        const int steps = m.track.stepsIn (lengthSteps);
+        playTrackStep (t, (int) (count % steps), count / steps, steps, nominal / factor, nominal / factor);
     }
 }
 

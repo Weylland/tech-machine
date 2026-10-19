@@ -5,7 +5,7 @@ namespace techno::automation
 {
 namespace
 {
-struct Decoded { enum Kind { Strip, Param, Row, Velocity, None } kind; int index, row; };
+struct Decoded { enum Kind { Strip, Param, Row, Step, None } kind; int index, row; };
 
 Decoded decode (const MachineDef& def, int target)
 {
@@ -15,7 +15,8 @@ Decoded decode (const MachineDef& def, int target)
     if (target < (int) def.params.size()) return { Decoded::Param, target, 0 };
     target -= (int) def.params.size();
     if (target < (int) def.rows.size() * rowCount) return { Decoded::Row, target % rowCount, target / rowCount };
-    if (target == (int) def.rows.size() * rowCount) return { Decoded::Velocity, 0, 0 };
+    target -= (int) def.rows.size() * rowCount;
+    if (target < stepSettingCount) return { Decoded::Step, target, 0 };
     return { Decoded::None, 0, 0 };
 }
 } // namespace
@@ -23,7 +24,7 @@ Decoded decode (const MachineDef& def, int target)
 int targetCount (int machineType)
 {
     const auto& def = machineDef (machineType);
-    return stripCount + (int) def.params.size() + (int) def.rows.size() * rowCount + 1;
+    return stripCount + (int) def.params.size() + (int) def.rows.size() * rowCount + stepSettingCount;
 }
 
 juce::String paramId (int machineType, int target)
@@ -34,7 +35,7 @@ juce::String paramId (int machineType, int target)
         case Decoded::Strip: return pid::machine (machineType, stripSuffixes[d.index]);
         case Decoded::Param: return pid::synth (machineType, d.index);
         case Decoded::Row:   return pid::row (machineType, d.row, rowSuffixes[d.index]);
-        case Decoded::Velocity: return "velocity";
+        case Decoded::Step:  return stepSuffixes[d.index];
         case Decoded::None:  break;
     }
     return {};
@@ -58,7 +59,12 @@ juce::String label (int machineType, int target)
         case Decoded::Strip: return utf8 (stripLabels[d.index]);
         case Decoded::Param: return utf8 (def.params[(size_t) d.index].label);
         case Decoded::Row:   return utf8 (def.rows[(size_t) d.row].label) + juce::String (juce::CharPointer_UTF8 (" \xc2\xb7 ")) + utf8 (rowLabels[d.index]);
-        case Decoded::Velocity: return utf8 ("VÉLOCITÉ (force des notes)");
+        case Decoded::Step:
+        {
+            static const char* const stepLabels[] { "VÉLOCITÉ (force des notes)", "CHANCE (probabilité de jouer)",
+                                                    "CONDITION (à quels tours)", "RETARD (groove)" };
+            return utf8 (stepLabels[d.index]);
+        }
         case Decoded::None:  break;
     }
     return {};
@@ -68,6 +74,32 @@ int choiceCount (int machineType, int target)
 {
     const auto& def = machineDef (machineType);
     const auto d = decode (def, target);
+    if (d.kind == Decoded::Step) return d.index == Condition ? conditionCount : 0;
     return d.kind == Decoded::Param ? (int) def.params[(size_t) d.index].choices.size() : 0;
+}
+
+juce::String choiceName (int machineType, int target, int index)
+{
+    const auto& def = machineDef (machineType);
+    const auto d = decode (def, target);
+    if (d.kind == Decoded::Step && d.index == Condition) return utf8 (conditionNames[juce::jlimit (0, conditionCount - 1, index)]);
+    if (d.kind != Decoded::Param) return {};
+    const auto& choices = def.params[(size_t) d.index].choices;
+    return choices.empty() ? juce::String() : utf8 (choices[(size_t) juce::jlimit (0, (int) choices.size() - 1, index)]);
+}
+
+bool conditionPlays (int condition, long long round, bool fill)
+{
+    switch (condition)
+    {
+        case 1: return fill;
+        case 2: return ! fill;
+        case 3: return round == 0;
+        case 4: return round > 0;
+        case 5: case 6: return round % 2 == condition - 5;
+        case 7: case 8: case 9: return round % 3 == condition - 7;
+        case 10: case 11: case 12: case 13: return round % 4 == condition - 10;
+        default: return true;
+    }
 }
 } // namespace techno::automation

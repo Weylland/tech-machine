@@ -279,14 +279,25 @@ void TechMachineProcessor::setRecordAutomation (bool on)
 
 void TechMachineProcessor::recordKnob (const juce::String& paramId, float value)
 {
-    const int step = currentStep.load();
-    if (! recordAutomation || ! playing || step < 0) return;
+    if (! recordAutomation || ! playing) return;
     const auto it = automationIndex.find (paramId);
     if (it == automationIndex.end()) return;
+    const int step = machines[(size_t) it->second.first]->playStep.load();
+    if (step < 0) return;
     auto& track = machines[(size_t) it->second.first]->track;
     const int lane = track.laneFor (it->second.second, true);
     if (lane < 0) return;   // already 8 automated settings on this machine
     track.lockValue[(size_t) lane][(size_t) step] = value;
+    touchPattern();
+}
+
+void TechMachineProcessor::setTrackTiming (int type, int length, int speed)
+{
+    undoManager.beginNewTransaction();
+    beginPatternEdit();
+    auto& track = machines[(size_t) type]->track;
+    track.length = juce::jlimit (0, maxSteps, length);
+    track.speed = juce::jlimit (0, numTrackSpeeds - 1, speed);
     touchPattern();
 }
 

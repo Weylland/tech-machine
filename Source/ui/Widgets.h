@@ -403,6 +403,7 @@ public:
     std::function<void (int)> nudge;
     std::function<void()> onEditStart;   // called once at the start of each edit gesture (for undo)
     std::function<int()> getRoll;         // drum cells only: 0 = single hit, 2..4 = roll
+    std::function<bool()> isOutside;      // past the last step of a track shorter than the sequence
     std::function<void (int)> setRoll;
 
     void cycleRoll()
@@ -455,6 +456,11 @@ public:
             g.setColour (skin.capText);
             g.setFont (paint::condensed (getWidth() < 40 ? 13.0f : 14.0f));
             g.drawFittedText (getLabel(), getLocalBounds().reduced (2), juce::Justification::centred, 2, 0.7f);
+        }
+        if (isOutside && isOutside())
+        {
+            g.setColour (juce::Colours::black.withAlpha (0.6f));
+            g.fillRoundedRectangle (getLocalBounds().toFloat(), 3.0f);
         }
     }
 

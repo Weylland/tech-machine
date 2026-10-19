@@ -62,6 +62,28 @@ static Stats run (TechMachineProcessor& p, double seconds, const juce::String& w
     return st;
 }
 
+// The pitch of a held note: the first strong repetition (autocorrelation) between 50 and 1000 Hz.
+static double estimatePitch (const std::vector<float>& v, double rate)
+{
+    const int n = (int) v.size();
+    std::vector<double> c (962, 0.0);
+    double bestValue = -1e9;
+    for (int lag = 47; lag <= 961 && lag < n / 2; ++lag)
+    {
+        double sum = 0.0;
+        for (int i = 0; i + lag < n; ++i) sum += (double) v[(size_t) i] * v[(size_t) (i + lag)];
+        c[(size_t) lag] = sum / (double) (n - lag);
+        bestValue = std::max (bestValue, c[(size_t) lag]);
+    }
+    int best = 48;
+    for (int lag = 48; lag <= 960; ++lag)
+        if (c[(size_t) lag] > 0.85 * bestValue && c[(size_t) lag] >= c[(size_t) lag - 1] && c[(size_t) lag] >= c[(size_t) lag + 1]) { best = lag; break; }
+    const double a = c[(size_t) best - 1], b = c[(size_t) best], d = c[(size_t) best + 1];
+    const double curve = a - 2.0 * b + d;
+    const double shift = std::abs (curve) > 1e-12 ? 0.5 * (a - d) / curve : 0.0;
+    return rate / ((double) best + shift);
+}
+
 static void print (const juce::String& name, const Stats& s)
 {
     printf ("%-28s peak=%.3f rms=%6.1f dB nan=%d cpu=%.1f%%\n", name.toRawUTF8(), s.peak, s.rmsDb, s.nans, s.cpu);

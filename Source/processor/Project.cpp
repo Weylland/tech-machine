@@ -40,6 +40,9 @@ void TechMachineProcessor::newProject()
         for (auto& track : part) track.clear();
     setSong ({});
     songMode = false;
+    for (auto& stored : sceneStored) stored = false;
+    cuedScene = currentScene = -1;
+    fillArmed = false;
     for (auto& m : machines) m->track.clear();
     genreIndex = 0;
     progression = { 0 };
@@ -99,6 +102,8 @@ void TechMachineProcessor::writeTrackXml (juce::XmlElement& e, int type, const T
     }
     e.setAttribute ("accent", encodeBools (track.accent));
     e.setAttribute ("on", encodeBools (track.on));
+    if (track.length.load() > 0) e.setAttribute ("length", track.length.load());
+    if (track.speed.load() > 0) e.setAttribute ("speed", track.speed.load());
     e.setAttribute ("slide", encodeBools (track.slide));
 
     juce::StringArray notes, chords, ties;
@@ -142,6 +147,8 @@ void TechMachineProcessor::readTrackXml (const juce::XmlElement& e, int type, Tr
     }
     decodeBools (e.getStringAttribute ("accent"), track.accent);
     decodeBools (e.getStringAttribute ("on"), track.on);
+    track.length = juce::jlimit (0, maxSteps, e.getIntAttribute ("length", 0));
+    track.speed = juce::jlimit (0, numTrackSpeeds - 1, e.getIntAttribute ("speed", 0));
     decodeBools (e.getStringAttribute ("slide"), track.slide);
     auto notes = juce::StringArray::fromTokens (e.getStringAttribute ("note"), ",", {});
     for (int i = 0; i < maxSteps; ++i)
@@ -200,6 +207,17 @@ std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
         auto* songXml = patterns->createNewChildElement ("Song");
         songXml->setAttribute ("entries", entries.joinIntoString (","));
         songXml->setAttribute ("on", songMode.load());
+    }
+
+    for (int scene = 0; scene < numScenes; ++scene)
+    {
+        if (! hasScene (scene)) continue;
+        juce::StringArray cut;
+        for (int t = 0; t < numMachines; ++t)
+            if (sceneMutes[(size_t) scene][(size_t) t].load()) cut.add (machineDef (t).id);
+        auto* e = patterns->createNewChildElement ("Scene");
+        e->setAttribute ("index", scene);
+        e->setAttribute ("cut", cut.joinIntoString (","));
     }
     return xml;
 }
@@ -262,6 +280,17 @@ void TechMachineProcessor::restoreProjectXml (const juce::XmlElement& source)
     }
     setSong (entries);
     songMode = songOn && ! entries.empty();
+
+    for (auto& stored : sceneStored) stored = false;
+    cuedScene = currentScene = -1;
+    for (auto* e : patterns->getChildWithTagNameIterator ("Scene"))
+    {
+        const int scene = e->getIntAttribute ("index", -1);
+        if (scene < 0 || scene >= numScenes) continue;
+        const auto cut = juce::StringArray::fromTokens (e->getStringAttribute ("cut"), ",", {});
+        for (int t = 0; t < numMachines; ++t) sceneMutes[(size_t) scene][(size_t) t] = cut.contains (machineDef (t).id);
+        sceneStored[(size_t) scene] = true;
+    }
     songEntry = -1;
     switchPart (juce::jlimit (0, numParts - 1, patterns->getIntAttribute ("part", 0)));
 

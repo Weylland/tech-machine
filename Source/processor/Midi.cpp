@@ -33,11 +33,20 @@ void TechMachineProcessor::setRecordNotes (bool on)
     recordNotes = on;
 }
 
-int TechMachineProcessor::quantizedStep() const
+int TechMachineProcessor::quantizedStep (int type) const
 {
     if (stepIndex < 0) return 0;
-    const double nominal = sampleRate * stepSeconds();
-    return samplesToNextStep < nominal * 0.5 ? (stepIndex + 1) % lengthSteps : stepIndex;
+    const auto& track = machines[(size_t) type]->track;
+    const int speed = juce::jlimit (0, numTrackSpeeds - 1, track.speed.load());
+    if (track.length.load() == 0 && speed == 0)
+    {
+        const double nominal = sampleRate * stepSeconds();
+        return samplesToNextStep < nominal * 0.5 ? (stepIndex + 1) % lengthSteps : stepIndex;
+    }
+    // A track with its own length or speed: the nearest of its steps.
+    const double position = (double) stepCount + juce::jlimit (0.0, 1.0, 1.0 - samplesToNextStep / stepLength);
+    const auto count = (long long) std::floor (position * trackSpeedFactors[(size_t) speed] + 0.5);
+    return (int) (juce::jmax (0LL, count) % track.stepsIn (lengthSteps));
 }
 
 void TechMachineProcessor::handleMidi (const juce::MidiBuffer& midi)
@@ -92,7 +101,8 @@ void TechMachineProcessor::recordNoteOn (int type, int note, float velocity)
 {
     const auto& def = machineDef (type);
     auto& track = machines[(size_t) type]->track;
-    const int step = quantizedStep();
+    const int step = quantizedStep (type);
+    const int steps = track.stepsIn (lengthSteps);
     const auto s = (size_t) step;
     if (const int lane = track.laneFor (automation::velocityTarget (def), true); lane >= 0)
         track.lockValue[(size_t) lane][s] = juce::jlimit (0.05f, 1.0f, velocity * 0.9375f);   // velocity 0.8 (about 100) = normal
@@ -114,7 +124,7 @@ void TechMachineProcessor::recordNoteOn (int type, int note, float velocity)
         const bool fresh = ! track.on[s] || track.chord[s].load() == 0;
         track.chord[s] = (fresh ? 0 : track.chord[s].load()) | bit;
         track.tie[s] = fresh ? 0 : track.tie[s].load() & ~bit;
-        const auto prev = (size_t) ((step + lengthSteps - 1) % lengthSteps);
+        const auto prev = (size_t) ((step + steps - 1) % steps);
         track.tie[prev] = track.tie[prev].load() & ~bit;
         if (fresh) track.note[s] = semitone;
     }
@@ -138,11 +148,12 @@ void TechMachineProcessor::recordNoteOff (int type, int note)
 
     // Held keys become held steps: tied notes on the poly synths, a glide on the mono ones.
     auto& track = machines[(size_t) type]->track;
-    const int length = (quantizedStep() - start + lengthSteps) % lengthSteps;
+    const int steps = track.stepsIn (lengthSteps);
+    const int length = (quantizedStep (type) - start + steps) % steps;
     const std::uint64_t bit = 1ull << recordedSemitone (type, note);
     for (int k = 1; k < length; ++k)
     {
-        const auto s = (size_t) ((start + k) % lengthSteps), prev = (size_t) ((start + k - 1) % lengthSteps);
+        const auto s = (size_t) ((start + k) % steps), prev = (size_t) ((start + k - 1) % steps);
         if (def.kind == MachineKind::Poly)
         {
             const bool fresh = ! track.on[s] || track.chord[s].load() == 0;

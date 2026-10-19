@@ -530,6 +530,28 @@ MainView::MainView (TechMachineProcessor& p)
     songInfo = &addInfo (help ("song"));
     refreshParts();
 
+    fillButton.setTooltip (shortHelp (help ("fill").body));
+    fillButton.onClick = [this] { processor.armFill (fillButton.getToggleState()); };
+    addAndMakeVisible (fillButton);
+    fillInfo = &addInfo (help ("fill"));
+    for (int scene = 0; scene < TechMachineProcessor::numScenes; ++scene)
+    {
+        auto& b = sceneButtons[(size_t) scene];
+        b.setButtonText (juce::String (scene + 1));
+        b.setClickingTogglesState (false);
+        b.setTooltip (utf8 ("Scène ") + juce::String (scene + 1) + utf8 (" : clic = la rappeler (une scène vide garde les machines coupées maintenant), clic droit = la remplacer ou l'effacer"));
+        b.onClick = [this, scene]
+        {
+            if (processor.hasScene (scene)) processor.recallScene (scene);
+            else processor.storeScene (scene);
+            refreshScenes();
+        };
+        b.onRightClick = [this, scene] { showSceneMenu (scene); };
+        addAndMakeVisible (b);
+    }
+    scenesInfo = &addInfo (help ("scenes"));
+    refreshScenes();
+
     auto& hooks = midiLearnHooks();
     hooks.learn = [this] (const juce::String& id)
     {
@@ -596,6 +618,39 @@ void MainView::showPartMenu (int part)
         else if (result >= 100) processor.copyPart (part, result - 100);
         refreshParts();
     });
+}
+
+void MainView::showSceneMenu (int scene)
+{
+    juce::PopupMenu menu;
+    menu.addSectionHeader (utf8 ("Scène ") + juce::String (scene + 1));
+    menu.addItem (1, utf8 ("Garder les machines coupées maintenant dans cette scène"));
+    menu.addItem (2, utf8 ("Effacer cette scène"), processor.hasScene (scene));
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (sceneButtons[(size_t) scene]), [this, scene] (int result)
+    {
+        if (result == 1) processor.storeScene (scene);
+        else if (result == 2) processor.clearScene (scene);
+        refreshScenes();
+    });
+}
+
+// Scenes: the last one recalled is lit, the one waiting for the next bar blinks, the empty ones are dim.
+// FILL stays lit until its fill has played, and blinks while it plays.
+void MainView::refreshScenes()
+{
+    const bool blink = (juce::Time::getMillisecondCounter() / 250) % 2 == 0;
+    const int current = processor.lastScene(), cued = processor.cuedSceneIndex();
+    for (int scene = 0; scene < TechMachineProcessor::numScenes; ++scene)
+    {
+        auto& b = sceneButtons[(size_t) scene];
+        const bool stored = processor.hasScene (scene);
+        const bool on = (scene == current && cued < 0) || (scene == cued && blink);
+        b.setColour (juce::TextButton::buttonColourId, on ? juce::Colour (0xffd8892a) : stored ? juce::Colour (0xff4a3a26) : juce::Colour (0xff2c2d32));
+        b.setColour (juce::TextButton::textColourOffId, stored ? colours::text : colours::dim);
+    }
+    const bool armed = processor.isFillArmed();
+    const bool lit = armed && ! (processor.isFillPlaying() && ! blink);
+    if (fillButton.getToggleState() != lit) fillButton.setToggleState (lit, juce::dontSendNotification);
 }
 
 // Parts: the one playing is lit, the one waiting for the end of the loop blinks, the empty ones are dim.
@@ -1027,7 +1082,7 @@ void MainView::setPage (int newPage)
     for (auto* panel : panels)
     {
         panel->refreshCells();
-        panel->setPlayhead (processor.currentStep.load());
+        panel->setPlayhead (processor.machine (panel->type).playStep.load());
     }
 }
 
@@ -1065,6 +1120,12 @@ bool MainView::keyPressed (const juce::KeyPress& key)
 
     if (key == juce::KeyPress::spaceKey) { togglePlay(); return true; }
     if (key == juce::KeyPress::F11Key) { toggleFullScreen(); return true; }
+    if (code == 'F' && ! mods.isCommandDown() && ! mods.isAltDown())
+    {
+        processor.armFill (! processor.isFillArmed());
+        refreshScenes();
+        return true;
+    }
     if (! mods.isCommandDown()) return false;
 
     if (code == 'Z' && mods.isShiftDown()) { processor.undoManager.redo(); return true; }
@@ -1092,7 +1153,7 @@ void MainView::timerCallback()
     if (pianoRoll != nullptr)
     {
         auto& grid = pianoRoll->getGrid();
-        grid.setPlayhead (processor.currentStep.load());
+        grid.setPlayhead (processor.machine (grid.machine()).playStep.load());
         if (processor.patternVersion.load() != grid.knownVersion) grid.reload();
     }
     if (processor.sampleVersion() != lastSampleVersion)
@@ -1101,6 +1162,7 @@ void MainView::timerCallback()
         for (auto* panel : panels) panel->refreshSampleNames();
     }
     refreshParts();
+    refreshScenes();
     if (automationRecordButton.getToggleState() != processor.isRecordingAutomation())
         automationRecordButton.setToggleState (processor.isRecordingAutomation(), juce::dontSendNotification);
     if (midiRecordButton.getToggleState() != processor.isRecordingNotes())
@@ -1145,12 +1207,9 @@ void MainView::timerCallback()
     if (follow && playing && step >= 0 && step / pageSteps != viewPage)
         setPage (step / pageSteps);
 
-    if (step != lastStep)
-    {
-        lastStep = step;
-        for (auto* panel : panels)
-            if (panel->isVisible()) panel->setPlayhead (step);
-    }
+    // Each track shows its own step: a track can be shorter or faster than the sequence.
+    for (auto* panel : panels)
+        if (panel->isVisible()) panel->setPlayhead (processor.machine (panel->type).playStep.load());
 
     // Note and chord names depend on the key, the scale and each synth's octave and chord type.
     int labelHash = processor.currentKey() + 12 * processor.currentScale();
@@ -1253,6 +1312,7 @@ void MainView::paint (juce::Graphics& g)
     g.drawText (utf8 ("MESURES"), barButtons[0].getX() - 60, barButtons[0].getY(), 56, barButtons[0].getHeight(), juce::Justification::centredRight);
     g.drawText ("PAGE", pageButtons[0].getX() - 46, pageButtons[0].getY(), 42, pageButtons[0].getHeight(), juce::Justification::centredRight);
     g.drawText (utf8 ("PARTIES"), partButtons[0].getX() - 70, partButtons[0].getY(), 64, partButtons[0].getHeight(), juce::Justification::centredRight);
+    g.drawText (utf8 ("SCÈNES"), sceneButtons[0].getX() - 70, sceneButtons[0].getY(), 64, sceneButtons[0].getHeight(), juce::Justification::centredRight);
 
     paint::plate (g, masterArea.toFloat(), juce::Colour (0xff2e2f35), juce::Colour (0xff1c1d21), 6.0f, true);
     screws (g, masterArea);
@@ -1328,6 +1388,12 @@ void MainView::resized()
     songPlayButton.setBounds (x, y3, 170, 28);
     songEditButton.setBounds (songPlayButton.getRight() + 8, y3, 130, 28);
     songInfo->setBounds (songEditButton.getRight() + 2, y3 + 7, 15, 15);
+    x = songInfo->getRight() + (narrow ? 22 : 30);
+    fillButton.setBounds (x, y3, 70, 28);
+    fillInfo->setBounds (fillButton.getRight() + 2, y3 + 7, 15, 15);
+    x = fillInfo->getRight() + (narrow ? 70 : 78);
+    for (auto& scene : sceneButtons) { scene.setBounds (x, y3, narrow ? 32 : 34, 28); x += narrow ? 35 : 37; }
+    scenesInfo->setBounds (x, y3 + 7, 15, 15);
     guideButton.setBounds (addButton.getX() - 12 - 44, y2, 44, 28);
 
     // Master strip.

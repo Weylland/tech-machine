@@ -73,6 +73,24 @@ struct MachineDef
 
 const MachineDef& machineDef (int type);
 
+// Arpeggiator of the chord synths (every poly machine but the chip, which has its own).
+inline bool hasArpeggiator (const MachineDef& def) { return def.kind == MachineKind::Poly && def.type != Chip; }
+inline const std::vector<const char*>& arpModeNames()
+{
+    static const std::vector<const char*> names { "Off", "Montant", "Descendant", "Montant-descendant", "Au hasard", "Dans l'ordre joué" };
+    return names;
+}
+inline const std::vector<const char*>& arpRateNames()
+{
+    static const std::vector<const char*> names { "1/8", "1/16", "1/16 triolet", "1/32" };
+    return names;
+}
+inline const std::vector<const char*>& arpOctaveNames()
+{
+    static const std::vector<const char*> names { "1 octave", "2 octaves", "3 octaves" };
+    return names;
+}
+
 // Parameter order of each synth: must match the params vectors in MachineDefs.cpp.
 namespace p303 { enum { Octave, Wave, Cutoff, Reso, EnvMod, Decay, Accent, count }; }
 namespace p101 { enum { Octave, Saw, Square, Sub, Noise, Pwm, Cutoff, Reso, Env, Attack, Decay, Sustain, Release, Glide, count }; }
