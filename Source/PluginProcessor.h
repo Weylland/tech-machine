@@ -94,6 +94,9 @@ public:
     void setAutomation (int machineType, int target, int step, float value);   // noLock erases; message thread
     void clearAutomation (int machineType, int target);
 
+    // Separate outputs in a host: a machine can leave on its own stereo output instead of the master.
+    static constexpr int numAuxOutputs = 8;
+
     // Sampler pads.
     static constexpr int numPads = techno::SampleBank::numPads;
     bool loadSamplePad (int pad, const juce::File&);
@@ -140,6 +143,12 @@ public:
     // Offline render of a project to a WAV file. Safe to call from a background thread.
     static bool exportWav (const juce::XmlElement& project, const juce::File&, int loops, const std::function<bool (float)>& progress);
 
+    // The notes as a MIDI file (one track per machine; the whole song when it is on). Message thread.
+    bool exportMidi (const juce::File&) const;
+
+    // One WAV per machine of the rack, each with its own effects. Safe to call from a background thread.
+    static bool exportStems (const juce::XmlElement& project, const juce::File& folder, int loops, const std::function<bool (float)>& progress);
+
     void startRecording();
     void stopRecording();
     bool isRecording() const { return activeWriter.load() != nullptr; }
@@ -156,7 +165,8 @@ public:
 private:
     struct Strip
     {
-        std::atomic<float>* show, *mute, *solo, *drive, *crush, *filter, *echo, *reverb, *volume, *pan;
+        std::atomic<float>* show, *mute, *solo, *drive, *crush, *filter, *echo, *reverb, *volume, *pan, *output;
+        int bus = 0;   // 0 = master, 1..numAuxOutputs = a separate output of the host
         techno::Crusher crusher;
         techno::DjFilter djFilter;
         float gain = 0.0f;
@@ -173,6 +183,8 @@ private:
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     void render (float* left, float* right, int numSamples);
+    std::array<float*, numAuxOutputs + 1> auxLeft {}, auxRight {};
+    static BusesProperties buses();
     void readStrip (int machineType);
     void advanceStep();
     void syncToHost (double ppq);

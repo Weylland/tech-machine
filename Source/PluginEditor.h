@@ -140,6 +140,8 @@ private:
     void saveProject (std::function<void()> then = {});
     void saveProjectAs (std::function<void()> then = {});
     void exportWav (int loops);
+    void exportStems (int loops);
+    void exportMidi();
     void projectChanged();
 
     TechMachineProcessor& processor;

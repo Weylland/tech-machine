@@ -41,6 +41,7 @@ set(TECHMACHINE_SOURCES
     Source/processor/Project.cpp
     Source/processor/Song.cpp
     Source/processor/Sounds.cpp
+    Source/processor/Export.cpp
     Source/core/Automation.cpp
     Source/core/Examples.cpp
     Source/core/Help.cpp
@@ -48,6 +49,7 @@ set(TECHMACHINE_SOURCES
     Source/core/Translations.cpp
     Source/core/MachineDefs.cpp
     Source/core/MidiLearn.cpp
+    Source/core/MidiMap.cpp
     Source/core/Music.cpp
     Source/core/PatternLibrary.cpp
     Source/core/Presets.cpp

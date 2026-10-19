@@ -466,6 +466,17 @@ void MachinePanel::showMoreMenu()
     menu.addItem (5, utf8 ("Décaler d'un pas vers la droite →"));
     menu.addSeparator();
     menu.addItem (6, utf8 ("Tout effacer"));
+    if (processor.isHosted())
+    {
+        // Where this machine leaves in the music software.
+        juce::PopupMenu outputs;
+        const int current = (int) processor.apvts.getRawParameterValue (pid::machine (type, "output"))->load();
+        outputs.addItem (300, utf8 ("Master (avec les effets du master)"), true, current == 0);
+        for (int bus = 1; bus <= TechMachineProcessor::numAuxOutputs; ++bus)
+            outputs.addItem (300 + bus, utf8 ("Sortie ") + juce::String (bus + 1), true, current == bus);
+        menu.addSeparator();
+        menu.addSubMenu (utf8 ("Sortie dans le logiciel de musique"), outputs);
+    }
     if (type == Sampler)
     {
         menu.addSeparator();
@@ -481,6 +492,11 @@ void MachinePanel::showMoreMenu()
     }
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (moreButton), [this] (int result)
     {
+        if (result >= 300 && result <= 300 + TechMachineProcessor::numAuxOutputs)
+        {
+            processor.setParam (pid::machine (type, "output"), (float) (result - 300));
+            return;
+        }
         switch (result)
         {
             case 1: processor.copyMachine (type); break;

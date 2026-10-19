@@ -43,7 +43,7 @@ std::unique_ptr<juce::RangedAudioParameter> choice (const juce::String& id, cons
 } // namespace
 
 TechMachineProcessor::TechMachineProcessor()
-    : AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
+    : AudioProcessor (buses()),
       apvts (*this, &undoManager, "TechMachine", createLayout())
 {
     auto raw = [this] (const juce::String& id) { return apvts.getRawParameterValue (id); };
@@ -80,6 +80,7 @@ TechMachineProcessor::TechMachineProcessor()
         s.reverb = raw (pid::machine (t, "reverb"));
         s.volume = raw (pid::machine (t, "volume"));
         s.pan = raw (pid::machine (t, "pan"));
+        s.output = raw (pid::machine (t, "output"));
     }
 
     partStore = std::make_unique<std::array<std::array<Track, numMachines>, numParts>>();
@@ -141,6 +142,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout TechMachineProcessor::create
         layout.add (knob (pid::machine (t, "reverb"), name + " reverb", 0.0f));
         layout.add (knob (pid::machine (t, "volume"), name + " volume", 0.75f));
         layout.add (knob (pid::machine (t, "pan"), name + " pan", 0.5f, panText));
+        layout.add (choice (pid::machine (t, "output"), name + " output",
+                            { "Master", "Sortie 2", "Sortie 3", "Sortie 4", "Sortie 5", "Sortie 6", "Sortie 7", "Sortie 8", "Sortie 9" }, 0));
 
         if (drum)
         {
@@ -176,9 +179,20 @@ juce::AudioProcessorValueTreeState::ParameterLayout TechMachineProcessor::create
     return layout;
 }
 
+// The main stereo output, and separate stereo outputs the host can turn on.
+juce::AudioProcessor::BusesProperties TechMachineProcessor::buses()
+{
+    auto b = BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true);
+    for (int i = 1; i <= numAuxOutputs; ++i) b = b.withOutput ("Out " + juce::String (i + 1), juce::AudioChannelSet::stereo(), false);
+    return b;
+}
+
 bool TechMachineProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-    return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()) return false;
+    for (int i = 1; i < layouts.outputBuses.size(); ++i)
+        if (! layouts.outputBuses[i].isDisabled() && layouts.outputBuses[i] != juce::AudioChannelSet::stereo()) return false;
+    return true;
 }
 
 void TechMachineProcessor::prepareToPlay (double newSampleRate, int samplesPerBlock)
@@ -262,6 +276,17 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     handleMidi (midi);
     midi.clear();
 
+    // Separate outputs turned on by the host (cleared here, filled by render()).
+    for (int bus = 1; bus <= numAuxOutputs; ++bus)
+    {
+        auto* b = getBus (false, bus);
+        if (b == nullptr || ! b->isEnabled() || b->getNumberOfChannels() < 2) continue;
+        auto aux = getBusBuffer (buffer, false, bus);
+        aux.clear();
+        auxLeft[(size_t) bus] = aux.getWritePointer (0);
+        auxRight[(size_t) bus] = aux.getWritePointer (1);
+    }
+
     bool anySolo = false;
     for (auto& s : strips)
         anySolo = anySolo || (s.show->load() > 0.5f && s.solo->load() > 0.5f);
@@ -277,6 +302,8 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         }
 
         s.audible = s.mute->load() < 0.5f && (! anySolo || s.solo->load() > 0.5f);
+        const int bus = (int) s.output->load();
+        s.bus = bus > 0 && bus <= numAuxOutputs && auxLeft[(size_t) bus] != nullptr ? bus : 0;
         readStrip (t);
         machines[(size_t) t]->readParams();
     }
@@ -304,6 +331,8 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     auto* left = buffer.getWritePointer (0);
     auto* right = buffer.getWritePointer (1);
     render (left, right, numSamples);
+    auxLeft.fill (nullptr);
+    auxRight.fill (nullptr);
 
     float peak = 0.0f;
     for (int i = 0; i < numSamples; ++i)
@@ -388,8 +417,16 @@ void TechMachineProcessor::render (float* left, float* right, int numSamples)
                 r *= duck;
             }
 
-            sumL += l;
-            sumR += r;
+            if (s.bus > 0)
+            {
+                auxLeft[(size_t) s.bus][i] += l;
+                auxRight[(size_t) s.bus][i] += r;
+            }
+            else
+            {
+                sumL += l;
+                sumR += r;
+            }
             const float mono = 0.5f * (l + r);
             echoIn += mono * s.echoSend + frame.echo * s.gain;
             reverbIn += mono * s.reverbSend + frame.reverb * s.gain;

@@ -1734,12 +1734,162 @@ static int test_sounds (int argc, char** argv)
     return failures;
 }
 
+
+// Exports: the MIDI file holds the right notes (drums on channel 10 with General MIDI notes, synth pitches,
+// chords, held notes, the song), and the stems give one sounding WAV per machine.
+static int test_exports (int argc, char** argv)
+{
+    juce::ignoreUnused (argc, argv);
+    int failures = 0;
+    auto expect = [&] (bool ok, const char* what)
+    {
+        if (! ok) ++failures;
+        printf ("  %-66s %s\n", what, ok ? "ok" : "FAIL");
+    };
+    const auto folder = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_exports");
+    folder.deleteRecursively();
+    folder.createDirectory();
+
+    TechMachineProcessor p;
+    p.newProject();
+    p.setBars (1);
+    p.setParam (pid::bpm, 120.0f);
+    p.setParam (pid::key, 0.0f);     // C
+    p.setParam (pid::scale, 2.0f);   // major
+    p.setShown (TR909, true);
+    p.setShown (TB303, true);
+    p.setShown (Juno106, true);
+    auto& kick = p.machine (TR909).track;
+    for (int st = 0; st < 16; st += 4) kick.hits[0][(size_t) st] = true;
+    auto& acid = p.machine (TB303).track;
+    acid.on[0] = true; acid.note[0] = 0;                                   // C, one step
+    acid.on[4] = true; acid.note[4] = 4; acid.slide[4] = true;             // E held over two steps
+    acid.on[5] = true; acid.note[5] = 4;
+    auto& juno = p.machine (Juno106).track;
+    juno.on[8] = true; juno.note[8] = 0;                                   // a chord on C
+    p.setParam ("juno106_chord", 1.0f);
+    for (auto* t : { &kick, &acid, &juno }) t->tile (16);
+
+    auto readMidi = [] (const juce::File& f)
+    {
+        juce::MidiFile midi;
+        juce::FileInputStream in (f);
+        midi.readFrom (in);
+        return midi;
+    };
+    auto notesOf = [] (const juce::MidiMessageSequence& seq, int& channel)
+    {
+        std::vector<std::pair<double, int>> notes;
+        for (auto* e : seq)
+            if (e->message.isNoteOn())
+            {
+                notes.push_back ({ e->message.getTimeStamp(), e->message.getNoteNumber() });
+                channel = e->message.getChannel();
+            }
+        return notes;
+    };
+    auto lengthOf = [] (const juce::MidiMessageSequence& seq, double start)
+    {
+        for (auto* e : seq)
+            if (e->message.isNoteOn() && std::abs (e->message.getTimeStamp() - start) < 1.0 && e->noteOffObject != nullptr)
+                return e->noteOffObject->message.getTimeStamp() - start;
+        return 0.0;
+    };
+
+    const auto midiFile = folder.getChildFile ("test.mid");
+    expect (p.exportMidi (midiFile), "MIDI file written");
+    const auto midi = readMidi (midiFile);
+    expect (midi.getNumTracks() == 4, "one track per machine plus the tempo");
+    int drumChannel = 0, acidChannel = 0, junoChannel = 0;
+    const auto drums = notesOf (*midi.getTrack (1), drumChannel);
+    expect (drums.size() == 4 && drums[0].second == 36 && std::abs (drums[1].first - 960.0) < 1.0 && drumChannel == 10,
+            "909 kick: 4 notes C1 (36) on the beats, channel 10");
+    const auto bass = notesOf (*midi.getTrack (2), acidChannel);
+    const int base = machineBaseNote (machineDef (TB303), 0, 2);
+    expect (bass.size() == 2 && bass[0].second == base && bass[1].second == base + 4, "303: C then E, at the right pitch");
+    expect (std::abs (lengthOf (*midi.getTrack (2), 4 * 240.0) - 1.5 * 240.0) < 1.0, "303: the held E lasts 1.5 steps (like the gate of the synth)");
+    const auto chord = notesOf (*midi.getTrack (3), junoChannel);
+    int intervals[5];
+    const int expectedNotes = chordIntervals (2, 0, 1, intervals);   // the chord the synth plays: C major scale, chord type Auto
+    expect ((int) chord.size() == expectedNotes && std::abs (chord[0].first - 8 * 240.0) < 1.0, "106: the chord the synth plays, on step 9");
+
+    // Song: A x2 then B (empty) x1 -> the notes of A twice.
+    p.setSong ({ { 0, 2 }, { 1, 1 } });
+    p.setSongMode (true);
+    p.selectPart (0);
+    const auto songFile = folder.getChildFile ("song.mid");
+    p.exportMidi (songFile);
+    int ch = 0;
+    expect (notesOf (*readMidi (songFile).getTrack (1), ch).size() == 8, "song: the kicks of part A twice");
+    p.setSongMode (false);
+
+    // Stems
+    const auto stems = folder.getChildFile ("stems");
+    expect (TechMachineProcessor::exportStems (*p.createProjectXml(), stems, 1, {}), "stems exported");
+    const auto files = stems.findChildFiles (juce::File::findFiles, false, "*.wav");
+    expect (files.size() == 3, "one WAV per machine of the rack");
+    juce::AudioFormatManager formats;
+    formats.registerBasicFormats();
+    int sounding = 0;
+    for (auto& f : files)
+    {
+        std::unique_ptr<juce::AudioFormatReader> reader (formats.createReaderFor (f));
+        if (reader == nullptr) continue;
+        juce::AudioBuffer<float> buffer (2, (int) reader->lengthInSamples);
+        reader->read (&buffer, 0, (int) reader->lengthInSamples, 0, true, true);
+        sounding += buffer.getMagnitude (0, buffer.getNumSamples()) > 0.01f ? 1 : 0;
+    }
+    expect (sounding == 3, "every stem has sound");
+    folder.deleteRecursively();
+
+    // Separate outputs in a host: the kick sent to output 2 leaves the master.
+    {
+        juce::AudioProcessor::setTypeOfNextNewPlugin (juce::AudioProcessor::wrapperType_VST3);
+        TechMachineProcessor host;
+        juce::AudioProcessor::setTypeOfNextNewPlugin (juce::AudioProcessor::wrapperType_Undefined);
+        auto layout = host.getBusesLayout();
+        layout.outputBuses.getReference (1) = juce::AudioChannelSet::stereo();
+        expect (host.setBusesLayout (layout), "the host can turn on output 2");
+        host.newProject();
+        host.setShown (TR909, true);
+        for (int st = 0; st < maxSteps; st += 4) host.machine (TR909).track.hits[0][(size_t) st] = true;
+        host.setParam (pid::machine (TR909, "output"), 1.0f);
+        host.prepareToPlay (48000.0, 512);
+        FakeHead head;
+        host.setPlayHead (&head);
+        juce::AudioBuffer<float> buffer (host.getTotalNumOutputChannels(), 512);
+        juce::MidiBuffer none;
+        float master = 0.0f, aux = 0.0f;
+        for (int i = 0; i < 100; ++i)
+        {
+            head.ppq = (double) i * 512.0 / 48000.0 * 2.0;
+            host.processBlock (buffer, none);
+            master = std::max (master, buffer.getMagnitude (0, 0, 512));
+            aux = std::max (aux, buffer.getMagnitude (2, 0, 512));
+        }
+        expect (aux > 0.1f && master < 0.001f, "the kick plays on output 2, not on the master");
+        host.setParam (pid::machine (TR909, "output"), 0.0f);
+        master = 0.0f;
+        for (int i = 100; i < 200; ++i)
+        {
+            head.ppq = (double) i * 512.0 / 48000.0 * 2.0;
+            host.processBlock (buffer, none);
+            master = std::max (master, buffer.getMagnitude (0, 0, 512));
+        }
+        expect (master > 0.1f, "back on the master");
+        host.setPlayHead (nullptr);
+    }
+    printf ("exports: %d failures\n", failures);
+    return failures;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
     { "automation", test_automation },
     { "parts", test_parts },
     { "sounds", test_sounds },
+    { "exports", test_exports },
     { "host", test_host },
     { "levels", test_levels },
     { "examples", test_examples },
@@ -1788,7 +1938,7 @@ static int check (char** argv)
     chaosIterations = 8;
     char* none[] { argv[0], nullptr };
     int failures = 0;
-    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_ui, test_chaos, test_french })
+    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_ui, test_chaos, test_french })
         failures += run (1, none);
     printf ("\ncheck: %d failures\n", failures);
     return failures;

@@ -95,15 +95,17 @@ private:
 class MainView::ExportJob : public juce::ThreadWithProgressWindow
 {
 public:
-    ExportJob (std::unique_ptr<juce::XmlElement> project, const juce::File& target, int loopCount, std::function<void (bool)> done)
-        : ThreadWithProgressWindow (utf8 ("Export WAV en cours…"), true, true),
-          file (target), xml (std::move (project)), loops (loopCount), onDone (std::move (done))
+    using Task = std::function<bool (const juce::XmlElement&, const juce::File&, const std::function<bool (float)>&)>;
+
+    ExportJob (std::unique_ptr<juce::XmlElement> project, const juce::File& target, Task exportTask, std::function<void (bool)> done)
+        : ThreadWithProgressWindow (utf8 ("Export en cours…"), true, true),
+          file (target), xml (std::move (project)), task (std::move (exportTask)), onDone (std::move (done))
     {
     }
 
     void run() override
     {
-        ok = TechMachineProcessor::exportWav (*xml, file, loops, [this] (float p)
+        ok = task (*xml, file, [this] (float p)
         {
             setProgress (p);
             return ! threadShouldExit();
@@ -119,7 +121,7 @@ public:
 
 private:
     std::unique_ptr<juce::XmlElement> xml;
-    int loops;
+    Task task;
     std::function<void (bool)> onDone;
     bool ok = false;
 };
@@ -777,8 +779,12 @@ void MainView::showProjectMenu()
         recent.addItem (100 + i, juce::File (recentFiles[i]).getFileNameWithoutExtension());
     for (int i = 0; i < (int) examples().size(); ++i)
         examplesMenu.addItem (200 + i, utf8 (examples()[(size_t) i].name) + utf8 ("   —   ") + utf8 (examples()[(size_t) i].genre));
+    juce::PopupMenu stemsMenu;
     for (int loops : { 1, 2, 4, 8 })
+    {
         exportMenu.addItem (300 + loops, juce::String (loops) + utf8 (loops == 1 ? " boucle" : " boucles"));
+        stemsMenu.addItem (400 + loops, juce::String (loops) + utf8 (loops == 1 ? " boucle" : " boucles"));
+    }
 
     juce::PopupMenu menu;
     menu.addItem (item (1, utf8 ("Accueil…")));
@@ -792,6 +798,8 @@ void MainView::showProjectMenu()
     menu.addItem (item (5, utf8 ("Enregistrer sous…"), utf8 ("Ctrl+Maj+S")));
     menu.addSeparator();
     menu.addSubMenu (utf8 ("Exporter en WAV"), exportMenu);
+    menu.addSubMenu (utf8 ("Exporter les pistes séparées (un WAV par machine)"), stemsMenu);
+    menu.addItem (item (7, utf8 ("Exporter les notes en MIDI…")));
     menu.addItem (item (6, utf8 ("Dossier des enregistrements"), {}, processor.getLastRecording().existsAsFile()));
 
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (projectButton), [this, recentFiles] (int r)
@@ -805,6 +813,8 @@ void MainView::showProjectMenu()
         else if (r >= 100 && r < 100 + recentFiles.size()) askThen ([this, f = juce::File (recentFiles[r - 100])] { openProjectFile (f); });
         else if (r >= 200 && r < 200 + (int) examples().size()) loadExample (r - 200);
         else if (r > 300 && r <= 308) exportWav (r - 300);
+        else if (r > 400 && r <= 408) exportStems (r - 400);
+        else if (r == 7) exportMidi();
     });
 }
 
@@ -917,6 +927,55 @@ void MainView::saveProjectAs (std::function<void()> then)
                           });
 }
 
+// One WAV per machine, in a folder chosen by the user.
+void MainView::exportStems (int loops)
+{
+    const auto suggested = juce::File::getSpecialLocation (juce::File::userMusicDirectory).getChildFile ("Tech Machine");
+    chooser = std::make_unique<juce::FileChooser> (utf8 ("Dossier des pistes séparées"), suggested);
+    chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories,
+                          [this, loops] (const juce::FileChooser& fc)
+                          {
+                              const auto folder = fc.getResult();
+                              if (folder == juce::File()) return;
+                              auto stems = [loops] (const juce::XmlElement& x, const juce::File& out, const std::function<bool (float)>& progress)
+                              {
+                                  return TechMachineProcessor::exportStems (x, out, loops, progress);
+                              };
+                              exportJob = std::make_unique<ExportJob> (processor.createProjectXml(), folder, stems, [this] (bool ok)
+                              {
+                                  juce::MessageManager::callAsync ([this, ok]
+                                  {
+                                      if (exportJob == nullptr) return;
+                                      const auto target = exportJob->file;
+                                      exportJob.reset();
+                                      if (ok) target.revealToUser();
+                                      else juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, utf8 ("Export interrompu"),
+                                                                                   utf8 ("Les pistes n'ont pas toutes été créées."));
+                                  });
+                              });
+                              exportJob->launchThread();
+                          });
+}
+
+void MainView::exportMidi()
+{
+    const auto suggested = juce::File::getSpecialLocation (juce::File::userMusicDirectory).getChildFile ("Tech Machine")
+                               .getChildFile (juce::File::createLegalFileName (processor.projectName()) + ".mid");
+    chooser = std::make_unique<juce::FileChooser> (utf8 ("Exporter les notes en MIDI"), suggested, "*.mid");
+    chooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles
+                              | juce::FileBrowserComponent::warnAboutOverwriting,
+                          [this] (const juce::FileChooser& fc)
+                          {
+                              auto f = fc.getResult();
+                              if (f == juce::File()) return;
+                              f = f.withFileExtension (".mid");
+                              f.getParentDirectory().createDirectory();
+                              if (processor.exportMidi (f)) f.revealToUser();
+                              else juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, utf8 ("Export MIDI"),
+                                                                           utf8 ("Le fichier MIDI n'a pas pu être écrit."));
+                          });
+}
+
 void MainView::exportWav (int loops)
 {
     const auto suggested = juce::File::getSpecialLocation (juce::File::userMusicDirectory).getChildFile ("Tech Machine")
@@ -930,7 +989,11 @@ void MainView::exportWav (int loops)
                               if (f == juce::File()) return;
                               f = f.withFileExtension (".wav");
                               f.getParentDirectory().createDirectory();
-                              exportJob = std::make_unique<ExportJob> (processor.createProjectXml(), f, loops, [this] (bool ok)
+                              auto wav = [loops] (const juce::XmlElement& x, const juce::File& out, const std::function<bool (float)>& progress)
+                              {
+                                  return TechMachineProcessor::exportWav (x, out, loops, progress);
+                              };
+                              exportJob = std::make_unique<ExportJob> (processor.createProjectXml(), f, wav, [this] (bool ok)
                               {
                                   juce::MessageManager::callAsync ([this, ok]
                                   {
