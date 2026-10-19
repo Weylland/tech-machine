@@ -145,6 +145,13 @@ inline MidiLearnHooks& midiLearnHooks()
     return hooks;
 }
 
+// Set by the editor: told when the user turns a knob (to record its moves into the steps).
+inline std::function<void (const juce::String& paramId, float value)>& knobMovedHook()
+{
+    static std::function<void (const juce::String&, float)> hook;
+    return hook;
+}
+
 // Knob (or fader) bound to a parameter, with a printed name and an "i". Right-click: help and MIDI learn.
 class Knob : public juce::Component
 {
@@ -164,6 +171,13 @@ public:
         attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (state, paramId, slider);
         if (auto* p = state.getParameter (paramId))
             slider.setDoubleClickReturnValue (true, p->convertFrom0to1 (p->getDefaultValue()));
+
+        slider.onDragStart = [this] { dragging = true; };
+        slider.onDragEnd = [this] { dragging = false; };
+        slider.onValueChange = [this]
+        {
+            if (dragging && knobMovedHook()) knobMovedHook() (parameterId, (float) slider.getValue());
+        };
     }
 
     void setBipolar() { slider.getProperties().set ("bipolar", true); }
@@ -206,6 +220,7 @@ private:
     juce::Slider slider;
     ControlLabel label;
     bool fader;
+    bool dragging = false;
     juce::String parameterId;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
 };

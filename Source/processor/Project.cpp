@@ -123,6 +123,17 @@ std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
         if (m->type == Sampler)
             for (int i = 0; i < numPads; ++i)
                 if (const auto pad = samples.describe (i); pad.isNotEmpty()) e->setAttribute ("pad" + juce::String (i), pad);
+
+        for (size_t l = 0; l < (size_t) maxLockLanes; ++l)
+        {
+            const int target = m->track.lockTarget[l].load();
+            if (target < 0) continue;
+            juce::StringArray values;
+            for (auto& v : m->track.lockValue[l]) values.add (v.load() >= 0.0f ? juce::String ((double) v.load(), 9) : juce::String ("-"));   // 9 digits: read back exactly
+            auto* lock = e->createNewChildElement ("Lock");
+            lock->setAttribute ("param", automation::paramId (m->type, target));
+            lock->setAttribute ("values", values.joinIntoString (","));
+        }
     }
     return xml;
 }
@@ -167,6 +178,15 @@ void TechMachineProcessor::restoreProjectXml (const juce::XmlElement& source)
                 juce::StringArray pads;
                 for (int i = 0; i < numPads; ++i) pads.add (e->getStringAttribute ("pad" + juce::String (i)));
                 samples.restore (pads);
+            }
+            for (auto* lock : e->getChildWithTagNameIterator ("Lock"))
+            {
+                const int target = automation::targetFor (m->type, lock->getStringAttribute ("param"));
+                const int lane = target >= 0 ? m->track.laneFor (target, true) : -1;
+                if (lane < 0) continue;
+                const auto values = juce::StringArray::fromTokens (lock->getStringAttribute ("values"), ",", {});
+                for (int s = 0; s < maxSteps && s < values.size(); ++s)
+                    m->track.lockValue[(size_t) lane][(size_t) s] = values[s] == "-" ? noLock : values[s].getFloatValue();
             }
             auto chords = juce::StringArray::fromTokens (e->getStringAttribute ("chord"), ",", {});
             auto ties = juce::StringArray::fromTokens (e->getStringAttribute ("tie"), ",", {});

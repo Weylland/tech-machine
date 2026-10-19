@@ -98,6 +98,16 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "Des sons tout faits pour cette machine : les plus célèbres (piano électrique du DX7, acid de la 303, supersaw de la trance, "
             "orgue gospel, 808 du trap…) ou, sur une boîte à rythmes, des kits (hard techno, trap, lo-fi, dub…).\n\n"
             "Ça remplace les réglages du son, pas tes notes. Tu peux ensuite tourner les boutons pour l'adapter." } },
+        { "machine.automation", { "Automation",
+            "Fait changer les réglages de cette machine au fil des pas : un filtre qui s'ouvre petit à petit, un kick qui "
+            "s'allonge à la fin de la mesure, un écho qui n'arrive que sur certaines notes…\n\n"
+            "Choisis un réglage, puis dessine sa valeur pas par pas à la souris. Un pas sans valeur suit le bouton. "
+            "Tu peux aussi enregistrer en tournant les boutons pendant la lecture (ENREG. BOUTONS, en haut). "
+            "Le bouton AUTOMATION s'allume quand la machine a des réglages automatisés (8 au maximum)." } },
+        { "automation.record", { "Enregistrer les boutons",
+            "Allume-le, lance la lecture et tourne les boutons d'une machine : leurs mouvements s'écrivent dans les pas, "
+            "comme une automation dans un logiciel de musique. Ils se rejouent ensuite à chaque tour.\n\n"
+            "Pour corriger ou effacer, ouvre AUTOMATION sur la machine. Tout s'annule avec Ctrl+Z." } },
         { "machine.roll", { "Piano roll",
             "Ouvre un grand écran pour écrire les notes comme dans les logiciels de musique : les hauteurs de bas en haut, "
             "toute la séquence de gauche à droite.\n\n"

@@ -559,6 +559,14 @@ void icon (Graphics& g, const juce::String& name, Rect r, Colour colour)
             g.drawLine (corner.x, corner.y, corner.x, corner.y + dy, t);
         }
     }
+    else if (name == "curve")
+    {
+        juce::Path p;
+        p.startNewSubPath (b.getX() + s * 0.12f, b.getBottom() - s * 0.25f);
+        p.cubicTo (b.getX() + s * 0.4f, b.getBottom() - s * 0.25f, b.getX() + s * 0.45f, b.getY() + s * 0.2f, b.getX() + s * 0.65f, b.getY() + s * 0.25f);
+        p.lineTo (b.getRight() - s * 0.12f, b.getY() + s * 0.45f);
+        g.strokePath (p, juce::PathStrokeType (juce::jmax (1.4f, s * 0.09f), juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    }
     else if (name == "keys")
     {
         const float t = juce::jmax (1.2f, s * 0.08f);

@@ -36,6 +36,9 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
     if (! patternKindsFor (def).empty()) addHeaderButton (patternButton, "machine.patterns");
     diceButton.onClick = [this] { showDiceMenu(); };
     if (type != Sampler) addHeaderButton (diceButton, "machine.diceMenu");
+    automationButton.onClick = [this] { if (onOpenAutomation) onOpenAutomation (type); };
+    automationButton.setClickingTogglesState (false);
+    addHeaderButton (automationButton, "machine.automation");
     moreButton.onClick = [this] { showMoreMenu(); };
     addHeaderButton (moreButton, "machine.more");
 
@@ -510,6 +513,10 @@ void MachinePanel::setPlayhead (int step)
 
 void MachinePanel::refreshCells()
 {
+    bool automated = false;
+    for (auto& t : processor.machine (type).track.lockTarget) automated = automated || t.load() >= 0;
+    automationButton.setToggleState (automated, juce::dontSendNotification);
+    automationButton.setColour (juce::TextButton::buttonOnColourId, juce::Colour (0xff5b4bb8));
     repaint();
 }
 
@@ -586,7 +593,7 @@ void MachinePanel::resized()
     {
         it->second->setBounds (header.removeFromRight (16).withSizeKeepingCentre (15, 15));
         header.removeFromRight (3);
-        const int width = it->first == &moreButton ? 36 : it->first == &diceButton ? 110 : it->first == &patternButton ? 124 : it->first == &soundButton ? 96 : it->first == &rollButton ? 124 : 76;
+        const int width = it->first == &moreButton ? 36 : it->first == &diceButton ? 104 : it->first == &patternButton ? 114 : it->first == &soundButton ? 92 : it->first == &rollButton ? 114 : it->first == &automationButton ? 120 : 76;
         it->first->setBounds (header.removeFromRight (width));
         header.removeFromRight (10);
     }
@@ -594,7 +601,9 @@ void MachinePanel::resized()
     subtitleRight = header.getRight() - 6;
     const auto modelWidth = (int) juce::GlyphArrangement::getStringWidth (paint::display (30.0f), utf8 (skin.model));
     const auto brandWidth = (int) juce::GlyphArrangement::getStringWidth (paint::condensed (13.0f), utf8 (skin.brand));
-    machineInfo.setBounds (side() + 18 + modelWidth + 12 + brandWidth + 10, 13, 16, 16);
+    // The printed brand ("ANALOG DRUM MACHINE"...) is decoration: it gives way to the buttons when space is short.
+    showBrand = side() + 18 + modelWidth + 12 + brandWidth + 10 + 16 <= subtitleRight;
+    machineInfo.setBounds (side() + 18 + modelWidth + (showBrand ? 12 + brandWidth : 0) + 10, 13, 16, 16);
 
     const bool showBody = ! collapsed;
     for (auto* c : getChildren())
@@ -697,7 +706,7 @@ void MachinePanel::paint (juce::Graphics& g)
     g.drawText (utf8 (skin.model), s + 18, 4, (int) modelWidth + 4, 32, juce::Justification::centredLeft);
     g.setFont (paint::condensed (13.0f));
     g.setColour (skin.bandText.withAlpha (0.85f));
-    g.drawText (utf8 (skin.brand), s + 18 + (int) modelWidth + 12, 13, 400, 16, juce::Justification::centredLeft);
+    if (showBrand) g.drawText (utf8 (skin.brand), s + 18 + (int) modelWidth + 12, 13, 400, 16, juce::Justification::centredLeft);
     g.setColour (skin.bandText.withAlpha (0.55f));
     g.setFont (paint::font (11.0f, false));
     g.drawFittedText (utf8 (def.subtitle), s + 18, 34, juce::jmax (60, subtitleRight - (s + 18)), 14, juce::Justification::centredLeft, 1, 0.85f);

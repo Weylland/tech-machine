@@ -708,6 +708,10 @@ static int test_ui (int argc, char** argv)
                     if (panel->type == Juno106 && panel->onOpenRoll) panel->onOpenRoll (Juno106);
                 savePng (ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f), "ui_roll_" + tag);
                 auditLayout (*ed, theme, "roll " + tag, issues);
+                for (auto* panel : panels)
+                    if (panel->type == TR909 && panel->onOpenAutomation) panel->onOpenAutomation (TR909);
+                savePng (ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f), "ui_automation_" + tag);
+                auditLayout (*ed, theme, "automation " + tag, issues);
             }
         }
     }
@@ -1347,9 +1351,198 @@ static int test_snap (int argc, char** argv)
     return 0;
 }
 
+
+// Automation: values per step replace the knobs, in the strip, the synths and the drum sounds; they are saved,
+// kept by HASARD, recorded from the knobs, drawn with the mouse, shown on the panel and undone.
+static int test_automation (int argc, char** argv)
+{
+    juce::ignoreUnused (argc, argv);
+    int failures = 0;
+    auto expect = [&] (bool ok, const char* what)
+    {
+        if (! ok) ++failures;
+        printf ("  %-66s %s\n", what, ok ? "ok" : "FAIL");
+    };
+    auto acid = [] (TechMachineProcessor& p)
+    {
+        p.newProject();
+        p.setShown (TB303, true);
+        p.setBars (1);
+        auto& t = p.machine (TB303).track;
+        for (int st = 0; st < pageSteps; ++st) { t.on[(size_t) st] = true; t.note[(size_t) st] = st % 5; }
+        t.tile (pageSteps);
+        p.setParam ("tb303_cutoff", 0.1f);
+    };
+    const int cutoff = automation::synthTarget (p303::Cutoff);
+
+    TechMachineProcessor plain, locked;
+    acid (plain);
+    acid (locked);
+    for (int st = 0; st < maxSteps; ++st) locked.setAutomation (TB303, cutoff, st, 0.9f);
+    // Brightness: level of the sample-to-sample differences against the level of the signal.
+    auto brightness = [] (TechMachineProcessor& p)
+    {
+        p.setPlayConfigDetails (0, 2, 48000.0, 512);
+        p.prepareToPlay (48000.0, 512);
+        p.playing = true;
+        juce::AudioBuffer<float> buffer (2, 512);
+        juce::MidiBuffer none;
+        double level = 0, edges = 0;
+        float previous = 0;
+        for (int i = 0; i < 140; ++i)
+        {
+            p.processBlock (buffer, none);
+            for (int n = 0; n < 512; ++n)
+            {
+                const float x = buffer.getSample (0, n);
+                level += x * x;
+                edges += (x - previous) * (x - previous);
+                previous = x;
+            }
+        }
+        return std::sqrt (edges / std::max (level, 1.0e-12));
+    };
+    const double closed = brightness (plain), open = brightness (locked);
+    printf ("    brightness closed %.3f open %.3f\n", closed, open);
+    expect (open > closed * 1.5, "303 filter automated open: much brighter than the closed knob");
+
+    TechMachineProcessor muted;
+    acid (muted);
+    for (int st = 0; st < maxSteps; ++st) muted.setAutomation (TB303, automation::Volume, st, 0.0f);
+    expect (run (muted, 1.5).rmsDb < -60.0, "strip volume automated to 0: silence");
+
+    TechMachineProcessor kick, longKick;
+    for (auto* p : { &kick, &longKick })
+    {
+        p->newProject();
+        p->setShown (TR909, true);
+        p->setBars (1);
+        for (int st = 0; st < maxSteps; st += 4) p->machine (TR909).track.hits[0][(size_t) st] = true;
+        p->setParam ("tr909_bd_decay", 0.1f);
+    }
+    for (int st = 0; st < maxSteps; ++st) longKick.setAutomation (TR909, automation::rowTarget (machineDef (TR909), 0, automation::Decay), st, 1.0f);
+    expect (run (longKick, 1.5).rmsDb > run (kick, 1.5).rmsDb + 2.0, "909 kick length automated: longer kick");
+
+    // Half of the steps automated: the knob comes back on the others.
+    TechMachineProcessor half;
+    acid (half);
+    for (int st = 0; st < maxSteps; st += 2) half.setAutomation (TB303, cutoff, st, 0.9f);
+    const double halfBright = brightness (half);
+    expect (halfBright > closed * 1.15 && halfBright < open * 0.95, "steps without a value follow the knob");
+
+    // After the sequencer stops, the knobs rule again.
+    locked.playing = false;
+    juce::AudioBuffer<float> block (2, 512);
+    juce::MidiBuffer midi;
+    locked.processBlock (block, midi);
+    expect (juce::exactlyEqual (locked.machine (TB303).setting (cutoff, 0.1f), 0.1f), "stopped: back to the knob");
+
+    // Saved with the project, read back
+    const auto file = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_automation.techmachine");
+    {
+        TechMachineProcessor p;
+        acid (p);
+        for (int st = 0; st < 16; ++st) p.setAutomation (TB303, cutoff, st, (float) st / 15.0f);
+        p.saveProject (file);
+        TechMachineProcessor q;
+        q.loadProject (file);
+        const int lane = q.machine (TB303).track.laneFor (cutoff, false);
+        expect (lane >= 0 && std::abs (q.machine (TB303).track.lockValue[(size_t) lane][15].load() - 1.0f) < 0.001f
+                && q.machine (TB303).track.lockValue[(size_t) lane][20].load() < 0.0f,
+                "automation saved and read back");
+        float worst = 0;
+        const int pl = p.machine (TB303).track.laneFor (cutoff, false), ql = q.machine (TB303).track.laneFor (cutoff, false);
+        for (int st = 0; st < maxSteps && pl >= 0 && ql >= 0; ++st)
+            worst = std::max (worst, std::abs (p.machine (TB303).track.lockValue[(size_t) pl][(size_t) st].load()
+                                               - q.machine (TB303).track.lockValue[(size_t) ql][(size_t) st].load()));
+        printf ("    largest difference after save + load: %g\n", (double) worst);
+        expect (fingerprint (p, 2.0) == fingerprint (q, 2.0), "same sound after save + load");
+        file.deleteFile();
+    }
+
+    // HASARD writes new notes but keeps the automation; undo removes a drawing.
+    {
+        TechMachineProcessor p;
+        acid (p);
+        p.setAutomation (TB303, cutoff, 3, 0.7f);
+        p.generate (TB303, GenerateMode::NewIdea);
+        expect (p.machine (TB303).track.laneFor (cutoff, false) >= 0, "HASARD keeps the automation");
+        p.undoManager.beginNewTransaction();
+        p.beginPatternEdit();
+        p.setAutomation (TB303, automation::Echo, 5, 0.5f);
+        p.undoManager.undo();
+        expect (p.machine (TB303).track.laneFor (automation::Echo, false) < 0, "undo removes the automation drawn");
+    }
+
+    // Recording: knob moves while playing land in the step being played.
+    {
+        TechMachineProcessor p;
+        acid (p);
+        p.setPlayConfigDetails (0, 2, 48000.0, 480);
+        p.prepareToPlay (48000.0, 480);
+        p.playing = true;
+        p.setRecordAutomation (true);
+        juce::AudioBuffer<float> b480 (2, 480);
+        for (int i = 0; i < 20; ++i) p.processBlock (b480, midi);
+        const int step = p.currentStep.load();
+        p.recordKnob ("tb303_reso", 0.95f);
+        p.setRecordAutomation (false);
+        p.recordKnob ("tb303_env", 0.2f);
+        auto& t = p.machine (TB303).track;
+        const int lane = t.laneFor (automation::synthTarget (p303::Reso), false);
+        expect (step >= 0 && lane >= 0 && std::abs (t.lockValue[(size_t) lane][(size_t) step].load() - 0.95f) < 0.001f,
+                "recording: the knob move is written into the current step");
+        expect (t.laneFor (automation::synthTarget (p303::EnvMod), false) < 0, "not recording: knob moves write nothing");
+    }
+
+    // Drawing with the mouse, erasing with the right button; the panel button lights up.
+    {
+        Theme theme;
+        juce::LookAndFeel::setDefaultLookAndFeel (&theme);
+        TechMachineProcessor p;
+        acid (p);
+        AutomationEditor editor (p, TB303);
+        editor.setBounds (0, 0, 1300, 600);
+        editor.selectTarget (cutoff);
+        auto event = [&editor] (juce::Point<int> at, juce::ModifierKeys mods)
+        {
+            const auto f = at.toFloat();
+            return juce::MouseEvent (juce::Desktop::getInstance().getMainMouseSource(), f, mods, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                                     &editor, &editor, juce::Time::getCurrentTime(), f, juce::Time::getCurrentTime(), 1, false);
+        };
+        const juce::ModifierKeys left (juce::ModifierKeys::leftButtonModifier), right (juce::ModifierKeys::rightButtonModifier);
+        editor.mouseDown (event (editor.pointFor (0, 0.2f), left));
+        editor.mouseDrag (event (editor.pointFor (15, 0.8f), left));
+        editor.mouseUp (event (editor.pointFor (15, 0.8f), left));
+        auto& t = p.machine (TB303).track;
+        const int lane = t.laneFor (cutoff, false);
+        bool rising = lane >= 0;
+        for (int st = 1; st < 16 && rising; ++st)
+            rising = t.lockValue[(size_t) lane][(size_t) st].load() >= t.lockValue[(size_t) lane][(size_t) st - 1].load();
+        expect (rising && t.lockValue[(size_t) lane][0].load() < 0.3f && t.lockValue[(size_t) lane][15].load() > 0.7f,
+                "a mouse drag draws a rising ramp over every step it crosses");
+        editor.mouseDown (event (editor.pointFor (3, 0.5f), right));
+        editor.mouseUp (event (editor.pointFor (3, 0.5f), right));
+        expect (t.lockValue[(size_t) lane][3].load() < 0.0f, "right click erases a step");
+
+        int page = 0;
+        MachinePanel panel (p, TB303, page);
+        panel.refreshCells();
+        juce::TextButton* automationButton = nullptr;
+        for (auto* c : panel.getChildren())
+            if (auto* b = dynamic_cast<juce::TextButton*> (c); b != nullptr && b->getButtonText() == "AUTOMATION") automationButton = b;
+        expect (automationButton != nullptr && automationButton->getToggleState(), "AUTOMATION button lit on a machine with automation");
+        juce::LookAndFeel::setDefaultLookAndFeel (nullptr);
+    }
+
+    printf ("automation: %d failures\n", failures);
+    return failures;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
+    { "automation", test_automation },
     { "host", test_host },
     { "levels", test_levels },
     { "examples", test_examples },
@@ -1398,7 +1591,7 @@ static int check (char** argv)
     chaosIterations = 8;
     char* none[] { argv[0], nullptr };
     int failures = 0;
-    for (auto run : { test_params, test_project, test_propagate, test_ui, test_chaos, test_french })
+    for (auto run : { test_params, test_project, test_propagate, test_automation, test_ui, test_chaos, test_french })
         failures += run (1, none);
     printf ("\ncheck: %d failures\n", failures);
     return failures;

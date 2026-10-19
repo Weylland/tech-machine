@@ -22,7 +22,7 @@ public:
     void readParams() override
     {
         for (size_t i = 0; i < params.size(); ++i)
-            values[i] = params[i]->load();
+            values[i] = setting (automation::synthTarget ((int) i), params[i]->load());
         octave = (int) values[0];
         applyParams();
     }

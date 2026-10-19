@@ -82,6 +82,10 @@ TechMachineProcessor::TechMachineProcessor()
         s.pan = raw (pid::machine (t, "pan"));
     }
 
+    for (int t = 0; t < numMachines; ++t)
+        for (int target = 0; target < automation::targetCount (t); ++target)
+            automationIndex[automation::paramId (t, target)] = { t, target };
+
     name = utf8 ("Sans titre");
     apvts.state.addListener (this);
     for (auto& r : recordStart) r = -1;
@@ -227,7 +231,11 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     }
     if (! play && wasPlaying)
     {
-        for (auto& m : machines) m->stop();
+        for (auto& m : machines)
+        {
+            m->stop();
+            m->releaseLocks();
+        }
         currentStep = -1;
     }
     wasPlaying = play;
@@ -265,16 +273,7 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         }
 
         s.audible = s.mute->load() < 0.5f && (! anySolo || s.solo->load() > 0.5f);
-        const float vol = s.volume->load();
-        s.target = s.audible ? vol * vol * 1.6f : 0.0f;
-        const float angle = s.pan->load() * juce::MathConstants<float>::halfPi;
-        s.panLeft = std::cos (angle) * juce::MathConstants<float>::sqrt2;
-        s.panRight = std::sin (angle) * juce::MathConstants<float>::sqrt2;
-        s.driveAmount = s.drive->load();
-        s.crushAmount = s.crush->load();
-        s.echoSend = s.echo->load();
-        s.reverbSend = s.reverb->load();
-        s.djFilter.set (s.filter->load(), sampleRate);
+        readStrip (t);
         machines[(size_t) t]->readParams();
     }
 
@@ -322,6 +321,24 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     const juce::ScopedLock sl (writerLock);
     if (auto* writer = activeWriter.load())
         writer->write (buffer.getArrayOfReadPointers(), numSamples);
+}
+
+// The effects of a machine's strip, as they sound now (automation included).
+void TechMachineProcessor::readStrip (int t)
+{
+    using namespace automation;
+    auto& s = strips[(size_t) t];
+    const auto& m = *machines[(size_t) t];
+    const float vol = m.setting (Volume, s.volume->load());
+    s.target = s.audible ? vol * vol * 1.6f : 0.0f;
+    const float angle = m.setting (Pan, s.pan->load()) * juce::MathConstants<float>::halfPi;
+    s.panLeft = std::cos (angle) * juce::MathConstants<float>::sqrt2;
+    s.panRight = std::sin (angle) * juce::MathConstants<float>::sqrt2;
+    s.driveAmount = m.setting (Drive, s.drive->load());
+    s.crushAmount = m.setting (Crush, s.crush->load());
+    s.echoSend = m.setting (Echo, s.echo->load());
+    s.reverbSend = m.setting (Reverb, s.reverb->load());
+    s.djFilter.set (m.setting (Filter, s.filter->load()), sampleRate);
 }
 
 void TechMachineProcessor::render (float* left, float* right, int numSamples)
@@ -433,7 +450,13 @@ void TechMachineProcessor::advanceStep()
     for (int t = 0; t < numMachines; ++t)
     {
         if (! strips[(size_t) t].shown) continue;
-        machines[(size_t) t]->onStep (info);
+        auto& m = *machines[(size_t) t];
+        if (m.applyLocks (stepIndex))
+        {
+            m.readParams();
+            readStrip (t);
+        }
+        m.onStep (info);
         if (machines[(size_t) t]->takeKick() && strips[(size_t) t].audible)
             pump.trigger (stepSeconds() * 4.0f);
     }

@@ -44,6 +44,7 @@ public:
 
     // Opens the piano roll screen for this machine (set by the main view).
     std::function<void (int machineType)> onOpenRoll;
+    std::function<void (int machineType)> onOpenAutomation;
 
     // Shows the MIDI badge on the machine that receives the keyboard.
     void setMidiTarget (bool isTarget)
@@ -56,9 +57,11 @@ public:
 private:
     bool midiTarget = false;
     int subtitleRight = 600;   // the subtitle stops before the header buttons
+    bool showBrand = true;
     std::unique_ptr<juce::FileChooser> chooser;
     void chooseSampleFile (std::function<void (const juce::File&)> then);
     IconButton rollButton { "keys", "PIANO ROLL" };
+    IconButton automationButton { "curve", "AUTOMATION" };
     void showMoreMenu();
     void showRowFx (int row);
     InfoButton& addInfo (const HelpText&);

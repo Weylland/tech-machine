@@ -11,6 +11,7 @@
 #include "machines/SampleBank.h"
 
 #include <juce_audio_formats/juce_audio_formats.h>
+#include <map>
 #include <juce_audio_processors/juce_audio_processors.h>
 
 class TechMachineProcessor : public juce::AudioProcessor, private juce::ValueTree::Listener
@@ -69,6 +70,13 @@ public:
     void previewNote (int machineType, int midiNote, bool on);   // plays a note right away (piano roll)
     bool isRecordingNotes() const { return recordNotes.load(); }
     std::atomic<int> midiActivity { 0 };
+
+    // Automation recording: while it is on and the sequencer plays, moving a knob writes its value into the steps.
+    void setRecordAutomation (bool on);
+    bool isRecordingAutomation() const { return recordAutomation.load(); }
+    void recordKnob (const juce::String& paramId, float value);   // message thread
+    void setAutomation (int machineType, int target, int step, float value);   // noLock erases; message thread
+    void clearAutomation (int machineType, int target);
 
     // Sampler pads.
     static constexpr int numPads = techno::SampleBank::numPads;
@@ -136,6 +144,7 @@ private:
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     void render (float* left, float* right, int numSamples);
+    void readStrip (int machineType);
     void advanceStep();
     void syncToHost (double ppq);
     float stepSeconds() const { return 60.0f / bpmValue / 4.0f; }
@@ -184,7 +193,8 @@ private:
     void recordNoteOff (int machineType, int note);
     int recordedSemitone (int machineType, int note) const;
     std::atomic<int> midiTarget { -1 };
-    std::atomic<bool> recordNotes { false };
+    std::atomic<bool> recordNotes { false }, recordAutomation { false };
+    std::map<juce::String, std::pair<int, int>> automationIndex;   // parameter id -> (machine, target)
     int recordStart[128] {};
 
     struct PreviewNote { int type = 0, note = 0; bool on = false; };

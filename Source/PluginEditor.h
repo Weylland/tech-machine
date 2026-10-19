@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "ui/MachinePanel.h"
+#include "ui/AutomationEditor.h"
 #include "ui/PianoRoll.h"
 #include "ui/Theme.h"
 #include "ui/Widgets.h"
@@ -114,7 +115,10 @@ private:
     void showAudioSettings();
     void openPianoRoll (int machineType);
     void closePianoRoll();
+    void openAutomation (int machineType);
+    void closeAutomation();
     std::unique_ptr<techno::PianoRollEditor> pianoRoll;
+    std::unique_ptr<techno::AutomationEditor> automationEditor;
     void setPage (int newPage);
     void layoutRack();
     techno::InfoButton& addInfo (const techno::HelpText&);
@@ -142,6 +146,8 @@ private:
     techno::IconButton fullScreenButton { "fullscreen", techno::utf8 ("PLEIN ÉCRAN") }, languageButton { "globe", juce::String::fromUTF8 ("FRANÇAIS") };
     techno::IconButton audioButton { "gear", techno::utf8 ("AUDIO / MIDI") };
     techno::LedButton midiRecordButton { techno::utf8 ("ENREG. MIDI"), juce::Colour (0xffff3b1f) };
+    techno::LedButton automationRecordButton { techno::utf8 ("ENREG. BOUTONS"), juce::Colour (0xffff3b1f) };
+    techno::InfoButton* automationRecordInfo = nullptr;
     int lastMidiMapVersion = 0, lastMidiTarget = -2;
     std::uint64_t lastShownMask = ~0ull;
     int lastSampleVersion = -1;

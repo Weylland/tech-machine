@@ -114,7 +114,10 @@ void TechMachineProcessor::generate (int type, GenerateMode mode)
 {
     undoManager.beginNewTransaction();
     beginPatternEdit();
-    techno::generate (machines[(size_t) type]->track, machineDef (type), context(), mode, random);
+    auto& track = machines[(size_t) type]->track;
+    const auto kept = track.snapshot();   // new notes, same automation
+    techno::generate (track, machineDef (type), context(), mode, random);
+    track.restoreLocks (kept);
     touchPattern();
 }
 
@@ -150,7 +153,12 @@ void TechMachineProcessor::generateAll()
         {
             const bool drum = machineDef (t).kind == MachineKind::Drum;
             if (isShown (t) && drum == (pass == 0))
-                techno::generate (machines[(size_t) t]->track, machineDef (t), context(), GenerateMode::NewIdea, random);
+            {
+                auto& track = machines[(size_t) t]->track;
+                const auto kept = track.snapshot();
+                techno::generate (track, machineDef (t), context(), GenerateMode::NewIdea, random);
+                track.restoreLocks (kept);
+            }
         }
     }
     touchPattern();
@@ -168,7 +176,10 @@ void TechMachineProcessor::applyPattern (int type, const Pattern& pattern)
 {
     undoManager.beginNewTransaction();
     beginPatternEdit();
-    techno::applyPattern (machines[(size_t) type]->track, machineDef (type), context(), pattern);
+    auto& track = machines[(size_t) type]->track;
+    const auto kept = track.snapshot();
+    techno::applyPattern (track, machineDef (type), context(), pattern);
+    track.restoreLocks (kept);
     touchPattern();
 }
 
@@ -254,5 +265,52 @@ void TechMachineProcessor::setBars (int newBars)
     if (newSteps > oldSteps)
         for (auto& m : machines) m->track.tile (oldSteps);
     setParam (pid::bars, (float) (newBars - 1));
+    touchPattern();
+}
+
+//==============================================================================
+// Automation
+
+void TechMachineProcessor::setRecordAutomation (bool on)
+{
+    if (on && ! recordAutomation)
+    {
+        undoManager.beginNewTransaction();
+        beginPatternEdit();
+    }
+    recordAutomation = on;
+}
+
+void TechMachineProcessor::recordKnob (const juce::String& paramId, float value)
+{
+    const int step = currentStep.load();
+    if (! recordAutomation || ! playing || step < 0) return;
+    const auto it = automationIndex.find (paramId);
+    if (it == automationIndex.end()) return;
+    auto& track = machines[(size_t) it->second.first]->track;
+    const int lane = track.laneFor (it->second.second, true);
+    if (lane < 0) return;   // already 8 automated settings on this machine
+    track.lockValue[(size_t) lane][(size_t) step] = value;
+    touchPattern();
+}
+
+void TechMachineProcessor::setAutomation (int type, int target, int step, float value)
+{
+    auto& track = machines[(size_t) type]->track;
+    const int lane = track.laneFor (target, value >= 0.0f);
+    if (lane < 0) return;
+    track.lockValue[(size_t) lane][(size_t) step] = value;
+    if (value < 0.0f) track.releaseEmptyLanes();
+    touchPattern();
+}
+
+void TechMachineProcessor::clearAutomation (int type, int target)
+{
+    auto& track = machines[(size_t) type]->track;
+    if (const int lane = track.laneFor (target, false); lane >= 0)
+    {
+        for (auto& v : track.lockValue[(size_t) lane]) v = noLock;
+        track.lockTarget[(size_t) lane] = -1;
+    }
     touchPattern();
 }

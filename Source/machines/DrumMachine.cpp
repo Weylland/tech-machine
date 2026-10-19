@@ -51,24 +51,26 @@ public:
     {
         for (int i = 0; i < numRows; ++i)
         {
-            settings[i] = { tuneParam[i]->load(), decayParam[i]->load(), toneParam[i]->load() };
-            const float level = levelParam[i]->load();
+            using namespace automation;
+            auto row = [this, i] (int s, std::atomic<float>* knob) { return setting (rowTarget (def, i, s), knob->load()); };
+            settings[i] = { row (Tune, tuneParam[i]), row (Decay, decayParam[i]), row (Tone, toneParam[i]) };
+            const float level = row (Level, levelParam[i]);
             levels[i] = level * 1.25f * trims[i];
             mutes[i] = muteParam[i]->load() > 0.5f;
 
             auto& fx = rowFx[i];
-            fx.driveAmount = fx.drive->load();
-            fx.echoSend = fx.echo->load();
-            fx.reverbSend = fx.reverb->load();
-            const float angle = fx.pan->load() * juce::MathConstants<float>::halfPi;
+            fx.driveAmount = row (RowDrive, fx.drive);
+            fx.echoSend = row (RowEcho, fx.echo);
+            fx.reverbSend = row (RowReverb, fx.reverb);
+            const float angle = row (RowPan, fx.pan) * juce::MathConstants<float>::halfPi;
             fx.panLeft = std::cos (angle) * juce::MathConstants<float>::sqrt2;
             fx.panRight = std::sin (angle) * juce::MathConstants<float>::sqrt2;
-            fx.dsp.set (fx.filter->load(), fs);
+            fx.dsp.set (row (RowFilter, fx.filter), fs);
         }
         accentAmount = accentParam->load();
         if (! machineParams.empty())
         {
-            for (size_t i = 0; i < machineParams.size(); ++i) machineValues[i] = machineParams[i]->load();
+            for (size_t i = 0; i < machineParams.size(); ++i) machineValues[i] = setting (automation::synthTarget ((int) i), machineParams[i]->load());
             for (auto& v : voices) v->setMachineParams (machineValues.data());
         }
     }

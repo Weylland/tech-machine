@@ -438,6 +438,7 @@ MainView::MainView (TechMachineProcessor& p)
         auto* panel = panels.add (new MachinePanel (processor, t, viewPage));
         panel->onLayoutChange = [this] { layoutRack(); };
         panel->onOpenRoll = [this] (int machineType) { openPianoRoll (machineType); };
+        panel->onOpenAutomation = [this] (int machineType) { openAutomation (machineType); };
         content.addChildComponent (panel);
     }
 
@@ -489,6 +490,12 @@ MainView::MainView (TechMachineProcessor& p)
     midiRecordButton.onClick = [this] { processor.setRecordNotes (midiRecordButton.getToggleState()); };
     addAndMakeVisible (midiRecordButton);
 
+    automationRecordButton.setTooltip (shortHelp (help ("automation.record").body));
+    automationRecordButton.onClick = [this] { processor.setRecordAutomation (automationRecordButton.getToggleState()); };
+    addAndMakeVisible (automationRecordButton);
+    automationRecordInfo = &addInfo (help ("automation.record"));
+    knobMovedHook() = [this] (const juce::String& id, float value) { processor.recordKnob (id, value); };
+
     auto& hooks = midiLearnHooks();
     hooks.learn = [this] (const juce::String& id)
     {
@@ -521,8 +528,26 @@ void MainView::toggleFullScreen()
         desktop.setKioskModeComponent (window, false);
 }
 
+void MainView::openAutomation (int machineType)
+{
+    closePianoRoll();
+    automationEditor = std::make_unique<AutomationEditor> (processor, machineType);
+    juce::Component::SafePointer<MainView> safe (this);
+    automationEditor->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->closeAutomation(); }); };
+    addAndMakeVisible (*automationEditor);
+    automationEditor->setBounds (rack.getBounds().expanded (0, 4));
+    automationEditor->grabKeyboardFocus();
+}
+
+void MainView::closeAutomation()
+{
+    automationEditor.reset();
+    grabKeyboardFocus();
+}
+
 void MainView::openPianoRoll (int machineType)
 {
+    closeAutomation();
     pianoRoll = std::make_unique<PianoRollEditor> (processor, machineType);
     juce::Component::SafePointer<MainView> safe (this);
     pianoRoll->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->closePianoRoll(); }); };
@@ -555,6 +580,7 @@ void MainView::toggleLanguage()
 MainView::~MainView()
 {
     midiLearnHooks() = {};
+    knobMovedHook() = {};
     removeMouseListener (this);
     setLookAndFeel (nullptr);
 }
@@ -921,6 +947,8 @@ void MainView::timerCallback()
         lastSampleVersion = processor.sampleVersion();
         for (auto* panel : panels) panel->refreshSampleNames();
     }
+    if (automationRecordButton.getToggleState() != processor.isRecordingAutomation())
+        automationRecordButton.setToggleState (processor.isRecordingAutomation(), juce::dontSendNotification);
     if (midiRecordButton.getToggleState() != processor.isRecordingNotes())
         midiRecordButton.setToggleState (processor.isRecordingNotes(), juce::dontSendNotification);
 
@@ -941,6 +969,7 @@ void MainView::timerCallback()
             if (! processor.isShown (pianoRoll->getGrid().machine())) closePianoRoll();
             else pianoRoll->refreshMachines();
         }
+        if (automationEditor != nullptr && ! processor.isShown (automationEditor->machine())) closeAutomation();
         lastShownMask = mask;
         layoutRack();
     }
@@ -1125,13 +1154,15 @@ void MainView::resized()
     for (auto& bar : barButtons) { bar.setBounds (x, y2, 34, 28); x += 37; }
     lengthInfo->setBounds (x - 2, y2 + 7, 15, 15);
 
-    x = lcd.getRight() + 72;
-    for (auto& page : pageButtons) { page.setBounds (x, y2, 36, 28); x += 39; }
-    followButton.setBounds (x + 2, y2, 82, 28);
+    x = lcd.getRight() + (narrow ? 50 : 72);
+    for (auto& page : pageButtons) { page.setBounds (x, y2, narrow ? 33 : 36, 28); x += narrow ? 36 : 39; }
+    followButton.setBounds (x + 2, y2, narrow ? 76 : 82, 28);
     pageInfo->setBounds (followButton.getRight() + 2, y2 + 7, 15, 15);
+    automationRecordButton.setBounds (pageInfo->getRight() + (narrow ? 8 : 10), y2, narrow ? 112 : 130, 28);
+    automationRecordInfo->setBounds (automationRecordButton.getRight() + 2, y2 + 7, 15, 15);
 
     addInfoButton->setBounds (consoleArea.getRight() - 16 - 15, y2 + 7, 15, 15);
-    addButton.setBounds (addInfoButton->getX() - 4 - 150, y2, 150, 28);
+    addButton.setBounds (addInfoButton->getX() - 4 - (narrow ? 130 : 150), y2, narrow ? 130 : 150, 28);
     guideButton.setBounds (addButton.getX() - 12 - 44, y2, 44, 28);
 
     // Master strip.
@@ -1168,6 +1199,7 @@ void MainView::resized()
 
     startScreen.setBounds (getLocalBounds());
     if (pianoRoll != nullptr) pianoRoll->setBounds (rack.getBounds().expanded (0, 4));
+    if (automationEditor != nullptr) automationEditor->setBounds (rack.getBounds().expanded (0, 4));
 }
 
 //==============================================================================

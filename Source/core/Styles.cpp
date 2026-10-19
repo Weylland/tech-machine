@@ -1545,6 +1545,7 @@ void shiftTrack (Track& t, int steps, int direction)
         copy.note[dst] = t.note[src].load();
         copy.chord[dst] = t.chord[src].load();
         copy.tie[dst] = t.tie[src].load();
+        for (size_t l = 0; l < (size_t) maxLockLanes; ++l) copy.lockValue[l][dst] = t.lockValue[l][src].load();
     }
     for (int s = 0; s < steps; ++s)
     {
@@ -1560,6 +1561,7 @@ void shiftTrack (Track& t, int steps, int direction)
         t.note[i] = copy.note[i].load();
         t.chord[i] = copy.chord[i].load();
         t.tie[i] = copy.tie[i].load();
+        for (size_t l = 0; l < (size_t) maxLockLanes; ++l) t.lockValue[l][i] = copy.lockValue[l][i].load();
     }
     t.tile (steps);
 }
