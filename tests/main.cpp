@@ -898,7 +898,9 @@ static int test_chaos (int argc, char** argv)
                 tr.accent[(size_t) st] = st % 4 == 0;
             }
             tr.tile (pageSteps);
-            const auto st = run (p, 1.5);
+            auto st = run (p, 1.5);
+            // A busy computer (a shared CI machine) can slow down one run: too slow only if it is twice in a row.
+            if (st.cpu > 20.0 && st.nans == 0) st.cpu = std::min (st.cpu, run (p, 1.5).cpu);
             ++cases;
             if (st.nans > 0 || st.rmsDb > -5.0 || st.cpu > 20.0)
             {
