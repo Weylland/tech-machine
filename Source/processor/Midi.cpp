@@ -47,7 +47,15 @@ void TechMachineProcessor::handleMidi (const juce::MidiBuffer& midi)
         const auto m = meta.getMessage();
         if (m.isController())
         {
-            midiLearn.handleController (m.getControllerNumber(), m.getControllerValue());
+            const bool assigned = midiLearn.handleController (m.getControllerNumber(), m.getControllerValue());
+            if (! assigned && m.getControllerNumber() == 1)   // modulation wheel: vibrato
+                if (const int t = midiTargetMachine(); t >= 0) machines[(size_t) t]->setModWheel ((float) m.getControllerValue() / 127.0f);
+            continue;
+        }
+        if (m.isPitchWheel())
+        {
+            if (const int t = midiTargetMachine(); t >= 0)
+                machines[(size_t) t]->setPitchBend ((float) (m.getPitchWheelValue() - 8192) / 8192.0f * 2.0f);
             continue;
         }
         if (! m.isNoteOnOrOff()) continue;
@@ -86,6 +94,8 @@ void TechMachineProcessor::recordNoteOn (int type, int note, float velocity)
     auto& track = machines[(size_t) type]->track;
     const int step = quantizedStep();
     const auto s = (size_t) step;
+    if (const int lane = track.laneFor (automation::velocityTarget (def), true); lane >= 0)
+        track.lockValue[(size_t) lane][s] = juce::jlimit (0.05f, 1.0f, velocity * 0.9375f);   // velocity 0.8 (about 100) = normal
     if (def.kind == MachineKind::Drum)
     {
         const int row = machines[(size_t) type]->rowForMidiNote (note);

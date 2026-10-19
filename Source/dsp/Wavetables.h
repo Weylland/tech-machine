@@ -48,7 +48,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         sweepEnv = 1.0f;
         sweepCoef = decayCoef (p.decaySeconds * 0.6f, fs);
         sequenceClock = 0.0f;
@@ -111,7 +111,7 @@ private:
 
     const WaveParams& p;
     const WavetableSet* tables[numWavetables] {};
-    float fs = 44100.0f, freq = 220, gain = 1, phase = 0, lfoPhase = 0, sweepEnv = 0, sweepCoef = 0.999f, sequenceClock = 0;
+    float fs = 44100.0f, gain = 1, phase = 0, lfoPhase = 0, sweepEnv = 0, sweepCoef = 0.999f, sequenceClock = 0;
     Adsr adsr;
     Svf filter;
 };

@@ -16,7 +16,7 @@ public:
     void start (const juce::String& paramId);   // the next controller moved drives this parameter
     void forget (const juce::String& paramId);
     int controllerFor (const juce::String& paramId) const;   // -1 when none
-    void handleController (int cc, int value);  // audio thread
+    bool handleController (int cc, int value);  // audio thread; false when no knob is assigned to this controller
     void save();
 
     std::atomic<int> version { 0 };

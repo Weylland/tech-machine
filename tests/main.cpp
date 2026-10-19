@@ -1883,6 +1883,271 @@ static int test_exports (int argc, char** argv)
     return failures;
 }
 
+// MIDI expression: velocity of the steps, pitch wheel, modulation wheel, MIDI clock and the vocoder microphone.
+static int test_expression (int argc, char** argv)
+{
+    juce::ignoreUnused (argc, argv);
+    int failures = 0;
+    auto expect = [&] (bool ok, const char* what)
+    {
+        if (! ok) ++failures;
+        printf ("  %-66s %s\n", what, ok ? "ok" : "FAIL");
+    };
+    constexpr double rate = 48000.0;
+    constexpr int bs = 480;
+
+    // Renders blocks; the MIDI events go in the first block. Returns the left channel.
+    auto render = [&] (TechMachineProcessor& p, int blocks, juce::MidiBuffer midi = {}, const std::vector<float>* input = nullptr)
+    {
+        std::vector<float> out;
+        juce::AudioBuffer<float> block (2, bs);
+        for (int b = 0; b < blocks; ++b)
+        {
+            block.clear();
+            if (input != nullptr)
+                for (int ch = 0; ch < 2; ++ch)
+                    for (int i = 0; i < bs; ++i) block.setSample (ch, i, (*input)[(size_t) ((b * bs + i) % (int) input->size())]);
+            p.processBlock (block, midi);
+            midi.clear();
+            out.insert (out.end(), block.getReadPointer (0), block.getReadPointer (0) + bs);
+        }
+        return out;
+    };
+    auto peakOf = [] (const std::vector<float>& v, size_t from = 0)
+    {
+        float peak = 0.0f;
+        for (size_t i = from; i < v.size(); ++i) peak = std::max (peak, std::abs (v[i]));
+        return peak;
+    };
+    auto rmsOf = [] (const std::vector<float>& v)
+    {
+        double sum = 0.0;
+        for (float x : v) sum += (double) x * x;
+        return std::sqrt (sum / (double) juce::jmax ((size_t) 1, v.size()));
+    };
+    // The pitch of a held note: the first strong repetition (autocorrelation) between 50 and 1000 Hz.
+    auto pitchOf = [&] (const std::vector<float>& v)
+    {
+        const int n = (int) v.size();
+        std::vector<double> c (962, 0.0);
+        double bestValue = -1e9;
+        for (int lag = 47; lag <= 961 && lag < n / 2; ++lag)
+        {
+            double sum = 0.0;
+            for (int i = 0; i + lag < n; ++i) sum += (double) v[(size_t) i] * v[(size_t) (i + lag)];
+            c[(size_t) lag] = sum / (double) (n - lag);
+            bestValue = std::max (bestValue, c[(size_t) lag]);
+        }
+        int best = 48;
+        for (int lag = 48; lag <= 960; ++lag)
+            if (c[(size_t) lag] > 0.85 * bestValue && c[(size_t) lag] >= c[(size_t) lag - 1] && c[(size_t) lag] >= c[(size_t) lag + 1]) { best = lag; break; }
+        const double a = c[(size_t) best - 1], b = c[(size_t) best], d = c[(size_t) best + 1];
+        const double curve = a - 2.0 * b + d;
+        const double shift = std::abs (curve) > 1e-12 ? 0.5 * (a - d) / curve : 0.0;
+        return rate / ((double) best + shift);
+    };
+    auto setup = [&] (TechMachineProcessor& p, int type, int inputs = 0)
+    {
+        p.newProject();
+        p.setBars (1);
+        p.setParam (pid::bpm, 120.0f);
+        p.setShown (type, true);
+        p.setMidiTarget (type);
+        p.setPlayConfigDetails (inputs, 2, rate, bs);
+        p.prepareToPlay (rate, bs);
+    };
+
+    // Velocity: a quiet step plays quieter, a step without a value plays as before.
+    {
+        float peaks[2] {};
+        for (int quiet = 0; quiet < 2; ++quiet)
+        {
+            TechMachineProcessor p;
+            setup (p, TR909);
+            p.machine (TR909).track.hits[0][0] = true;
+            if (quiet == 1) p.setAutomation (TR909, automation::velocityTarget (machineDef (TR909)), 0, automation::normalVelocity * 0.5f);
+            p.playing = true;
+            peaks[quiet] = peakOf (render (p, 20));
+        }
+        printf ("  velocity: normal %.3f, half %.3f\n", peaks[0], peaks[1]);
+        expect (peaks[0] > 0.05f && std::abs (peaks[1] / peaks[0] - 0.5f) < 0.1f, "a step at half velocity hits about half as hard");
+    }
+
+    // Velocity recorded from the keyboard, and written to the MIDI export.
+    {
+        TechMachineProcessor p;
+        setup (p, SH101);
+        p.playing = true;
+        p.setRecordNotes (true);
+        render (p, 2);
+        juce::MidiBuffer on;
+        on.addEvent (juce::MidiMessage::noteOn (1, 60, (juce::uint8) 40), 0);
+        render (p, 2, on);
+        juce::MidiBuffer off;
+        off.addEvent (juce::MidiMessage::noteOff (1, 60), 0);
+        render (p, 2, off);
+        p.setRecordNotes (false);
+        auto& track = p.machine (SH101).track;
+        const int lane = track.findLane (automation::velocityTarget (machineDef (SH101)));
+        float recorded = -1.0f;
+        for (int st = 0; st < 16 && lane >= 0; ++st)
+            if (track.on[(size_t) st]) recorded = track.lockValue[(size_t) lane][(size_t) st].load();
+        printf ("  recorded velocity %.3f\n", recorded);
+        expect (std::abs (recorded - 40.0f / 127.0f * 0.9375f) < 0.01f, "a soft key records a soft step");
+
+        const auto file = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_velocity.mid");
+        p.exportMidi (file);
+        juce::MidiFile midi;
+        juce::FileInputStream in (file);
+        midi.readFrom (in);
+        int exported = -1;
+        for (int t = 0; t < midi.getNumTracks(); ++t)
+            for (auto* e : *midi.getTrack (t))
+                if (e->message.isNoteOn()) exported = e->message.getVelocity();
+        file.deleteFile();
+        printf ("  exported velocity %d\n", exported);
+        expect (exported > 20 && exported < 50, "the MIDI export keeps the soft step");
+    }
+
+    // Pitch wheel: up to two semitones on a held note, back when released.
+    {
+        TechMachineProcessor p;
+        setup (p, SH101);
+        juce::MidiBuffer on;
+        on.addEvent (juce::MidiMessage::noteOn (1, 57, (juce::uint8) 100), 0);
+        render (p, 10, on);
+        const double normal = pitchOf (render (p, 50));
+        juce::MidiBuffer up;
+        up.addEvent (juce::MidiMessage::pitchWheel (1, 16383), 0);
+        render (p, 10, up);
+        const double bent = pitchOf (render (p, 50));
+        juce::MidiBuffer centre;
+        centre.addEvent (juce::MidiMessage::pitchWheel (1, 8192), 0);
+        render (p, 10, centre);
+        const double back = pitchOf (render (p, 50));
+        printf ("  pitch: %.1f Hz, bent %.1f Hz (ratio %.3f), back %.1f Hz\n", normal, bent, bent / normal, back);
+        expect (std::abs (bent / normal - 1.1225) < 0.03, "the pitch wheel raises the note two semitones");
+        expect (std::abs (back / normal - 1.0) < 0.01, "the note comes back when the wheel is released");
+    }
+
+    // Pitch wheel on a polyphonic machine.
+    {
+        TechMachineProcessor p;
+        setup (p, Juno106);
+        p.setParam ("juno106_chord", 0.0f);
+        juce::MidiBuffer on;
+        on.addEvent (juce::MidiMessage::noteOn (1, 57, (juce::uint8) 100), 0);
+        render (p, 10, on);
+        const double normal = pitchOf (render (p, 50));
+        juce::MidiBuffer down;
+        down.addEvent (juce::MidiMessage::pitchWheel (1, 0), 0);
+        render (p, 10, down);
+        const double bent = pitchOf (render (p, 50));
+        printf ("  poly pitch: %.1f Hz, bent %.1f Hz (ratio %.3f)\n", normal, bent, bent / normal);
+        expect (std::abs (bent / normal - 0.8909) < 0.03, "the pitch wheel lowers a chord machine two semitones");
+    }
+
+    // Modulation wheel: vibrato on the held note.
+    {
+        std::vector<float> outs[2];
+        for (int mod = 0; mod < 2; ++mod)
+        {
+            TechMachineProcessor p;
+            setup (p, SH101);
+            juce::MidiBuffer on;
+            on.addEvent (juce::MidiMessage::noteOn (1, 57, (juce::uint8) 100), 0);
+            if (mod == 1) on.addEvent (juce::MidiMessage::controllerEvent (1, 1, 127), 0);
+            outs[mod] = render (p, 100, on);
+        }
+        // The pitch over windows of 50 ms: steady without the wheel, moving with it.
+        auto spread = [&] (const std::vector<float>& v)
+        {
+            double lo = 1e9, hi = 0;
+            const size_t window = 1440;
+            for (size_t from = 4800; from + window <= v.size(); from += window)
+            {
+                const double f = pitchOf (std::vector<float> (v.begin() + (long) from, v.begin() + (long) (from + window)));
+                lo = std::min (lo, f);
+                hi = std::max (hi, f);
+            }
+            return hi - lo;
+        };
+        printf ("  pitch spread: still %.1f Hz, with the wheel %.1f Hz\n", spread (outs[0]), spread (outs[1]));
+        expect (spread (outs[1]) > spread (outs[0]) + 4.0, "the modulation wheel adds vibrato");
+    }
+
+    // MIDI clock: tempo, start and stop from another machine.
+    {
+        TechMachineProcessor p;
+        setup (p, TR909);
+        const double interval = rate * 60.0 / (140.0 * 24.0);
+        double nextTick = 0.0;
+        int sample = 0;
+        auto clockBlocks = [&] (int blocks, juce::MidiBuffer first = {})
+        {
+            for (int b = 0; b < blocks; ++b)
+            {
+                juce::MidiBuffer m (first);
+                first.clear();
+                for (; nextTick < sample + bs; nextTick += interval)
+                    m.addEvent (juce::MidiMessage::midiClock(), (int) nextTick - sample);
+                render (p, 1, m);
+                sample += bs;
+            }
+        };
+        juce::MidiBuffer start;
+        start.addEvent (juce::MidiMessage::midiStart(), 0);
+        clockBlocks (200, start);
+        printf ("  clock: following %d, tempo %.2f, playing %d, step %d\n", (int) p.isFollowingMidiClock(), p.displayBpm.load(),
+                (int) p.playing.load(), p.currentStep.load());
+        expect (p.isFollowingMidiClock() && std::abs (p.displayBpm.load() - 140.0f) < 0.5f, "the tempo follows the clock (140)");
+        expect (p.playing.load(), "MIDI start plays");
+        // 2 s at 140 BPM = 18.7 steps: on a bar of 16, step 2
+        expect (p.currentStep.load() == 2, "the steps run at the clock's tempo");
+        juce::MidiBuffer stop;
+        stop.addEvent (juce::MidiMessage::midiStop(), 0);
+        clockBlocks (2, stop);
+        expect (! p.playing.load(), "MIDI stop stops");
+        render (p, 120);
+        expect (! p.isFollowingMidiClock(), "without a clock, back to the own tempo");
+        render (p, 1);
+        expect (std::abs (p.displayBpm.load() - 120.0f) < 0.01f, "the own tempo is back (120)");
+    }
+
+    // Vocoder microphone: the chords speak with the voice of the audio input.
+    {
+        std::vector<float> voice ((size_t) bs * 10);
+        juce::Random random (7);
+        for (size_t i = 0; i < voice.size(); ++i)   // a buzzing voice at 150 Hz with a little breath
+            voice[i] = 0.3f * (2.0f * std::fmod ((float) i * 150.0f / (float) rate, 1.0f) - 1.0f) + 0.03f * (random.nextFloat() * 2.0f - 1.0f);
+        const std::vector<float> silence (voice.size(), 0.0f);
+        double levels[3] {};
+        for (int c = 0; c < 3; ++c)
+        {
+            TechMachineProcessor p;
+            setup (p, Vocoder, 2);
+            if (c > 0) p.setParam ("vocoder_source", 1.0f);
+            juce::MidiBuffer on;
+            on.addEvent (juce::MidiMessage::noteOn (1, 57, (juce::uint8) 100), 0);
+            levels[c] = rmsOf (render (p, 100, on, c == 2 ? &silence : &voice));
+        }
+        printf ("  vocoder rms: internal voice %.4f, microphone %.4f, silent microphone %.5f\n", levels[0], levels[1], levels[2]);
+        expect (levels[1] > 0.01, "the microphone makes the chords speak");
+        expect (levels[2] < levels[1] * 0.05, "a silent microphone keeps the vocoder quiet");
+    }
+
+    // The input never reaches the output by itself.
+    {
+        TechMachineProcessor p;
+        setup (p, TR909, 2);
+        std::vector<float> loud ((size_t) bs, 0.5f);
+        expect (peakOf (render (p, 4, {}, &loud)) < 1.0e-6f, "the audio input is not passed to the output");
+    }
+
+    printf ("expression: %d failures\n", failures);
+    return failures;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
@@ -1890,6 +2155,7 @@ static const Mode modes[] {
     { "parts", test_parts },
     { "sounds", test_sounds },
     { "exports", test_exports },
+    { "expression", test_expression },
     { "host", test_host },
     { "levels", test_levels },
     { "examples", test_examples },
@@ -1938,7 +2204,7 @@ static int check (char** argv)
     chaosIterations = 8;
     char* none[] { argv[0], nullptr };
     int failures = 0;
-    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_ui, test_chaos, test_french })
+    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_expression, test_ui, test_chaos, test_french })
         failures += run (1, none);
     printf ("\ncheck: %d failures\n", failures);
     return failures;

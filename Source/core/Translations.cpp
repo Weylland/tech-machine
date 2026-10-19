@@ -41,7 +41,7 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\n5. En panne d'idée ? Choisis un GENRE puis clique sur SURPRISE ! (tout le rack) ou sur HASARD d'une machine (Nouvelle idée, Varier un peu, Plus de notes, Moins de notes).\n"
           "\n6. Appuie sur LECTURE (barre Espace) et tourne les boutons pendant que ça joue. Double-clic sur un bouton = valeur d'origine.\n"
           "\n7. Une erreur ? Ctrl+Z annule, Ctrl+Y rétablit.\n\n8. Enregistre ton projet (Ctrl+S) et exporte-le en WAV depuis le menu PROJET.\n"
-          "\nEn bas à droite : AUDIO / MIDI (carte son, ASIO, clavier MIDI), PLEIN ÉCRAN (F11) et la langue (FRANÇAIS / ENGLISH). Clique sur une machine pour qu'elle reçoive ton clavier MIDI.\n"
+          "\nEn bas à droite : AUDIO / MIDI (carte son, ASIO, clavier MIDI), PLEIN ÉCRAN (F11) et la langue (FRANÇAIS / ENGLISH). Clique sur une machine pour qu'elle reçoive ton clavier MIDI : la force des touches, la molette de pitch (± 2 demi-tons) et la molette de modulation (vibrato) sont suivies.\n"
           "\nLe petit « i » à côté de chaque élément explique à quoi il sert. Survole un bouton pour un résumé rapide.",
           "1. Open an EXAMPLE PROJECT (PROJECT menu › Examples, or the home screen) to hear what the machine can do, or start from an EMPTY PROJECT.\n"
           "\n2. Add machines with “+ MACHINE”: a drum machine, a bass, chords… They arrive empty.\n"
@@ -50,7 +50,7 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\n5. Out of ideas? Pick a GENRE then click SURPRISE! (the whole rack) or a machine's RANDOM button (New idea, Vary a little, More notes, Fewer notes).\n"
           "\n6. Press PLAY (space bar) and turn the knobs while it plays. Double-click a knob = default value.\n"
           "\n7. Made a mistake? Ctrl+Z undoes, Ctrl+Y redoes.\n\n8. Save your project (Ctrl+S) and export it to WAV from the PROJECT menu.\n"
-          "\nBottom right: AUDIO / MIDI (sound card, ASIO, MIDI keyboard), FULL SCREEN (F11) and the language (FRANÇAIS / ENGLISH). Click a machine so it receives your MIDI keyboard.\n"
+          "\nBottom right: AUDIO / MIDI (sound card, ASIO, MIDI keyboard), FULL SCREEN (F11) and the language (FRANÇAIS / ENGLISH). Click a machine so it receives your MIDI keyboard: how hard you play, the pitch wheel (± 2 semitones) and the modulation wheel (vibrato) are followed.\n"
           "\nThe little “i” next to each element explains what it does. Hover over a button for a quick summary." },
         { "1/4 pointée",
           "Dotted 1/4" },
@@ -762,6 +762,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Celesta" },
         { "D ",
           "R " },
+        { "D'où vient la voix. Voix interne = le robot dit les MOTS choisis. Micro = ta propre voix, par l'entrée audio : parle ou chante pendant que les accords jouent. Dans l'application seule, choisis le micro dans AUDIO / MIDI et décoche « Mute audio input » ; mets un casque pour éviter le larsen. Dans un logiciel de musique, envoie une piste audio sur l'entrée (sidechain) de Tech Machine.",
+          "Where the voice comes from. Built-in voice = the robot says the chosen WORDS. Microphone = your own voice, through the audio input: talk or sing while the chords play. In the standalone app, pick the microphone in AUDIO / MIDI and untick “Mute audio input”; wear headphones to avoid feedback. In music software, send an audio track to the input (sidechain) of Tech Machine." },
         { "DARBOUKA DOUM",
           "DARBUKA DOUM" },
         { "DARBOUKA TEK",
@@ -1723,6 +1725,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Mellotron · the tape sounds of the 60s and 70s" },
         { "Miami bass (kick infini)",
           "Miami bass (endless kick)" },
+        { "Micro (entrée audio)",
+          "Microphone (audio input)" },
         { "Microwave (impulsion)",
           "Microwave (pulse)" },
         { "Microwave — basse",
@@ -2679,6 +2683,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "VIOLINS" },
         { "VITESSE",
           "SPEED" },
+        { "VOIX",
+          "VOICE" },
         { "VOYELLE",
           "VOWEL" },
         { "Varier un peu",
@@ -2694,9 +2700,11 @@ const std::unordered_map<std::string, const char*>& englishTable()
         { "Vitesse de la sirène.",
           "Speed of the siren." },
         { "Vitesse du morceau en battements par minute. Glisse vers le haut ou le bas sur l'écran (ou molette) pour le changer.\n"
-          "\nRepères : reggae 70-85, lo-fi 70-90, hip-hop 85-95, reggaeton 90-100, funk 95-115, disco 115-125, house 120-128, techno 125-135, trance 136-140, trap 130-150, psytrance 140-148, hard techno 145-160, drum & bass 170-176, gabber 170-200. En plugin, le tempo suit ton logiciel de musique.",
+          "\nRepères : reggae 70-85, lo-fi 70-90, hip-hop 85-95, reggaeton 90-100, funk 95-115, disco 115-125, house 120-128, techno 125-135, trance 136-140, trap 130-150, psytrance 140-148, hard techno 145-160, drum & bass 170-176, gabber 170-200. En plugin, le tempo suit ton logiciel de musique.\n"
+          "\nUne autre machine (boîte à rythmes, séquenceur) envoie son horloge MIDI ? Tech Machine suit son tempo, ses départs et ses arrêts : l'écran affiche TEMPO MIDI (SYNC).",
           "Speed of the track in beats per minute. Drag up or down on the display (or use the wheel) to change it.\n"
-          "\nGuide: reggae 70-85, lo-fi 70-90, hip-hop 85-95, reggaeton 90-100, funk 95-115, disco 115-125, house 120-128, techno 125-135, trance 136-140, trap 130-150, psytrance 140-148, hard techno 145-160, drum & bass 170-176, gabber 170-200. As a plugin, the tempo follows your music software." },
+          "\nGuide: reggae 70-85, lo-fi 70-90, hip-hop 85-95, reggaeton 90-100, funk 95-115, disco 115-125, house 120-128, techno 125-135, trance 136-140, trap 130-150, psytrance 140-148, hard techno 145-160, drum & bass 170-176, gabber 170-200. As a plugin, the tempo follows your music software.\n"
+          "\nAnother machine (drum machine, sequencer) sends its MIDI clock? Tech Machine follows its tempo, its starts and its stops: the screen shows TEMPO MIDI (SYNC)." },
         { "Vitesse du vibrato.",
           "Speed of the vibrato." },
         { "Vitesse du wobble, calée sur le tempo : 1/2 = lent, 1/4 = à chaque temps, 1/8 = deux fois par temps, triolets = balancé, 1/16 = très rapide.",
@@ -2727,6 +2735,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Glass voices" },
         { "Voix de verre (D-50)",
           "Glass voices (D-50)" },
+        { "Voix interne",
+          "Built-in voice" },
         { "Voix intime",
           "Intimate voice" },
         { "Volume de ce son. Monte le kick, baisse les charlestons s'ils sont trop présents.",
@@ -2775,6 +2785,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Level only" },
         { "Vumètre",
           "Level meter" },
+        { "VÉLOCITÉ (force des notes)",
+          "VELOCITY (how hard the notes play)" },
         { "Wavestation — séquence",
           "Wavestation — sequence" },
         { "Wobble = scie + carré (dubstep). Reese = scies désaccordées qui grondent (drum & bass). Growl = son « qui parle », agressif.",

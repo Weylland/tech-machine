@@ -25,7 +25,8 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "7. Une erreur ? Ctrl+Z annule, Ctrl+Y rétablit.\n\n"
             "8. Enregistre ton projet (Ctrl+S) et exporte-le en WAV depuis le menu PROJET.\n\n"
             "En bas à droite : AUDIO / MIDI (carte son, ASIO, clavier MIDI), PLEIN ÉCRAN (F11) et la langue (FRANÇAIS / ENGLISH). "
-            "Clique sur une machine pour qu'elle reçoive ton clavier MIDI.\n\n"
+            "Clique sur une machine pour qu'elle reçoive ton clavier MIDI : la force des touches, la molette de pitch "
+            "(± 2 demi-tons) et la molette de modulation (vibrato) sont suivies.\n\n"
             "Le petit « i » à côté de chaque élément explique à quoi il sert. Survole un bouton pour un résumé rapide." } },
 
         { "play", { "Lecture / Stop",
@@ -35,7 +36,9 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "Vitesse du morceau en battements par minute. Glisse vers le haut ou le bas sur l'écran (ou molette) pour le changer.\n\n"
             "Repères : reggae 70-85, lo-fi 70-90, hip-hop 85-95, reggaeton 90-100, funk 95-115, disco 115-125, "
             "house 120-128, techno 125-135, trance 136-140, trap 130-150, psytrance 140-148, hard techno 145-160, "
-            "drum & bass 170-176, gabber 170-200. En plugin, le tempo suit ton logiciel de musique." } },
+            "drum & bass 170-176, gabber 170-200. En plugin, le tempo suit ton logiciel de musique.\n\n"
+            "Une autre machine (boîte à rythmes, séquenceur) envoie son horloge MIDI ? Tech Machine suit son tempo, ses départs "
+            "et ses arrêts : l'écran affiche TEMPO MIDI (SYNC)." } },
         { "swing", { "Swing",
             "Décale légèrement un pas sur deux pour donner un groove « chaloupé » au lieu d'un rythme robotique.\n\n"
             "0 = parfaitement droit (techno, trance, trap). Un peu = groove house, funk. Beaucoup = hip-hop, lo-fi, UK garage." } },

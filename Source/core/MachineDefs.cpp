@@ -1119,6 +1119,12 @@ std::vector<MachineDef> buildDefs()
             { "sibilance", "SOUFFLE", 0.4f, "Les « s » et « t » de la voix, les consonnes qui la rendent compréhensible.", {} },
             { "shift", "TAILLE", 0.5f, "Change la taille de la bouche : à gauche = voix de géant, à droite = voix de souris.", {} },
             { "release", "RELEASE", 0.3f, releaseHelp, {} },
+            { "source", "VOIX", 0.0f,
+              "D'où vient la voix. Voix interne = le robot dit les MOTS choisis. Micro = ta propre voix, par l'entrée audio : "
+              "parle ou chante pendant que les accords jouent. Dans l'application seule, choisis le micro dans AUDIO / MIDI et "
+              "décoche « Mute audio input » ; mets un casque pour éviter le larsen. Dans un logiciel de musique, envoie une piste "
+              "audio sur l'entrée (sidechain) de Tech Machine.",
+              { "Voix interne", "Micro (entrée audio)" } },
         } });
 
     defs.push_back ({ TR606, "tr606", "606", "Boîte à rythmes · inspirée de la Roland TR-606 Drumatix (1981)", MachineKind::Drum,

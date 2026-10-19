@@ -302,7 +302,7 @@ public:
         note = midiNote;
         gain = velocity;
         const auto& t = pluckType (p.type);
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         const float damping = juce::jlimit (0.05f, 0.98f, t.damping + (p.brightness - 0.5f) * 0.6f);
         loopCoef = 0.15f + 0.84f * damping;
         // The damping filter delays the loop by about (1 - a) / a samples: take it off the line length.
@@ -357,7 +357,7 @@ public:
 private:
     PluckParams& p;
     DelayLine loop;
-    float fs = 44100.0f, freq = 220, gain = 1, period = 100, loopCoef = 0.5f, loopGain = 0.99f, decaySeconds = 1;
+    float fs = 44100.0f, gain = 1, period = 100, loopCoef = 0.5f, loopGain = 0.99f, decaySeconds = 1;
     float bend = 0, pickCoef = 0.5f, lp = 0, pickLp = 0, dcIn = 0, dcOut = 0, level = 0;
     int excite = 0, waitSamples = 0;
     bool active = false;
@@ -411,7 +411,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         adsr.gateOn();
     }
 
@@ -455,7 +455,7 @@ public:
 
 private:
     const ChoirParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1;
+    float fs = 44100.0f, gain = 1;
     float phases[3] { 0.0f, 0.33f, 0.66f }, vibrato[3] { 0.0f, 0.4f, 0.7f };
     int lastVowel = -1, updateCounter = 0;
     std::array<Svf, 3> formants;

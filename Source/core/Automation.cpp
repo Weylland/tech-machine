@@ -5,7 +5,7 @@ namespace techno::automation
 {
 namespace
 {
-struct Decoded { enum Kind { Strip, Param, Row, None } kind; int index, row; };
+struct Decoded { enum Kind { Strip, Param, Row, Velocity, None } kind; int index, row; };
 
 Decoded decode (const MachineDef& def, int target)
 {
@@ -15,6 +15,7 @@ Decoded decode (const MachineDef& def, int target)
     if (target < (int) def.params.size()) return { Decoded::Param, target, 0 };
     target -= (int) def.params.size();
     if (target < (int) def.rows.size() * rowCount) return { Decoded::Row, target % rowCount, target / rowCount };
+    if (target == (int) def.rows.size() * rowCount) return { Decoded::Velocity, 0, 0 };
     return { Decoded::None, 0, 0 };
 }
 } // namespace
@@ -22,7 +23,7 @@ Decoded decode (const MachineDef& def, int target)
 int targetCount (int machineType)
 {
     const auto& def = machineDef (machineType);
-    return stripCount + (int) def.params.size() + (int) def.rows.size() * rowCount;
+    return stripCount + (int) def.params.size() + (int) def.rows.size() * rowCount + 1;
 }
 
 juce::String paramId (int machineType, int target)
@@ -33,6 +34,7 @@ juce::String paramId (int machineType, int target)
         case Decoded::Strip: return pid::machine (machineType, stripSuffixes[d.index]);
         case Decoded::Param: return pid::synth (machineType, d.index);
         case Decoded::Row:   return pid::row (machineType, d.row, rowSuffixes[d.index]);
+        case Decoded::Velocity: return "velocity";
         case Decoded::None:  break;
     }
     return {};
@@ -56,6 +58,7 @@ juce::String label (int machineType, int target)
         case Decoded::Strip: return utf8 (stripLabels[d.index]);
         case Decoded::Param: return utf8 (def.params[(size_t) d.index].label);
         case Decoded::Row:   return utf8 (def.rows[(size_t) d.row].label) + juce::String (juce::CharPointer_UTF8 (" \xc2\xb7 ")) + utf8 (rowLabels[d.index]);
+        case Decoded::Velocity: return utf8 ("VÉLOCITÉ (force des notes)");
         case Decoded::None:  break;
     }
     return {};

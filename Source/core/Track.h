@@ -73,6 +73,14 @@ struct Track
             for (auto& v : lane) v = noLock;
     }
 
+    // The lane holding a setting, -1 when it has none.
+    int findLane (int target) const
+    {
+        for (int i = 0; i < maxLockLanes; ++i)
+            if (lockTarget[(size_t) i].load() == target) return i;
+        return -1;
+    }
+
     // The lane of a setting, or a free one for it (-1 when all 8 are used by other settings).
     int laneFor (int target, bool create)
     {

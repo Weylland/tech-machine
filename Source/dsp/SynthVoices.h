@@ -17,6 +17,7 @@ public:
     virtual float process() = 0;
     virtual void reset() = 0;
     virtual void syncStep (int /*step*/, double /*stepSamples*/) {}   // tempo-locked LFOs
+    virtual void setBend (float /*semitones*/) {}                       // pitch wheel and vibrato of the keyboard
 };
 
 // Note/glide/gate bookkeeping shared by the mono synths.
@@ -45,6 +46,8 @@ public:
         onRelease();
     }
 
+    void setBend (float semitones) override { bendSemitones = semitones; }
+
 protected:
     virtual void onTrigger() = 0;
     virtual void onLegato() {}
@@ -56,7 +59,7 @@ protected:
     }
 
     float fs = 44100.0f;
-    float currentNote = 45.0f, targetNote = 45.0f;
+    float currentNote = 45.0f, targetNote = 45.0f, bendSemitones = 0.0f;
     bool gate = false, gliding = false, accent = false;
 };
 
@@ -99,7 +102,7 @@ public:
     float process() override
     {
         updateGlide (glideCoef);
-        const float dt = midiToHz (currentNote) / fs;
+        const float dt = midiToHz (currentNote + bendSemitones) / fs;
         advance (phase, dt);
 
         float osc;
@@ -191,7 +194,7 @@ public:
     float process() override
     {
         updateGlide (glideCoef);
-        const float dt = midiToHz (currentNote) / fs;
+        const float dt = midiToHz (currentNote + bendSemitones) / fs;
         const float previous = phase;
         advance (phase, dt);
         if (phase < previous) subHigh = ! subHigh;
@@ -263,7 +266,7 @@ public:
     float process() override
     {
         updateGlide (glideCoef);
-        const float f = midiToHz (currentNote);
+        const float f = midiToHz (currentNote + bendSemitones);
         const float detune = std::exp2 (detuneCents / 1200.0f);
         const float dt1 = f / fs, dt2 = f * detune / fs, dt3 = 0.5f * f / (detune * detune) / fs;
         advance (phases[0], dt1);
@@ -322,8 +325,14 @@ public:
     virtual bool isActive() const = 0;
     virtual void process (float& left, float& right) = 0;
 
+    // Pitch wheel and vibrato of the keyboard: the note's frequency times the machine's bend.
+    void setBend (float ratio) { freq = noteFreq * ratio; }
+
     int note = -1;
     unsigned int age = 0;
+
+protected:
+    float freq = 220.0f, noteFreq = 220.0f;
 };
 
 struct JunoParams
@@ -353,7 +362,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         adsr.gateOn();
     }
 
@@ -389,7 +398,7 @@ public:
 
 private:
     const JunoParams& p;
-    float fs = 44100.0f, phase = 0, freq = 220, gain = 1;
+    float fs = 44100.0f, phase = 0, gain = 1;
     bool subHigh = true;
     Adsr adsr;
     Ladder ladder;
@@ -478,7 +487,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         for (auto& ph : phases) ph = random.nextFloat();
         highpassL.set (freq, fs);
         highpassR.set (freq, fs);
@@ -529,7 +538,7 @@ private:
     }
 
     const SuperParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1;
+    float fs = 44100.0f, gain = 1;
     float phases[7] {};
     Adsr adsr;
     Ladder ladderL, ladderR;

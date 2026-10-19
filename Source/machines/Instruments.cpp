@@ -665,6 +665,7 @@ public:
             PolyMachine::render (f);
             return;
         }
+        applyExpression();
         if (--orderCountdown <= 0)
         {
             orderCountdown = 64;
@@ -879,17 +880,37 @@ public:
         PolyMachine::liveNoteOn (note, velocity);
     }
 
+    void setExternalInput (const float* samples, int numSamples) override
+    {
+        input = samples;
+        inputCount = numSamples;
+        inputPos = 0;
+    }
+
 private:
     void applyParams() override
     {
         pulseMix = values[pVoc::Carrier];
+        microphone = (int) values[pVoc::Source] == 1;
         vocoder.set ((int) values[pVoc::Words], values[pVoc::Speed], values[pVoc::Sibilance], values[pVoc::Shift]);
         for (auto* v : carrierVoices) v->setRelease (knobTime (values[pVoc::Release], 0.01f, 3.0f));
     }
 
-    void postProcess (float& left, float& right) override { vocoder.process (left, right); }
+    void postProcess (float& left, float& right) override
+    {
+        if (! microphone)
+        {
+            vocoder.process (left, right);
+            return;
+        }
+        const float voice = input != nullptr && inputPos < inputCount ? input[inputPos++] * 3.0f : 0.0f;
+        vocoder.processExternal (voice, left, right);
+    }
 
     float pulseMix = 0.3f;
+    bool microphone = false;
+    const float* input = nullptr;
+    int inputCount = 0, inputPos = 0;
     std::vector<CarrierVoice*> carrierVoices;
     SpeechVocoder vocoder;
     juce::Random random { 0x7ec4 };   // fixed seed: the same project always sounds the same

@@ -85,7 +85,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         const auto& preset = fmPreset (p.preset);
         const float decayScale = 0.3f * std::pow (10.0f, p.decay);
         adsr.set (preset.attack, preset.decay * decayScale, preset.sustain, knobTime (p.release, 0.01f, 3.0f), fs);
@@ -135,7 +135,7 @@ public:
 
 private:
     const FmParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1;
+    float fs = 44100.0f, gain = 1;
     float c1 = 0, m1 = 0, c2 = 0, m2 = 0, index1 = 1, index2 = 1, coef1 = 0, coef2 = 0, riseCoef = 0;
     bool rises = false;
     Adsr adsr;
@@ -167,7 +167,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         adsr.gateOn();
     }
 
@@ -193,7 +193,7 @@ public:
 
 private:
     const StringParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1, phase8 = 0, phase4 = 0.31f, phase16 = 0.67f;
+    float fs = 44100.0f, gain = 1, phase8 = 0, phase4 = 0.31f, phase16 = 0.67f;
     Adsr adsr;
     Svf filter;
 };
@@ -287,7 +287,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         if (p.house) adsr.set (0.002f, 0.35f, 0.45f, 0.08f, fs);
         else adsr.set (0.003f, 0.1f, 1.0f, 0.03f, fs);
         adsr.gateOn();
@@ -322,7 +322,7 @@ public:
 
 private:
     const OrganParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1, phase = 0, percPhase = 0, percEnv = 0, clickEnv = 0, percCoef = 0, clickCoef = 0;
+    float fs = 44100.0f, gain = 1, phase = 0, percPhase = 0, percEnv = 0, clickEnv = 0, percCoef = 0, clickCoef = 0;
     Adsr adsr;
     Svf clickFilter;
     Noise noise;
@@ -396,7 +396,7 @@ public:
     float process() override
     {
         updateGlide (glideCoef);
-        const float f = midiToHz (currentNote) * (1.0f + punch * 1.5f * punchEnv);
+        const float f = midiToHz (currentNote + bendSemitones) * (1.0f + punch * 1.5f * punchEnv);
         punchEnv *= punchCoef;
         advance (phase, f / fs);
 

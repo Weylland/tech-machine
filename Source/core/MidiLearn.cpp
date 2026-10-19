@@ -26,7 +26,7 @@ int MidiLearn::controllerFor (const juce::String& paramId) const
     return -1;
 }
 
-void MidiLearn::handleController (int cc, int value)
+bool MidiLearn::handleController (int cc, int value)
 {
     if (auto* learn = learnTarget.exchange (nullptr))
     {
@@ -36,7 +36,11 @@ void MidiLearn::handleController (int cc, int value)
         ++version;
     }
     if (auto* p = ccMap[(size_t) cc].load())
+    {
         p->setValueNotifyingHost ((float) value / 127.0f);
+        return true;
+    }
+    return false;
 }
 
 void MidiLearn::save()

@@ -27,8 +27,26 @@ public:
         applyParams();
     }
 
+    // Keyboard expression, on the machine that receives the MIDI keyboard (audio thread).
+    void setPitchBend (float semitones) override { bend = semitones; }
+    void setModWheel (float amount) override { modulation = amount; }
+
 protected:
     virtual void applyParams() = 0;
+
+    // Pitch wheel plus the vibrato of the modulation wheel, in semitones. False while there is none to apply.
+    bool expression (float& semitones)
+    {
+        const bool active = ! juce::exactlyEqual (bend, 0.0f) || ! juce::exactlyEqual (modulation, 0.0f);
+        if (! active && ! expressionApplied) return false;
+        expressionApplied = active;
+        advance (vibratoPhase, 5.5f / expressionRate);
+        semitones = bend + modulation * 0.6f * std::sin (2.0f * pi * vibratoPhase);
+        return true;
+    }
+
+    float bend = 0.0f, modulation = 0.0f, vibratoPhase = 0.0f, expressionRate = 44100.0f;
+    bool expressionApplied = false;
 
     int gateSamples (const StepInfo& s) const
     {
@@ -56,7 +74,11 @@ public:
         gateFraction = gateLength;
     }
 
-    void prepare (float sampleRate) override { voice->prepare (sampleRate * 2.0f); }
+    void prepare (float sampleRate) override
+    {
+        voice->prepare (sampleRate * 2.0f);
+        expressionRate = sampleRate;
+    }
 
     void onStep (const StepInfo& s) override
     {
@@ -65,6 +87,7 @@ public:
         if (! track.on[st]) return;
 
         const bool glide = track.on[prev] && track.slide[prev];
+        if (! glide) noteGain = velocityScale();
         const int semitone = snapToScale (s.scale, track.note[st]);
         voice->noteOn (machineBaseNote (def, s.key, octave) + semitone, track.accent[st], glide);
         gateCountdown = gateSamples (s);
@@ -78,9 +101,10 @@ public:
     // The voice runs at twice the sample rate to keep the resonant filter and oscillators clean.
     void render (Frame& f) override
     {
+        if (float semitones; expression (semitones)) voice->setBend (semitones);
         const float a = voice->process();
         const float b = voice->process();
-        f.left = f.right = decimator.process (a, b) * outputTrim;
+        f.left = f.right = decimator.process (a, b) * outputTrim * noteGain;
     }
 
     void stop() override
@@ -118,6 +142,7 @@ private:
     }
 
     std::unique_ptr<MonoVoice> voice;
+    float noteGain = 1.0f;   // velocity of the note playing
     int typeIndex;
     std::vector<float> gains;
     Decimator2x decimator;
@@ -132,6 +157,7 @@ public:
     void prepare (float sampleRate) override
     {
         fs = sampleRate;
+        expressionRate = sampleRate;
         for (auto& v : voices) v->prepare (sampleRate * 2.0f);
         previousChord = {};
     }
@@ -152,7 +178,7 @@ public:
                 const int base = machineBaseNote (def, s.key, octave);
                 int count = 0;
                 for (int n = 0; n < noteRange; ++n) count += (int) ((mask >> n) & 1u);
-                const float velocity = (track.accent[st] ? 1.0f : 0.8f) * 1.6f / std::sqrt ((float) juce::jmax (1, count));
+                const float velocity = (track.accent[st] ? 1.0f : 0.8f) * 1.6f / std::sqrt ((float) juce::jmax (1, count)) * velocityScale();
                 for (int n = 0; n < noteRange; ++n)
                 {
                     if (! ((mask >> n) & 1u) || ((continuing >> n) & 1u)) continue;
@@ -188,7 +214,7 @@ public:
         previousChord = chord;
 
         // Same loudness whether one note or a five-note chord is played.
-        const float velocity = (track.accent[st] ? 1.0f : 0.8f) * 1.6f / std::sqrt ((float) count);
+        const float velocity = (track.accent[st] ? 1.0f : 0.8f) * 1.6f / std::sqrt ((float) count) * velocityScale();
         for (int k = 0; k < chord.count; ++k) startVoice (chord.notes[k], velocity);
 
         gateOpen = true;
@@ -220,6 +246,7 @@ public:
 
     void render (Frame& f) override
     {
+        applyExpression();
         float l0 = 0, r0 = 0, l1 = 0, r1 = 0;
         for (auto& v : voices)
         {
@@ -244,6 +271,17 @@ public:
 
 protected:
     virtual void postProcess (float&, float&) {}
+
+    void applyExpression()
+    {
+        if (float semitones; expression (semitones))
+        {
+            bendRatio = std::exp2 (semitones / 12.0f);
+            for (auto& v : voices) v->setBend (bendRatio);
+        }
+    }
+
+    float bendRatio = 1.0f;
 
     std::vector<std::unique_ptr<PolyVoice>> voices;
     float fs = 44100.0f;
@@ -305,6 +343,7 @@ private:
 
         chosen->age = ++ageCounter;
         chosen->start (note, velocity);
+        if (! juce::exactlyEqual (bendRatio, 1.0f)) chosen->setBend (bendRatio);
     }
 
     void releaseAll()

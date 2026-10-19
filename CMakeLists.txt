@@ -26,6 +26,8 @@ juce_add_plugin(TechMachine
     VST3_CATEGORIES Instrument Synth Drum
     COPY_PLUGIN_AFTER_BUILD FALSE
     BUNDLE_ID com.nicolassamier.techmachine
+    MICROPHONE_PERMISSION_ENABLED TRUE
+    MICROPHONE_PERMISSION_TEXT "Tech Machine uses the microphone for the vocoder."
     FORMATS ${TECHMACHINE_FORMATS})
 
 # Font used where Bahnschrift is not installed (macOS, Linux).

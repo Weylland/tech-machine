@@ -75,7 +75,10 @@ bool TechMachineProcessor::exportMidi (const juce::File& target) const
             {
                 const auto st = (size_t) s, prev = (size_t) ((s + steps - 1) % steps);
                 const long long at = first + s;
-                const int velocity = track.accent[st] ? 120 : 96;
+                int velocity = track.accent[st] ? 120 : 96;
+                if (const int lane = track.findLane (automation::velocityTarget (def)); lane >= 0)
+                    if (const float v = track.lockValue[(size_t) lane][st].load(); v >= 0.0f)
+                        velocity = juce::jlimit (1, 127, juce::roundToInt ((float) velocity * v / automation::normalVelocity));
                 if (drum)
                 {
                     for (int r = 0; r < (int) def.rows.size(); ++r)

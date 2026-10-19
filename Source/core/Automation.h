@@ -15,11 +15,15 @@ inline constexpr int rowCount = 9;
 enum Strip { Drive, Crush, Filter, Echo, Reverb, Volume, Pan };
 enum RowSetting { Level, Tune, Decay, Tone, RowDrive, RowFilter, RowPan, RowEcho, RowReverb };
 
+inline constexpr float normalVelocity = 0.75f;   // the velocity of a step without a value
+
 inline int synthTarget (int param) { return stripCount + param; }
+inline int velocityTarget (const MachineDef& def) { return stripCount + (int) def.params.size() + (int) def.rows.size() * rowCount; }
+inline bool isVelocity (int machineType, int target) { return target == velocityTarget (machineDef (machineType)); }
 inline int rowTarget (const MachineDef& def, int row, int setting) { return stripCount + (int) def.params.size() + row * rowCount + setting; }
 int targetCount (int machineType);
 
-juce::String paramId (int machineType, int target);
+juce::String paramId (int machineType, int target);   // "velocity" for the velocity, which is not a knob
 int targetFor (int machineType, const juce::String& paramId);   // -1 when the parameter cannot be automated
 juce::String label (int machineType, int target);               // shown in the interface (already translated)
 int choiceCount (int machineType, int target);                  // 0 for a knob (values 0..1), else the number of choices

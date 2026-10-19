@@ -105,7 +105,7 @@ namespace pLA { enum { Octave, Chord, Type, Layer, Brightness, Attack, Release, 
 namespace pCS { enum { Octave, Chord, Type, Brilliance, Reso, Attack, Release, Touch, Bend, Vibrato, count }; }
 namespace pEther { enum { Octave, Type, Glide, Vibrato, Rate, Tone, Attack, Release, count }; }
 namespace pWest { enum { Octave, Chord, Ratio, Gate, Fm, Fold, Symmetry, Decay, count }; }
-namespace pVoc { enum { Octave, Chord, Words, Speed, Carrier, Sibilance, Shift, Release, count }; }
+namespace pVoc { enum { Octave, Chord, Words, Speed, Carrier, Sibilance, Shift, Release, Source, count }; }
 namespace pSampler { enum { Mode, Texture, count }; }
 
 // Parameter IDs.

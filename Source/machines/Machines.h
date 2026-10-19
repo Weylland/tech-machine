@@ -50,6 +50,9 @@ public:
     virtual void liveNoteOn (int /*midiNote*/, float /*velocity*/) {}
     virtual void liveNoteOff (int /*midiNote*/) {}
     virtual int rowForMidiNote (int /*midiNote*/) const { return -1; }
+    virtual void setPitchBend (float /*semitones*/) {}
+    virtual void setModWheel (float /*amount*/) {}
+    virtual void setExternalInput (const float* /*samples*/, int /*numSamples*/) {}   // audio input of this block (vocoder)
 
     // Sampler: where each pad finds its sound.
     virtual void setSampleSlot (int /*pad*/, const std::atomic<const SampleData*>* /*slot*/) {}
@@ -84,6 +87,9 @@ public:
         std::fill (lockOverride.begin(), lockOverride.end(), noLock);
         applied.fill (-1);
     }
+
+    // Velocity of the current step, 1 = normal.
+    float velocityScale() const { return setting (automation::velocityTarget (def), automation::normalVelocity) / automation::normalVelocity; }
 
     // A setting as it sounds now: the step's value if it has one, otherwise the knob.
     float setting (int target, float knob) const

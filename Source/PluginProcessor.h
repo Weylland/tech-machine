@@ -69,6 +69,7 @@ public:
     void setRecordNotes (bool on);
     void previewNote (int machineType, int midiNote, bool on);   // plays a note right away (piano roll)
     bool isRecordingNotes() const { return recordNotes.load(); }
+    bool isFollowingMidiClock() const { return clockActive.load(); }   // tempo, start and stop from another machine
     std::atomic<int> midiActivity { 0 };
 
     // Song: 8 parts (A to H), each holding every machine's pattern, and the list of parts to play in order.
@@ -237,6 +238,10 @@ private:
     std::atomic<bool> dirty { false };
 
     void handleMidi (const juce::MidiBuffer&);
+    void handleMidiClock (const juce::MidiBuffer&, int numSamples);
+    std::atomic<bool> clockActive { false };
+    double clockInterval = 0, samplesSinceClock = 1.0e9, blockStart = 0, lastClock = -1;
+    std::vector<float> micInput;   // the audio input of this block (vocoder microphone)
     int quantizedStep() const;
     void recordNoteOn (int machineType, int note, float velocity);
     void recordNoteOff (int machineType, int note);

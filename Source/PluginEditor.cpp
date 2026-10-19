@@ -182,7 +182,8 @@ void LcdDisplay::paint (juce::Graphics& g)
     auto left = glass.reduced (12.0f, 8.0f).removeFromLeft (glass.getWidth() * 0.4f);
     g.setColour (amber.withAlpha (0.7f));
     g.setFont (paint::condensed (11.0f));
-    g.drawText (processor.isHosted() ? utf8 ("TEMPO DAW (SYNC)") : utf8 ("TEMPO"), left.removeFromTop (13.0f), juce::Justification::centredLeft);
+    g.drawText (processor.isHosted() ? utf8 ("TEMPO DAW (SYNC)") : processor.isFollowingMidiClock() ? utf8 ("TEMPO MIDI (SYNC)") : utf8 ("TEMPO"),
+                left.removeFromTop (13.0f), juce::Justification::centredLeft);
     auto digits = left.removeFromTop (left.getHeight() - 14.0f);
     paint::sevenSegment (g, juce::String (juce::roundToInt (bpm)).paddedLeft (' ', 3), digits.withWidth (digits.getHeight() * 1.9f), amber);
     g.setColour (amber.withAlpha (0.7f));

@@ -60,7 +60,7 @@ public:
     {
         updateGlide (glideCoef);
         const auto& t = bassType (type);
-        const float freq = midiToHz (currentNote);
+        const float freq = midiToHz (currentNote + bendSemitones);
         const float loopCoef = 0.15f + 0.84f * t.damping;
         const float period = juce::jlimit (2.0f, (float) loop.size - 3.0f, fs / freq - (1.0f - loopCoef) / loopCoef);
 
@@ -88,14 +88,14 @@ private:
     void onTrigger() override
     {
         const auto& t = bassType (type);
-        const float freq = midiToHz (currentNote);
+        const float freq = midiToHz (currentNote + bendSemitones);
         loopGain = std::exp (-6.91f / (t.decay * decayScale * freq));
         excite = (int) (fs / freq);
         popEnv = 1.0f;
         popCoef = decayCoef (0.004f, fs);
     }
 
-    void onRelease() override { loopGain = std::min (loopGain, std::exp (-6.91f / (muteSeconds * midiToHz (currentNote)))); }
+    void onRelease() override { loopGain = std::min (loopGain, std::exp (-6.91f / (muteSeconds * midiToHz (currentNote + bendSemitones)))); }
 
     DelayLine loop;
     Svf tone, popFilter;
@@ -149,7 +149,7 @@ public:
     {
         updateGlide (glideCoef);
         advance (lfoPhase, lfoInc);
-        const float freq = midiToHz (currentNote);
+        const float freq = midiToHz (currentNote + bendSemitones);
         const float spread = 1.0f + detune * 0.012f;
 
         float x;
@@ -215,7 +215,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         bend = -p.dip * 12.0f;   // starts below the note and rises to it
         bendCoef = decayCoef (0.12f, fs);
         adsr.set (p.attack, 0.5f, 1.0f, p.release, fs);
@@ -250,7 +250,7 @@ public:
 
 private:
     const HooverParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1, bend = 0, bendCoef = 0, pwm = 0;
+    float fs = 44100.0f, gain = 1, bend = 0, bendCoef = 0, pwm = 0;
     float phases[5] { 0.0f, 0.2f, 0.4f, 0.6f, 0.8f };
     Adsr adsr;
     Svf filter;
@@ -307,7 +307,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         adsr.gateOn();
     }
 
@@ -383,7 +383,7 @@ private:
     }
 
     const Poly80Params& p;
-    float fs = 44100.0f, freq = 220, gain = 1, phase1 = 0, phase2 = 0.37f;
+    float fs = 44100.0f, gain = 1, phase1 = 0, phase2 = 0.37f;
     float phases[3] { 0.0f, 0.37f, 0.71f }, subPhase = 0, drift = 0;
     Adsr adsr;
     Svf filter;
@@ -416,7 +416,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         morph = 0.0f;
         morphCoef = 1.0f - decayCoef (knobTime (p.speed, 0.03f, 0.8f), fs);
         adsr.set (0.01f, 0.3f, 1.0f, knobTime (p.release, 0.02f, 1.0f), fs);
@@ -454,7 +454,7 @@ public:
 
 private:
     const TalkboxParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1, phase = 0, morph = 0, morphCoef = 0;
+    float fs = 44100.0f, gain = 1, phase = 0, morph = 0, morphCoef = 0;
     unsigned int counter = 0;
     std::array<Svf, 3> formants;
     Adsr adsr;
@@ -490,7 +490,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         played = 0;
         tapeEnd = 1.0f;
         breath.set (juce::jmin (freq * 2.0f, 9000.0f), 3.0f, fs);
@@ -542,7 +542,7 @@ public:
 
 private:
     const MellotronParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1, tapeEnd = 1, tapeCoef = 0;
+    float fs = 44100.0f, gain = 1, tapeEnd = 1, tapeCoef = 0;
     float phases[3] { 0.0f, 0.3f, 0.6f };
     int played = 0;
     Adsr adsr;
@@ -575,7 +575,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         const float decay = knobTime (p.decay, 0.4f, 4.0f) * std::exp2 (-(float) (midiNote - 60) / 24.0f);
         amp = 1.0f;
         ampCoef = decayCoef (decay * (p.type == 1 ? 0.6f : 1.0f), fs);
@@ -644,7 +644,7 @@ private:
     const EPianoParams& p;
     DelayLine loop;
     Noise noise;
-    float fs = 44100.0f, freq = 220, gain = 1, carrier = 0, modulator = 0, tinePhase = 0;
+    float fs = 44100.0f, gain = 1, carrier = 0, modulator = 0, tinePhase = 0;
     float amp = 1, ampCoef = 1, index = 1, indexCoef = 1, tine = 1, tineCoef = 1, damp = 1, dampCoef = 1;
     float loopCoef = 0.5f, period = 100, loopGain = 0.99f, lp = 0, pickLp = 0;
     int excite = 0;
@@ -696,7 +696,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         const auto& t = brassType (p.type);
         const float a = t.attack * knobTime (p.attack, 0.3f, 4.0f);
         adsr.set (a, t.decayTo > 0.0f ? 0.4f : 0.18f, t.decayTo, knobTime (p.release, 0.03f, 1.0f), fs);
@@ -735,7 +735,7 @@ public:
 
 private:
     const BrassParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1, vibratoPhase = 0;
+    float fs = 44100.0f, gain = 1, vibratoPhase = 0;
     float phases[3] {};
     int vibratoDelay = 0;
     Adsr adsr;
@@ -787,7 +787,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         const auto& t = windType (p.type);
         adsr.set (knobTime (p.attack, 0.02f, 0.6f), 0.3f, 0.9f, knobTime (p.release, 0.03f, 1.0f), fs);
         adsr.gateOn();
@@ -823,7 +823,7 @@ public:
 
 private:
     const WindParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1, phase = 0, vibratoPhase = 0, chiff = 0, chiffCoef = 0, bend = 0, bendCoef = 0;
+    float fs = 44100.0f, gain = 1, phase = 0, vibratoPhase = 0, chiff = 0, chiffCoef = 0, bend = 0, bendCoef = 0;
     int vibratoDelay = 0;
     Adsr adsr;
     Svf breathFilter, tone;
@@ -856,7 +856,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         sweep = 1.0f;
         sweepCoef = decayCoef (p.type == 2 ? 0.08f : 0.25f, fs);
         switch (p.type)
@@ -948,7 +948,7 @@ private:
     const OrchestraParams& p;
     DelayLine loop;
     Noise noise;
-    float fs = 44100.0f, freq = 220, gain = 1, sweep = 0, sweepCoef = 0;
+    float fs = 44100.0f, gain = 1, sweep = 0, sweepCoef = 0;
     float phases[5] { 0.0f, 0.25f, 0.5f, 0.75f, 0.1f }, vib[4] { 0.0f, 0.3f, 0.6f, 0.8f };
     float loopCoef = 0.4f, period = 100, loopGain = 0.99f, lp = 0, pickLp = 0;
     int excite = 0;

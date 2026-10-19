@@ -101,7 +101,8 @@ public:
         }
 
         // The knob's own value: what the steps without a value play.
-        const float knob = normalised (processor.apvts.getRawParameterValue (automation::paramId (type, target))->load());
+        const float knob = automation::isVelocity (type, target) ? automation::normalVelocity
+                                                                 : normalised (processor.apvts.getRawParameterValue (automation::paramId (type, target))->load());
         const float knobY = yFor (knob);
         g.setColour (colours::dim.withAlpha (0.8f));
         const float dash[] { 6.0f, 5.0f };

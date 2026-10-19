@@ -79,7 +79,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         held = 0;
         adsr.gateOn();
     }
@@ -139,7 +139,7 @@ public:
 
 private:
     const ChipParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1, phase = 0, pwmPhase = 0, vibratoPhase = 0, noiseClock = 0;
+    float fs = 44100.0f, gain = 1, phase = 0, pwmPhase = 0, vibratoPhase = 0, noiseClock = 0;
     unsigned lfsr = 0x4001u;
     int held = 0;
     Adsr adsr;
@@ -187,7 +187,7 @@ public:
     {
         updateGlide (glideCoef);
         if (model == 3) drift += (noise.next() * 0.002f - drift * 0.0004f);   // the VCS 3 never stays in tune
-        const float f1 = midiToHz (currentNote + drift * 4.0f);
+        const float f1 = midiToHz (currentNote + bendSemitones + drift * 4.0f);
         const float dt1 = f1 / fs;
         const float previous = phase1;
         advance (phase1, dt1);
@@ -310,7 +310,7 @@ public:
         ++held;
         advance (vibratoPhase, rate / fs);
         const float onset = juce::jlimit (0.0f, 1.0f, (float) held / (0.5f * fs));
-        const float f = midiToHz (currentNote + vibrato * 0.45f * onset * sine (vibratoPhase));
+        const float f = midiToHz (currentNote + bendSemitones + vibrato * 0.45f * onset * sine (vibratoPhase));
         const float dt = f / fs;
         advance (phase, dt);
 
@@ -401,7 +401,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         accented = p.accent;
         const auto& t = config();
         amp.set (t.attack * knobTime (p.attack, 0.2f, 5.0f), t.decay, t.sustain, knobTime (p.release, 0.05f, 4.0f), fs);
@@ -486,7 +486,7 @@ private:
     }
 
     const CS80Params& p;
-    float fs = 44100.0f, freq = 220, gain = 1, scoop = 0, drop = 0, filterEnv = 0, filterAttack = 0.01f;
+    float fs = 44100.0f, gain = 1, scoop = 0, drop = 0, filterEnv = 0, filterAttack = 0.01f;
     float phases[3] { 0.0f, 0.33f, 0.71f }, subPhase = 0, ringPhase = 0, bellPhase = 0, vibratoPhase = 0;
     int held = 0;
     bool accented = false, releasing = false;
@@ -521,7 +521,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         const auto& t = config();
         bellEnv = pluckEnv = breathEnv = 1.0f;
         bellDecay = decayCoef (t.bellDecay, fs);
@@ -634,7 +634,7 @@ private:
     }
 
     const LaParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1;
+    float fs = 44100.0f, gain = 1;
     float phases[5] {}, partials[6] {}, partialEnv[6] {}, partialDecay[6] {};
     float bellEnv = 0, pluckEnv = 0, breathEnv = 0, bellDecay = 0, pluckDecay = 0, breathDecay = 0, releaseCoef = 0.999f;
     bool released = false;
@@ -668,7 +668,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         strike = 1.0f;
         const float seconds = knobTime (p.decay, 0.05f, 3.0f);
         fastDecay = decayCoef (seconds * 0.35f, fs);
@@ -712,7 +712,7 @@ public:
 
 private:
     const WestParams& p;
-    float fs = 44100.0f, freq = 220, gain = 1, strike = 0, fastDecay = 0.99f, slowDecay = 0.999f, modPhase = 0, carrierPhase = 0;
+    float fs = 44100.0f, gain = 1, strike = 0, fastDecay = 0.99f, slowDecay = 0.999f, modPhase = 0, carrierPhase = 0;
     Svf filter;
     Adsr sustainEnv;
 };
@@ -737,7 +737,7 @@ public:
     {
         note = midiNote;
         gain = velocity;
-        freq = midiToHz ((float) midiNote);
+        freq = noteFreq = midiToHz ((float) midiNote);
         adsr.gateOn();
     }
 
@@ -755,7 +755,7 @@ public:
 
 private:
     const float& pulse;
-    float fs = 44100.0f, freq = 220, gain = 1, phase = 0;
+    float fs = 44100.0f, gain = 1, phase = 0;
     Adsr adsr;
 };
 
@@ -837,8 +837,27 @@ public:
         }
         voice *= 0.12f;
 
-        // Vocoder: each band of the voice opens the same band of the synth.
-        const float carrier = 0.5f * (left + right);
+        float out = vocode (voice, 0.5f * (left + right));
+        sibilantHp.process (voice * (1.0f - voiced));
+        out = out * 2.0f + std::abs (sibilantHp.hp) * hiss * sibilance * 0.3f;
+        left = right = out;
+    }
+
+    // The same with a voice from outside (the microphone): its consonants pass through as they are.
+    void processExternal (float voice, float& left, float& right)
+    {
+        float out = vocode (voice, 0.5f * (left + right));
+        sibilantHp.process (voice);
+        out = out * 2.0f + sibilantHp.hp * sibilance * 0.5f;
+        left = right = out;
+    }
+
+private:
+    struct Phoneme { float formants[3]; float voiced, gain; };
+
+    // Each band of the voice opens the same band of the synth.
+    float vocode (float voice, float carrier)
+    {
         float out = 0.0f;
         for (int b = 0; b < numBands; ++b)
         {
@@ -851,13 +870,8 @@ public:
             s.process (carrier);
             out += s.bp * l;
         }
-        sibilantHp.process (voice * (1.0f - voiced));
-        out = out * 2.0f + std::abs (sibilantHp.hp) * hiss * sibilance * 0.3f;
-        left = right = out;
+        return out;
     }
-
-private:
-    struct Phoneme { float formants[3]; float voiced, gain; };
 
     char currentChar() const
     {

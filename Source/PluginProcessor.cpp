@@ -86,7 +86,7 @@ TechMachineProcessor::TechMachineProcessor()
     partStore = std::make_unique<std::array<std::array<Track, numMachines>, numParts>>();
     for (int t = 0; t < numMachines; ++t)
         for (int target = 0; target < automation::targetCount (t); ++target)
-            automationIndex[automation::paramId (t, target)] = { t, target };
+            if (! automation::isVelocity (t, target)) automationIndex[automation::paramId (t, target)] = { t, target };
 
     name = utf8 ("Sans titre");
     apvts.state.addListener (this);
@@ -182,7 +182,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout TechMachineProcessor::create
 // The main stereo output, and separate stereo outputs the host can turn on.
 juce::AudioProcessor::BusesProperties TechMachineProcessor::buses()
 {
-    auto b = BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true);
+    // Audio input: the microphone of the vocoder (on in the standalone app, a sidechain the host can turn on).
+    const bool standalone = juce::PluginHostType::getPluginLoadedAs() == wrapperType_Standalone;
+    auto b = BusesProperties().withInput ("Input", juce::AudioChannelSet::stereo(), standalone)
+                              .withOutput ("Output", juce::AudioChannelSet::stereo(), true);
     for (int i = 1; i <= numAuxOutputs; ++i) b = b.withOutput ("Out " + juce::String (i + 1), juce::AudioChannelSet::stereo(), false);
     return b;
 }
@@ -190,6 +193,8 @@ juce::AudioProcessor::BusesProperties TechMachineProcessor::buses()
 bool TechMachineProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()) return false;
+    const auto input = layouts.getMainInputChannelSet();
+    if (! input.isDisabled() && input != juce::AudioChannelSet::mono() && input != juce::AudioChannelSet::stereo()) return false;
     for (int i = 1; i < layouts.outputBuses.size(); ++i)
         if (! layouts.outputBuses[i].isDisabled() && layouts.outputBuses[i] != juce::AudioChannelSet::stereo()) return false;
     return true;
@@ -208,7 +213,7 @@ void TechMachineProcessor::prepareToPlay (double newSampleRate, int samplesPerBl
 
     reverb.prepare (sampleRate);
     lastReverbSize = -1.0f;
-    juce::ignoreUnused (samplesPerBlock);
+    micInput.assign ((size_t) juce::jmax (samplesPerBlock, 8192), 0.0f);
 
     muteCoef = 1.0f - decayCoef (0.006f, sampleRate);
 }
@@ -219,6 +224,19 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
     bpmValue = bpm->load();
     lengthSteps = numSteps();
+    if (! isHosted()) handleMidiClock (midi, buffer.getNumSamples());
+    if (clockActive.load()) bpmValue = juce::jlimit (20.0f, 400.0f, (float) (60.0 * sampleRate / (24.0 * clockInterval)));
+
+    // The audio input (microphone of the vocoder), read before the outputs overwrite the shared channels.
+    const int inputChannels = getTotalNumInputChannels();
+    const int micSamples = juce::jmin (buffer.getNumSamples(), (int) micInput.size());
+    for (int i = 0; i < micSamples; ++i)
+    {
+        float sum = 0.0f;
+        for (int ch = 0; ch < inputChannels && ch < buffer.getNumChannels(); ++ch) sum += buffer.getSample (ch, i);
+        micInput[(size_t) i] = inputChannels > 0 ? sum / (float) inputChannels : 0.0f;
+    }
+    machines[(size_t) Vocoder]->setExternalInput (inputChannels > 0 ? micInput.data() : nullptr, micSamples);
 
     // As a plugin, tempo, start/stop and position come from the host.
     bool play = playing.load();
@@ -357,6 +375,42 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 }
 
 // The effects of a machine's strip, as they sound now (automation included).
+// MIDI clock from another machine (24 ticks per quarter note): its tempo, start, stop and continue.
+void TechMachineProcessor::handleMidiClock (const juce::MidiBuffer& midi, int numSamples)
+{
+    for (const auto meta : midi)
+    {
+        const auto m = meta.getMessage();
+        if (m.isMidiClock())
+        {
+            const double at = blockStart + meta.samplePosition;
+            if (lastClock >= 0.0)
+            {
+                const double interval = at - lastClock;
+                clockInterval = clockInterval <= 0.0 ? interval : clockInterval * 0.9 + interval * 0.1;   // smoothed
+                clockActive = true;
+            }
+            lastClock = at;
+            samplesSinceClock = 0.0;
+        }
+        else if (m.isMidiStart())
+        {
+            playing = true;
+            wasPlaying = false;   // starts again from the beginning
+        }
+        else if (m.isMidiContinue()) playing = true;
+        else if (m.isMidiStop()) playing = false;
+    }
+    blockStart += numSamples;
+    samplesSinceClock += numSamples;
+    if (samplesSinceClock > sampleRate)   // no clock for a second: back to the own tempo
+    {
+        clockActive = false;
+        clockInterval = 0.0;
+        lastClock = -1.0;
+    }
+}
+
 void TechMachineProcessor::readStrip (int t)
 {
     using namespace automation;

@@ -79,7 +79,7 @@ public:
     void onStep (const StepInfo& s) override
     {
         const auto st = (size_t) s.step;
-        const float base = track.accent[st] ? 1.0f : 1.0f - 0.5f * accentAmount;
+        const float base = (track.accent[st] ? 1.0f : 1.0f - 0.5f * accentAmount) * velocityScale();
 
         for (int i = 0; i < numRows; ++i)
         {
