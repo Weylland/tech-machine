@@ -103,6 +103,15 @@ public:
     int sampleVersion() const { return samples.version.load(); }
 
     juce::RangedAudioParameter* presetParameter (int machineType, const char* key);
+
+    // The user's own sounds, saved as files and available in every project.
+    static std::vector<juce::String> soundParameters (int machineType);   // the settings that make a sound
+    static juce::File userSoundsFolder (int machineType);
+    static juce::StringArray userSounds (int machineType);
+    juce::String saveUserSound (int machineType, const juce::String& name);   // the name used, empty on failure
+    bool loadUserSound (int machineType, const juce::String& name);
+    static bool deleteUserSound (int machineType, const juce::String& name);
+    void resetSound (int machineType);
     void shiftMachine (int machineType, int direction);
     void duplicateFirstBar (int machineType);
     void copyMachine (int machineType);

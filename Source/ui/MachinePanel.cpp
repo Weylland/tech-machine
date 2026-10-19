@@ -31,7 +31,7 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
     addHeaderButton (*soloButton, "machine.solo");
 
     soundButton.onClick = [this] { showSoundMenu(); };
-    if (! presetsFor (type).empty()) addHeaderButton (soundButton, "machine.sounds");
+    addHeaderButton (soundButton, "machine.sounds");   // factory sounds and the user's own
     patternButton.onClick = [this] { showPatternMenu(); };
     if (! patternKindsFor (def).empty()) addHeaderButton (patternButton, "machine.patterns");
     diceButton.onClick = [this] { showDiceMenu(); };
@@ -332,17 +332,50 @@ void MachinePanel::showDiceMenu()
 
 void MachinePanel::showSoundMenu()
 {
+    enum { saveId = 900, folderId = 901, mineId = 1000, deleteId = 2000 };
     juce::PopupMenu menu;
     const auto& list = presetsFor (type);
-    menu.addSectionHeader (utf8 ("SONS PRÊTS À JOUER"));
+    if (! list.empty()) menu.addSectionHeader (utf8 ("SONS PRÊTS À JOUER"));
     for (int i = 0; i < (int) list.size(); ++i) menu.addItem (i + 1, utf8 (list[(size_t) i].name));
+
+    const auto mine = TechMachineProcessor::userSounds (type);
+    menu.addSectionHeader (utf8 ("MES SONS"));
+    for (int i = 0; i < mine.size(); ++i) menu.addItem (mineId + i, mine[i]);
+    menu.addItem (saveId, utf8 ("Enregistrer ce son…"));
+    if (! mine.isEmpty())
+    {
+        juce::PopupMenu remove;
+        for (int i = 0; i < mine.size(); ++i) remove.addItem (deleteId + i, mine[i]);
+        menu.addSubMenu (utf8 ("Supprimer un de mes sons"), remove);
+        menu.addItem (folderId, utf8 ("Ouvrir le dossier de mes sons"));
+    }
     menu.addSeparator();
     menu.addItem (-1, utf8 ("Remplace les réglages de son de cette machine (pas les notes)"), false, false);
-    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (soundButton), [this] (int result)
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (soundButton), [this, mine] (int result)
     {
         const auto& presets = presetsFor (type);
         if (result >= 1 && result <= (int) presets.size()) processor.applyPreset (type, presets[(size_t) result - 1]);
+        else if (result >= mineId && result < mineId + mine.size()) processor.loadUserSound (type, mine[result - mineId]);
+        else if (result >= deleteId && result < deleteId + mine.size()) TechMachineProcessor::deleteUserSound (type, mine[result - deleteId]);
+        else if (result == folderId) TechMachineProcessor::userSoundsFolder (type).revealToUser();
+        else if (result == saveId) askSoundName();
     });
+}
+
+// Asks for the name of the sound to save.
+void MachinePanel::askSoundName()
+{
+    auto* window = new juce::AlertWindow (utf8 ("Enregistrer ce son"),
+                                          utf8 ("Donne un nom à ce son : tu le retrouveras dans SONS › MES SONS, dans tous tes projets."),
+                                          juce::MessageBoxIconType::NoIcon);
+    window->addTextEditor ("name", utf8 (machineDef (type).name) + " " + juce::String (TechMachineProcessor::userSounds (type).size() + 1));
+    window->addButton (utf8 ("ENREGISTRER"), 1, juce::KeyPress (juce::KeyPress::returnKey));
+    window->addButton (utf8 ("ANNULER"), 0, juce::KeyPress (juce::KeyPress::escapeKey));
+    juce::Component::SafePointer<MachinePanel> safe (this);
+    window->enterModalState (true, juce::ModalCallbackFunction::create ([safe, window] (int result)
+    {
+        if (result == 1 && safe != nullptr) safe->processor.saveUserSound (safe->type, window->getTextEditorContents ("name"));
+    }), true);
 }
 
 bool MachinePanel::isInterestedInFileDrag (const juce::StringArray& files)

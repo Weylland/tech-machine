@@ -1676,11 +1676,70 @@ static int test_parts (int argc, char** argv)
     return failures;
 }
 
+
+// The user's own sounds: saved, listed, loaded exactly, never mixed up between machines, deleted to the bin.
+static int test_sounds (int argc, char** argv)
+{
+    juce::ignoreUnused (argc, argv);
+    int failures = 0;
+    auto expect = [&] (bool ok, const char* what)
+    {
+        if (! ok) ++failures;
+        printf ("  %-66s %s\n", what, ok ? "ok" : "FAIL");
+    };
+    const auto folder = TechMachineProcessor::userSoundsFolder (TB303);
+    expect (folder.getFullPathName().contains ("Tech Machine Tests"), "the tests use their own sounds folder");
+    folder.deleteRecursively();
+
+    TechMachineProcessor p;
+    p.newProject();
+    auto raw = [&p] (const char* id) { return p.apvts.getRawParameterValue (id)->load(); };
+    p.setParam ("tb303_cutoff", 0.123f);
+    p.setParam ("tb303_reso", 0.9f);
+    p.setParam ("tb303_wave", 1.0f);
+    p.setParam ("tb303_volume", 0.4f);
+    const auto saved = p.saveUserSound (TB303, "Ma basse");
+    expect (saved == "Ma basse" && TechMachineProcessor::userSounds (TB303).contains ("Ma basse"), "a sound is saved and listed");
+
+    p.setParam ("tb303_cutoff", 0.8f);
+    p.setParam ("tb303_reso", 0.1f);
+    p.setParam ("tb303_wave", 0.0f);
+    p.setParam ("tb303_volume", 0.9f);
+    expect (p.loadUserSound (TB303, "Ma basse"), "the sound loads");
+    expect (std::abs (raw ("tb303_cutoff") - 0.123f) < 1.0e-6f && std::abs (raw ("tb303_reso") - 0.9f) < 1.0e-6f
+            && juce::exactlyEqual (raw ("tb303_wave"), 1.0f), "its settings come back exactly");
+    expect (std::abs (raw ("tb303_volume") - 0.9f) < 1.0e-6f, "the volume is not part of a sound");
+
+    expect (p.saveUserSound (TB303, "Ma basse") == "Ma basse (2)", "the same name again: Ma basse (2), nothing overwritten");
+    expect (p.saveUserSound (TB303, "A/B: test?").isNotEmpty(), "a name with forbidden characters is cleaned");
+    expect (TechMachineProcessor::userSounds (TB303).size() == 3, "three sounds listed");
+
+    // A 303 sound is not a 101 sound.
+    folder.getChildFile ("Ma basse.tmsound").copyFileTo (TechMachineProcessor::userSoundsFolder (SH101).getChildFile ("Intrus.tmsound"));
+    TechMachineProcessor::userSoundsFolder (SH101).createDirectory();
+    folder.getChildFile ("Ma basse.tmsound").copyFileTo (TechMachineProcessor::userSoundsFolder (SH101).getChildFile ("Intrus.tmsound"));
+    expect (! p.loadUserSound (SH101, "Intrus"), "a sound of another machine is refused");
+
+    // Drum machines too
+    p.setParam ("tr909_bd_decay", 0.77f);
+    p.saveUserSound (TR909, "Kick long");
+    p.setParam ("tr909_bd_decay", 0.2f);
+    p.loadUserSound (TR909, "Kick long");
+    expect (std::abs (raw ("tr909_bd_decay") - 0.77f) < 1.0e-6f, "drum machine sounds too");
+
+    expect (TechMachineProcessor::deleteUserSound (TB303, "Ma basse (2)") && ! TechMachineProcessor::userSounds (TB303).contains ("Ma basse (2)"),
+            "a deleted sound goes to the bin");
+    TechMachineProcessor::userSoundsFolder (TB303).getParentDirectory().deleteRecursively();
+    printf ("sounds: %d failures\n", failures);
+    return failures;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
     { "automation", test_automation },
     { "parts", test_parts },
+    { "sounds", test_sounds },
     { "host", test_host },
     { "levels", test_levels },
     { "examples", test_examples },
@@ -1729,7 +1788,7 @@ static int check (char** argv)
     chaosIterations = 8;
     char* none[] { argv[0], nullptr };
     int failures = 0;
-    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_ui, test_chaos, test_french })
+    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_ui, test_chaos, test_french })
         failures += run (1, none);
     printf ("\ncheck: %d failures\n", failures);
     return failures;

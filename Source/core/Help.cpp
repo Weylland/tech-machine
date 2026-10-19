@@ -97,7 +97,9 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
         { "machine.sounds", { "Sons prêts à jouer",
             "Des sons tout faits pour cette machine : les plus célèbres (piano électrique du DX7, acid de la 303, supersaw de la trance, "
             "orgue gospel, 808 du trap…) ou, sur une boîte à rythmes, des kits (hard techno, trap, lo-fi, dub…).\n\n"
-            "Ça remplace les réglages du son, pas tes notes. Tu peux ensuite tourner les boutons pour l'adapter." } },
+            "Ça remplace les réglages du son, pas tes notes. Tu peux ensuite tourner les boutons pour l'adapter.\n\n"
+            "MES SONS : « Enregistrer ce son… » garde les réglages actuels sous le nom de ton choix, pour les retrouver dans "
+            "tous tes projets (ils sont rangés dans Musique › Tech Machine › Sons)." } },
         { "parts", { "Parties",
             "Un morceau est fait de plusieurs parties : une intro, un couplet, un refrain, un break… Chaque partie (A à H) a "
             "ses propres notes et sa propre automation, pour toutes les machines ; les sons et les réglages des boutons sont communs.\n\n"

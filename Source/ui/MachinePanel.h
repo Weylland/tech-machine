@@ -41,6 +41,7 @@ public:
     bool isInterestedInFileDrag (const juce::StringArray& files) override;
     void filesDropped (const juce::StringArray& files, int x, int y) override;
     void refreshSampleNames();
+    void askSoundName();
 
     // Opens the piano roll screen for this machine (set by the main view).
     std::function<void (int machineType)> onOpenRoll;
