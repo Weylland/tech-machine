@@ -19,6 +19,28 @@ void disableKeyboardFocus (juce::Component& c)
     for (auto* child : c.getChildren()) disableKeyboardFocus (*child);
 }
 
+// Keyboard navigation: Tab goes from control to control (buttons, knobs, selectors, steps), never by a click.
+void enableKeyboardFocus (juce::Component& c)
+{
+    const bool control = dynamic_cast<juce::Button*> (&c) != nullptr || dynamic_cast<juce::Slider*> (&c) != nullptr
+                      || dynamic_cast<juce::ComboBox*> (&c) != nullptr || dynamic_cast<techno::StepCell*> (&c) != nullptr
+                      || dynamic_cast<techno::InfoButton*> (&c) != nullptr;
+    c.setWantsKeyboardFocus (control);
+    c.setMouseClickGrabsKeyboardFocus (false);
+    for (auto* child : c.getChildren()) enableKeyboardFocus (*child);
+}
+
+// Screen readers: a control without a name of its own takes the text of its tooltip.
+void nameFromTooltips (juce::Component& c)
+{
+    if (auto* tip = dynamic_cast<juce::SettableTooltipClient*> (&c); tip != nullptr && c.getTitle().isEmpty())
+    {
+        const auto button = dynamic_cast<juce::Button*> (&c);
+        if (button == nullptr || button->getButtonText().isEmpty()) c.setTitle (tip->getTooltip().upToFirstOccurrenceOf ("  (", false, false));
+    }
+    for (auto* child : c.getChildren()) nameFromTooltips (*child);
+}
+
 void rail (juce::Graphics& g, juce::Rectangle<float> r)
 {
     g.setGradientFill (juce::ColourGradient (juce::Colour (0xff3c3d42), r.getX(), r.getY(), juce::Colour (0xff222327), r.getRight(), r.getY(), false));
@@ -392,8 +414,8 @@ MainView::MainView (TechMachineProcessor& p)
     surpriseInfo = &addInfo (help ("surprise"));
 
     styleButton (guideButton, juce::Colour (0xff2f4fa8));
-    guideButton.onClick = [this] { showInfo (help ("guide"), guideButton); };
-    guideButton.setTooltip (utf8 ("Bien démarrer : le mode d'emploi en 8 étapes"));
+    guideButton.onClick = [this] { showHelpMenu(); };
+    guideButton.setTooltip (utf8 ("Aide : le mode d'emploi, le tutoriel, les raccourcis et la taille de l'interface"));
 
     styleButton (projectButton, juce::Colour (0xff3a3b40));
     projectButton.onClick = [this] { showProjectMenu(); };
@@ -454,6 +476,7 @@ MainView::MainView (TechMachineProcessor& p)
         panel->onOpenRoll = [this] (int machineType) { openPianoRoll (machineType); };
         panel->onOpenAutomation = [this] (int machineType) { openAutomation (machineType); };
         panel->onOpenSampleEditor = [this] (int slot) { openSampleEditor (slot); };
+        panel->onReorderDrag = [this] (int machineType, int y, bool finished) { reorderDrag (machineType, y, finished); };
         content.addChildComponent (panel);
     }
 
@@ -493,7 +516,16 @@ MainView::MainView (TechMachineProcessor& p)
     addAndMakeVisible (vu);
     meterInfo = &addInfo (help ("master.meter"));
 
-    startScreen.onNew = [this] { newProject(); };
+    startScreen.onNew = [this]
+    {
+        newProject();
+        // The very first time, a guided tour.
+        if (! settings().getBoolValue ("tutorialSeen", false))
+        {
+            settings().setValue ("tutorialSeen", true);
+            startTutorial();
+        }
+    };
     startScreen.onOpen = [this] { openProject(); };
     startScreen.onResume = [this] { showStartScreen (false); };
     startScreen.onOpenFile = [this] (const juce::File& f) { openProjectFile (f); };
@@ -541,6 +573,16 @@ MainView::MainView (TechMachineProcessor& p)
     songInfo = &addInfo (help ("song"));
     refreshParts();
 
+    pcKeysButton.setTooltip (shortHelp (help ("pckeys").body));
+    pcKeysButton.onClick = [this]
+    {
+        for (auto& [code, note] : keysDown) processor.playKey (note, false);
+        keysDown.clear();
+        grabKeyboardFocus();
+    };
+    addAndMakeVisible (pcKeysButton);
+    pcKeysInfo = &addInfo (help ("pckeys"));
+
     fillButton.setTooltip (shortHelp (help ("fill").body));
     fillButton.onClick = [this] { processor.armFill (fillButton.getToggleState()); };
     addAndMakeVisible (fillButton);
@@ -577,7 +619,9 @@ MainView::MainView (TechMachineProcessor& p)
     audioButton.setTooltip (utf8 ("Carte son, pilote ASIO, taille du tampon (latence) et clavier ou contrôleur MIDI"));
     audioButton.setVisible (! processor.isHosted());
 
-    disableKeyboardFocus (*this);
+    Accessibility::stepMarks = settings().getBoolValue ("stepMarks", false);
+    nameFromTooltips (*this);
+    applyKeyboardNavigation();
     setWantsKeyboardFocus (true);
     addMouseListener (this, true);
     startTimerHz (30);
@@ -1119,13 +1163,46 @@ void MainView::setPage (int newPage)
     }
 }
 
+techno::MachinePanel* MainView::panelFor (int machineType) const
+{
+    for (auto* panel : panels)
+        if (panel->type == machineType) return panel;
+    return nullptr;
+}
+
+// A machine dragged by its name band: a line shows where it goes, it moves there on release.
+void MainView::reorderDrag (int machineType, int y, bool finished)
+{
+    int before = -1, lineY = content.getHeight() - 7;
+    for (int t : processor.machineOrder())
+    {
+        auto* panel = panelFor (t);
+        if (panel == nullptr || ! panel->isVisible()) continue;
+        if (y < panel->getBounds().getCentreY())
+        {
+            before = t;
+            lineY = panel->getY() - 7;
+            break;
+        }
+        lineY = panel->getBottom() + 7;
+    }
+    content.dropLineY = finished ? -1 : juce::jmax (2, lineY);
+    content.repaint();
+    if (! finished) return;
+    if (before != machineType) processor.moveMachine (machineType, before);
+    layoutRack();
+}
+
 void MainView::layoutRack()
 {
+    lastOrderVersion = processor.orderVersion.load();
     const int width = rack.getWidth() - rack.getScrollBarThickness() - 4;
     int y = 0, scrollY = -1;
     bool any = false;
-    for (auto* panel : panels)
+    for (int t : processor.machineOrder())
     {
+        auto* panel = panelFor (t);
+        if (panel == nullptr) continue;
         const bool shown = processor.isShown (panel->type);
         panel->setVisible (shown);
         if (! shown) continue;
@@ -1146,13 +1223,58 @@ void MainView::layoutRack()
     }
 }
 
+// Keyboard navigation: a ring around the control that has the focus (the steps draw their own).
+void MainView::paintOverChildren (juce::Graphics& g)
+{
+    auto* focused = lastFocused.getComponent();
+    if (! keyboardNavigation || focused == nullptr || dynamic_cast<StepCell*> (focused) != nullptr || ! focused->isShowing()) return;
+    g.setColour (colours::info);
+    g.drawRoundedRectangle (getLocalArea (focused, focused->getLocalBounds()).toFloat().expanded (2.0f), 4.0f, 2.0f);
+}
+
+void MainView::applyKeyboardNavigation()
+{
+    keyboardNavigation = settings().getBoolValue ("keyboardNavigation", false);
+    if (keyboardNavigation) enableKeyboardFocus (*this);
+    else disableKeyboardFocus (*this);
+    setWantsKeyboardFocus (true);
+    repaint();
+}
+
 bool MainView::keyPressed (const juce::KeyPress& key)
 {
     const auto mods = key.getModifiers();
     const int code = key.getKeyCode();
 
+    // With keyboard navigation, Space and Enter belong to the focused control; Ctrl+Space plays.
+    if (key == juce::KeyPress (juce::KeyPress::spaceKey, juce::ModifierKeys::commandModifier, 0)) { togglePlay(); return true; }
+    if (keyboardNavigation && (key == juce::KeyPress::spaceKey || key == juce::KeyPress::returnKey))
+    {
+        if (auto* focused = juce::Component::getCurrentlyFocusedComponent(); focused != nullptr && focused != this && isParentOf (focused))
+        {
+            if (auto* button = dynamic_cast<juce::Button*> (focused)) { button->triggerClick(); return true; }
+        }
+    }
     if (key == juce::KeyPress::spaceKey) { togglePlay(); return true; }
     if (key == juce::KeyPress::F11Key) { toggleFullScreen(); return true; }
+
+    // The computer keyboard as a piano: a key held down plays until it is released (keyStateChanged).
+    if (pcKeysButton.getToggleState() && ! mods.isCommandDown() && ! mods.isAltDown())
+    {
+        const auto character = juce::CharacterFunctions::toLowerCase (key.getTextCharacter());
+        const bool azerty = language() == Language::French;
+        if (character == (juce::juce_wchar) (azerty ? 'w' : 'z')) { keysOctave = juce::jmax (-3, keysOctave - 1); return true; }
+        if (character == 'x') { keysOctave = juce::jmin (3, keysOctave + 1); return true; }
+        if (const int note = noteForKey (character); note >= 0)
+        {
+            if (keysDown.count (code) == 0)
+            {
+                keysDown[code] = note;
+                processor.playKey (note, true);
+            }
+            return true;
+        }
+    }
     if (code == 'F' && ! mods.isCommandDown() && ! mods.isAltDown())
     {
         processor.armFill (! processor.isFillArmed());
@@ -1160,6 +1282,22 @@ bool MainView::keyPressed (const juce::KeyPress& key)
         return true;
     }
     if (! mods.isCommandDown()) return false;
+
+    // Ctrl + / Ctrl - / Ctrl 0: size of the interface.
+    if (onZoom && currentZoom && (code == '=' || code == '+' || code == '-' || code == '0' || code == juce::KeyPress::numberPadAdd
+                                  || code == juce::KeyPress::numberPadSubtract))
+    {
+        const float now = currentZoom();
+        const auto& steps = TechMachineEditor::zoomSteps;
+        int index = 3;
+        for (int i = 0; i < (int) std::size (steps); ++i)
+            if (std::abs (steps[i] - now) < 0.01f) index = i;
+        if (code == '0') index = 3;
+        else if (code == '-' || code == juce::KeyPress::numberPadSubtract) index = juce::jmax (0, index - 1);
+        else index = juce::jmin ((int) std::size (steps) - 1, index + 1);
+        onZoom (steps[index]);
+        return true;
+    }
 
     if (code == 'Z' && mods.isShiftDown()) { processor.undoManager.redo(); return true; }
     if (code == 'Z') { processor.undoManager.undo(); return true; }
@@ -1169,6 +1307,117 @@ bool MainView::keyPressed (const juce::KeyPress& key)
     if (code == 'O') { openProject(); return true; }
     if (code == 'N') { newProject(); return true; }
     return false;
+}
+
+// AZERTY (French) or QWERTY (English): the row of letters is the white keys, the row above the black keys.
+int MainView::noteForKey (juce::juce_wchar character) const
+{
+    static const juce::String azerty ("qzsedftgyhujkolpm"), qwerty ("awsedftgyhujkolp;");
+    const int index = (language() == Language::French ? azerty : qwerty).indexOfChar (character);
+    if (index < 0) return -1;
+    const int target = processor.midiTargetMachine();
+    const bool drum = target >= 0 && machineDef (target).kind == MachineKind::Drum;
+    return juce::jlimit (0, 127, (drum ? 36 : 60) + 12 * keysOctave + index);
+}
+
+bool MainView::keyStateChanged (bool)
+{
+    bool handled = false;
+    for (auto it = keysDown.begin(); it != keysDown.end();)
+    {
+        if (juce::KeyPress::isKeyCurrentlyDown (it->first)) { ++it; continue; }
+        processor.playKey (it->second, false);
+        it = keysDown.erase (it);
+        handled = true;
+    }
+    return handled;
+}
+
+int MainView::tutorialDrums() const
+{
+    for (int t : processor.machineOrder())
+        if (processor.isShown (t) && machineDef (t).kind == MachineKind::Drum && t != Sampler) return t;
+    return -1;
+}
+
+// "Your first beat in 2 minutes": add drums, a kick on each beat, play, hats, a bass or chords, then turn the knobs.
+void MainView::startTutorial()
+{
+    auto hitsOf = [this] (std::initializer_list<Role> roles)
+    {
+        const int t = tutorialDrums();
+        if (t < 0) return 0;
+        const auto& def = machineDef (t);
+        int count = 0;
+        for (int r = 0; r < (int) def.rows.size(); ++r)
+            if (std::find (roles.begin(), roles.end(), def.rows[(size_t) r].role) != roles.end())
+                for (int s = 0; s < processor.numSteps(); ++s) count += processor.machine (t).track.hits[(size_t) r][(size_t) s].load() ? 1 : 0;
+        return count;
+    };
+    auto drumPanel = [this]() -> juce::Component* { return panelFor (tutorialDrums()); };
+    std::vector<TutorialOverlay::Step> steps {
+        { utf8 ("Bienvenue ! On fait un beat ensemble. Clique sur « + MACHINE » › Batteries et percussions, puis choisis une boîte "
+                "à rythmes : la 909 par exemple."),
+          [this] { return &addButton; }, [this] { return tutorialDrums() >= 0; } },
+        { utf8 ("Clique sur 4 pas de la ligne KICK : 1, 5, 9 et 13. Un kick sur chaque temps : c'est la base de la house et de la techno."),
+          drumPanel, [hitsOf] { return hitsOf ({ Role::Kick }) >= 3; } },
+        { utf8 ("Écoute : clique sur LECTURE (ou appuie sur la barre Espace)."),
+          [this] { return &playButton; }, [this] { return processor.playing.load(); } },
+        { utf8 ("Ajoute des charleys : sur la ligne HAT, clique entre les kicks (pas 3, 7, 11 et 15). Ça groove déjà !"),
+          drumPanel, [hitsOf] { return hitsOf ({ Role::ClosedHat, Role::OpenHat }) >= 2; } },
+        { utf8 ("Une basse et des accords ? Clique sur SURPRISE ! : la machine ajoute tout un groupe qui va avec le genre choisi."),
+          [this] { return &surpriseButton; }, [this]
+          {
+              for (int t = 0; t < numMachines; ++t)
+                  if (processor.isShown (t) && machineDef (t).kind != MachineKind::Drum && ! processor.machine (t).track.isEmpty()) return true;
+              return false;
+          } },
+        { utf8 ("Bravo, ton premier morceau tourne ! Tourne les boutons pendant que ça joue (FILTRE, ÉCHO, REVERB…), essaie FILL, "
+                "puis enregistre ton projet avec Ctrl+S. Le petit « i » à côté de chaque élément explique à quoi il sert."),
+          nullptr, nullptr },
+    };
+    tutorial = std::make_unique<TutorialOverlay> (std::move (steps));
+    juce::Component::SafePointer<MainView> safe (this);
+    tutorial->onFinish = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->tutorial.reset(); }); };
+    addAndMakeVisible (*tutorial);
+    tutorial->setBounds (getLocalBounds());
+    tutorial->toFront (false);
+}
+
+void MainView::showHelpMenu()
+{
+    juce::PopupMenu menu, sizes;
+    const float now = currentZoom ? currentZoom() : 1.0f;
+    int id = 100;
+    for (float z : TechMachineEditor::zoomSteps)
+        sizes.addItem (id++, juce::String (juce::roundToInt (z * 100.0f)) + " %", true, std::abs (z - now) < 0.01f);
+    menu.addItem (1, utf8 ("Bien démarrer : le mode d'emploi"));
+    menu.addItem (2, utf8 ("Tutoriel : ton premier beat en 2 minutes"));
+    menu.addItem (3, utf8 ("Raccourcis clavier"));
+    menu.addSeparator();
+    menu.addSubMenu (utf8 ("Taille de l'interface  (Ctrl + / Ctrl -)"), sizes);
+    menu.addItem (4, utf8 ("Navigation au clavier (Tab, Entrée)"), true, settings().getBoolValue ("keyboardNavigation", false));
+    menu.addItem (5, utf8 ("Repères sur les pas actifs (daltonisme)"), true, Accessibility::stepMarks);
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (guideButton), [this] (int result)
+    {
+        if (result == 1) showInfo (help ("guide"), guideButton);
+        if (result == 2) startTutorial();
+        if (result == 3) showInfo (help ("shortcuts"), guideButton);
+        if (result == 4)
+        {
+            settings().setValue ("keyboardNavigation", ! settings().getBoolValue ("keyboardNavigation", false));
+            applyKeyboardNavigation();
+            if (settings().getBoolValue ("keyboardNavigation", false)) showInfo (help ("keyboardNavigation"), guideButton);
+        }
+        if (result == 5)
+        {
+            Accessibility::stepMarks = ! Accessibility::stepMarks;
+            settings().setValue ("stepMarks", Accessibility::stepMarks);
+            for (auto* panel : panels) panel->refreshCells();
+        }
+        if (result >= 100 && result < 100 + (int) std::size (TechMachineEditor::zoomSteps) && onZoom)
+            onZoom (TechMachineEditor::zoomSteps[result - 100]);
+    });
 }
 
 void MainView::timerCallback()
@@ -1196,6 +1445,14 @@ void MainView::timerCallback()
     }
     refreshParts();
     refreshScenes();
+    if (keyboardNavigation)
+        if (auto* focused = juce::Component::getCurrentlyFocusedComponent(); focused != lastFocused.getComponent())
+        {
+            if (auto* old = lastFocused.getComponent(); old != nullptr && old->isShowing()) repaint (getLocalArea (old, old->getLocalBounds()).expanded (4));
+            lastFocused = focused != nullptr && isParentOf (focused) ? focused : nullptr;
+            if (auto* now = lastFocused.getComponent()) repaint (getLocalArea (now, now->getLocalBounds()).expanded (4));
+        }
+    if (processor.orderVersion.load() != lastOrderVersion) layoutRack();
     if (automationRecordButton.getToggleState() != processor.isRecordingAutomation())
         automationRecordButton.setToggleState (processor.isRecordingAutomation(), juce::dontSendNotification);
     if (midiRecordButton.getToggleState() != processor.isRecordingNotes())
@@ -1415,18 +1672,20 @@ void MainView::resized()
     // Row 3: the parts of the song.
     const int y3 = cy + 118;
     x = 96;
-    for (auto& part : partButtons) { part.setBounds (x, y3, 40, 28); x += 44; }
+    for (auto& part : partButtons) { part.setBounds (x, y3, narrow ? 36 : 40, 28); x += narrow ? 40 : 44; }
     partsInfo->setBounds (x, y3 + 7, 15, 15);
     x += 30;
     songPlayButton.setBounds (x, y3, 170, 28);
     songEditButton.setBounds (songPlayButton.getRight() + 8, y3, 130, 28);
     songInfo->setBounds (songEditButton.getRight() + 2, y3 + 7, 15, 15);
     x = songInfo->getRight() + (narrow ? 22 : 30);
-    fillButton.setBounds (x, y3, 70, 28);
+    fillButton.setBounds (x, y3, narrow ? 62 : 70, 28);
     fillInfo->setBounds (fillButton.getRight() + 2, y3 + 7, 15, 15);
     x = fillInfo->getRight() + (narrow ? 70 : 78);
-    for (auto& scene : sceneButtons) { scene.setBounds (x, y3, narrow ? 32 : 34, 28); x += narrow ? 35 : 37; }
+    for (auto& scene : sceneButtons) { scene.setBounds (x, y3, narrow ? 30 : 34, 28); x += narrow ? 33 : 37; }
     scenesInfo->setBounds (x, y3 + 7, 15, 15);
+    pcKeysInfo->setBounds (consoleArea.getRight() - 16 - 15, y3 + 7, 15, 15);
+    pcKeysButton.setBounds (pcKeysInfo->getX() - 4 - (narrow ? 112 : 130), y3, narrow ? 112 : 130, 28);
     guideButton.setBounds (addButton.getX() - 12 - 44, y2, 44, 28);
 
     // Master strip.
@@ -1469,6 +1728,7 @@ void MainView::resized()
     if (pianoRoll != nullptr) pianoRoll->setBounds (rack.getBounds().expanded (0, 4));
     if (automationEditor != nullptr) automationEditor->setBounds (rack.getBounds().expanded (0, 4));
     if (sampleEditor != nullptr) sampleEditor->setBounds (rack.getBounds().expanded (0, 4));
+    if (tutorial != nullptr) tutorial->setBounds (getLocalBounds());
     if (songEditor != nullptr) songEditor->setBounds (rack.getBounds().expanded (0, 4));
 }
 
@@ -1477,11 +1737,33 @@ TechMachineEditor::TechMachineEditor (TechMachineProcessor& p)
     : AudioProcessorEditor (p), techProcessor (p)
 {
     setResizable (true, true);
-    setResizeLimits (1440, 700, 3200, 2400);
+
+    // The size chosen before; the first time, small enough for the screen (a laptop is often narrower than 1440 points).
+    float startZoom = (float) settings().getDoubleValue ("zoom", 0.0);
+    if (startZoom <= 0.0f)
+    {
+        startZoom = 1.0f;
+        if (const auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+            for (float z : zoomSteps)
+                if (z <= 1.0f && display->userBounds.getWidth() >= 1460.0f * z) startZoom = z;
+    }
+    zoom = juce::jlimit (zoomSteps[0], zoomSteps[std::size (zoomSteps) - 1], startZoom);
+    setResizeLimits ((int) (1440 * zoom), (int) (700 * zoom), 3200, 2400);
 
     // The standalone app always opens on the start screen; the plugin only when its project is empty.
     rebuild (! techProcessor.isHosted() || techProcessor.isProjectEmpty());
-    setSize (1600, 880);
+    setSize ((int) (1600 * zoom), (int) (880 * zoom));
+}
+
+void TechMachineEditor::setZoom (float newZoom)
+{
+    const float previous = zoom;
+    zoom = juce::jlimit (zoomSteps[0], zoomSteps[std::size (zoomSteps) - 1], newZoom);
+    settings().setValue ("zoom", zoom);
+    setResizeLimits ((int) (1440 * zoom), (int) (700 * zoom), 3200, 2400);
+    setSize (juce::jmax ((int) (1440 * zoom), (int) ((float) getWidth() * zoom / previous)),
+             juce::jmax ((int) (700 * zoom), (int) ((float) getHeight() * zoom / previous)));
+    resized();
 }
 
 TechMachineEditor::~TechMachineEditor() = default;
@@ -1490,6 +1772,8 @@ void TechMachineEditor::rebuild (bool showStart)
 {
     view = std::make_unique<MainView> (techProcessor);
     juce::Component::SafePointer<TechMachineEditor> safe (this);
+    view->onZoom = [safe] (float z) { if (safe != nullptr) safe->setZoom (z); };
+    view->currentZoom = [safe] { return safe != nullptr ? safe->zoom : 1.0f; };
     view->onLanguageChange = [safe]
     {
         // Recreate the interface outside of the button callback that asked for it.
@@ -1501,11 +1785,13 @@ void TechMachineEditor::rebuild (bool showStart)
         });
     };
     addAndMakeVisible (*view);
-    view->setBounds (getLocalBounds());
+    resized();
     view->showStartScreen (showStart);
 }
 
 void TechMachineEditor::resized()
 {
-    if (view != nullptr) view->setBounds (getLocalBounds());
+    if (view == nullptr) return;
+    view->setTransform (juce::AffineTransform::scale (zoom));
+    view->setBounds (0, 0, juce::roundToInt ((float) getWidth() / zoom), juce::roundToInt ((float) getHeight() / zoom));
 }

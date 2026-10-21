@@ -56,6 +56,12 @@ inline void showInfo (const juce::String& title, const juce::String& body, juce:
 inline void showInfo (const HelpText& help, juce::Component& target) { showInfo (help.title, help.body, target); }
 
 // Small round "i" printed on the faceplate; opens an explanation.
+// Display options for accessibility, read when painting.
+struct Accessibility
+{
+    inline static bool stepMarks = false;   // a mark on the active steps, not only their colour (colour blindness)
+};
+
 class InfoButton : public juce::Component, public juce::SettableTooltipClient
 {
 public:
@@ -66,6 +72,20 @@ public:
         title = titleText;
         body = bodyText;
         setTooltip (utf8 ("Clique pour comprendre à quoi ça sert"));
+        setTitle (utf8 ("Aide : ") + titleText);
+    }
+
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override
+    {
+        return std::make_unique<juce::AccessibilityHandler> (*this, juce::AccessibilityRole::button,
+            juce::AccessibilityActions().addAction (juce::AccessibilityActionType::press, [this] { showInfo (title, body, *this); }));
+    }
+
+    bool keyPressed (const juce::KeyPress& key) override
+    {
+        if (key != juce::KeyPress::returnKey && key != juce::KeyPress::spaceKey) return false;
+        showInfo (title, body, *this);
+        return true;
     }
 
     void setHelp (const HelpText& h) { setHelp (h.title, h.body); }
@@ -181,6 +201,8 @@ public:
         slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
         slider.setPopupDisplayEnabled (true, true, nullptr);
         slider.setTooltip (help.title + " : " + shortHelp (help.body));
+        slider.setTitle (name.isNotEmpty() ? name : help.title);
+        slider.setDescription (shortHelp (help.body));
         slider.addMouseListener (this, false);
         addAndMakeVisible (slider);
         if (showLabel) addAndMakeVisible (label);
@@ -253,6 +275,7 @@ public:
         int id = 1;
         for (auto* c : choices) box.addItem (utf8 (c), id++);
         box.setTooltip (help.title + " : " + shortHelp (help.body));
+        box.setTitle (name);
         addAndMakeVisible (box);
         addAndMakeVisible (label);
         attachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (state, paramId, box);
@@ -404,6 +427,59 @@ public:
     std::function<void()> onEditStart;   // called once at the start of each edit gesture (for undo)
     std::function<int()> getRoll;         // drum cells only: 0 = single hit, 2..4 = roll
     std::function<bool()> isOutside;      // past the last step of a track shorter than the sequence
+    juce::String accessibleName;          // "KICK, step 5" for screen readers
+
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override
+    {
+        struct Handler : juce::AccessibilityHandler
+        {
+            explicit Handler (StepCell& c)
+                : juce::AccessibilityHandler (c, juce::AccessibilityRole::toggleButton,
+                                              juce::AccessibilityActions()
+                                                  .addAction (juce::AccessibilityActionType::press, [&c] { c.toggleFromKeyboard(); })
+                                                  .addAction (juce::AccessibilityActionType::toggle, [&c] { c.toggleFromKeyboard(); })),
+                  cell (c) {}
+
+            juce::String getTitle() const override
+            {
+                const auto value = cell.mode == Mode::Value && cell.isOn() && cell.getLabel ? ", " + cell.getLabel() : juce::String();
+                return cell.accessibleName + value;
+            }
+
+            juce::AccessibleState getCurrentState() const override
+            {
+                auto state = juce::AccessibilityHandler::getCurrentState().withCheckable();
+                return cell.isOn() ? state.withChecked() : state;
+            }
+
+            StepCell& cell;
+        };
+        return std::make_unique<Handler> (*this);
+    }
+
+    void toggleFromKeyboard()
+    {
+        if (onEditStart) onEditStart();
+        setOn (! isOn());
+        repaint();
+        if (auto* handler = getAccessibilityHandler()) handler->notifyAccessibilityEvent (juce::AccessibilityEvent::valueChanged);
+    }
+
+    bool keyPressed (const juce::KeyPress& key) override
+    {
+        if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey) { toggleFromKeyboard(); return true; }
+        if (mode == Mode::Value && isOn() && nudge && (key == juce::KeyPress::upKey || key == juce::KeyPress::downKey))
+        {
+            if (onEditStart) onEditStart();
+            nudge (key == juce::KeyPress::upKey ? 1 : -1);
+            repaint();
+            return true;
+        }
+        return false;
+    }
+
+    void focusGained (FocusChangeType) override { repaint(); }
+    void focusLost (FocusChangeType) override { repaint(); }
     std::function<void (int)> setRoll;
 
     void cycleRoll()
@@ -461,6 +537,20 @@ public:
         {
             g.setColour (juce::Colours::black.withAlpha (0.6f));
             g.fillRoundedRectangle (getLocalBounds().toFloat(), 3.0f);
+        }
+        // Colour blindness: an active step also carries a mark, a square in a corner.
+        if (Accessibility::stepMarks && on)
+        {
+            const auto mark = juce::Rectangle<float> (7.0f, 7.0f).withPosition ((float) getWidth() - 10.0f, 3.0f);
+            g.setColour (juce::Colours::black.withAlpha (0.8f));
+            g.fillRect (mark.expanded (1.0f));
+            g.setColour (juce::Colours::white);
+            g.fillRect (mark);
+        }
+        if (hasKeyboardFocus (false))
+        {
+            g.setColour (colours::info);
+            g.drawRoundedRectangle (getLocalBounds().toFloat().reduced (1.0f), 3.0f, 2.0f);
         }
     }
 

@@ -49,6 +49,13 @@ public:
     std::function<void (int machineType)> onOpenAutomation;
     std::function<void (int slot)> onOpenSampleEditor;
 
+    // Moving the machine in the rack: drag its name band (y in the rack's coordinates; finished on release).
+    std::function<void (int machineType, int y, bool finished)> onReorderDrag;
+    void mouseMove (const juce::MouseEvent&) override;
+    void mouseDown (const juce::MouseEvent&) override;
+    void mouseDrag (const juce::MouseEvent&) override;
+    void mouseUp (const juce::MouseEvent&) override;
+
     // Shows the MIDI badge on the machine that receives the keyboard.
     void setMidiTarget (bool isTarget)
     {
@@ -59,6 +66,7 @@ public:
 
 private:
     bool midiTarget = false;
+    bool pressedOnBand = false, reordering = false;
     int shownStep = -2, shownPage = -1;
     int subtitleRight = 600;   // the subtitle stops before the header buttons
     bool showBrand = true;

@@ -133,6 +133,25 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "joues). VITESSE ARP : une note par croche (1/8), par double croche (1/16), en triolets ou par triple croche (1/32). "
             "OCTAVES ARP : répète les notes une ou deux octaves plus haut.\n\n"
             "Ça marche avec les accords de la séquence et avec les touches tenues sur un clavier MIDI." } },
+        { "shortcuts", { "Raccourcis clavier",
+            "Barre Espace : lecture / stop (Ctrl+Espace avec la navigation au clavier).\n"
+            "Ctrl+Z : annuler · Ctrl+Y : rétablir.\n"
+            "Ctrl+S : enregistrer · Ctrl+Maj+S : enregistrer sous · Ctrl+O : ouvrir · Ctrl+N : nouveau projet.\n"
+            "F : FILL à la fin de la boucle (quand CLAVIER PC est éteint).\n"
+            "F11 : plein écran · Ctrl + et Ctrl - : taille de l'interface · Ctrl 0 : taille normale.\n"
+            "Échap : fermer le piano roll, l'automation, le morceau ou l'éditeur de son.\n"
+            "CLAVIER PC allumé : les lettres jouent des notes, W et X changent d'octave." } },
+        { "keyboardNavigation", { "Navigation au clavier",
+            "Tab passe au réglage suivant, Maj+Tab au précédent. Entrée ou Espace appuie sur un bouton ou allume un pas, "
+            "les flèches tournent un bouton ou changent la note d'un pas. Ctrl+Espace lance ou arrête la lecture.\n\n"
+            "Un lecteur d'écran (Narrateur, NVDA, VoiceOver) annonce le nom de chaque réglage et l'état de chaque pas." } },
+        { "pckeys", { "Clavier de l'ordinateur",
+            "Pas de clavier MIDI ? Allume CLAVIER PC et joue avec les lettres, sur la machine qui a le badge MIDI (clique sur "
+            "une machine pour la choisir).\n\n"
+            "Rangée Q S D F G H J K L M = les touches blanches (do, ré, mi…), rangée Z E T Y U O P = les touches noires. "
+            "W et X = une octave plus bas ou plus haut. En anglais (clavier QWERTY) : A S D F G H J K pour les blanches, "
+            "W E T Y U O P pour les noires, Z et X pour l'octave.\n\n"
+            "Avec ENREG. MIDI allumé et la lecture lancée, ce que tu joues s'écrit dans les pas." } },
         { "fill", { "Fill",
             "Un roulement de batterie en un clic : à la fin de la boucle, la caisse claire et les toms jouent un fill sur le "
             "dernier temps, puis une cymbale crash tombe sur le premier temps suivant. Le bouton s'éteint ensuite tout seul.\n\n"
@@ -158,7 +177,9 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "LONGUEUR DE CETTE PISTE : la piste repart au début après ce nombre de pas, pendant que les autres continuent. "
             "Une piste de 3 ou 5 pas contre un kick de 16 crée une polyrythmie qui se décale à chaque tour.\n\n"
             "VITESSE DE CETTE PISTE : deux fois plus vite (×2), deux fois moins vite (×½) ou en triolets, pour un charleston "
-            "en triolets ou une basse qui roule." } },
+            "en triolets ou une basse qui roule.\n\n"
+            "MONTER / DESCENDRE : change la place de la machine dans le rack. Tu peux aussi la faire glisser par sa bande du haut "
+            "(là où est écrit son nom)." } },
         { "drum.fx", { "Effets de ce son",
             "Des effets rien que pour ce son de batterie : disto, filtre, position gauche/droite, envoi dans l'écho et la reverb.\n\n"
             "Exemple : de la disto seulement sur le kick, ou de l'écho seulement sur le rimshot. "

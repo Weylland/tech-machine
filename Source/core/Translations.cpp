@@ -40,6 +40,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           " at the end of the song" },
         { "+ 1 FOIS",
           "+ 1 TIME" },
+        { ", pas ",
+          ", step " },
         { "1 mesure",
           "1 bar" },
         { "1. Ouvre un PROJET EXEMPLE (menu PROJET › Exemples, ou l'écran d'accueil) pour entendre ce que la machine sait faire, ou pars d'un PROJET VIDE.\n"
@@ -118,6 +120,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "END" },
         { "ARRÊTER",
           "STOP" },
+        { "ARRÊTER LE TUTORIEL",
+          "STOP THE TUTORIAL" },
         { "ATTAQUE",
           "ATTACK PART" },
         { "AUTO",
@@ -152,6 +156,12 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Show bar " },
         { "Agogo : cloche africaine/brésilienne.",
           "Agogo: African / Brazilian bell." },
+        { "Aide : ",
+          "Help: " },
+        { "Aide : le mode d'emploi, le tutoriel, les raccourcis et la taille de l'interface",
+          "Help: the user guide, the tutorial, the shortcuts and the size of the interface" },
+        { "Ajoute des charleys : sur la ligne HAT, clique entre les kicks (pas 3, 7, 11 et 15). Ça groove déjà !",
+          "Add hats: on the HAT row, click between the kicks (steps 3, 7, 11 and 15). It grooves already!" },
         { "Ajoute des parties avec les boutons + A à + H : par exemple A (intro), B (couplet) ×4, C (break), B ×4.\n"
           "Écris d'abord tes parties dans le rack : choisis la partie avec les boutons PARTIES en haut.",
           "Add parts with the + A to + H buttons: for example A (intro), B (verse) ×4, C (break), B ×4.\n"
@@ -262,6 +272,17 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Pop ballad" },
         { "Bande",
           "Tape" },
+        { "Barre Espace : lecture / stop (Ctrl+Espace avec la navigation au clavier).\n"
+          "Ctrl+Z : annuler · Ctrl+Y : rétablir.\nCtrl+S : enregistrer · Ctrl+Maj+S : enregistrer sous · Ctrl+O : ouvrir · Ctrl+N : nouveau projet.\n"
+          "F : FILL à la fin de la boucle (quand CLAVIER PC est éteint).\n"
+          "F11 : plein écran · Ctrl + et Ctrl - : taille de l'interface · Ctrl 0 : taille normale.\n"
+          "Échap : fermer le piano roll, l'automation, le morceau ou l'éditeur de son.\n"
+          "CLAVIER PC allumé : les lettres jouent des notes, W et X changent d'octave.",
+          "Space bar: play / stop (Ctrl+Space with keyboard navigation).\n"
+          "Ctrl+Z: undo · Ctrl+Y: redo.\nCtrl+S: save · Ctrl+Shift+S: save as · Ctrl+O: open · Ctrl+N: new project.\n"
+          "F: FILL at the end of the loop (when PC KEYBOARD is off).\nF11: full screen · Ctrl + and Ctrl -: size of the interface · Ctrl 0: normal size.\n"
+          "Escape: close the piano roll, the automation, the song or the sound editor.\n"
+          "PC KEYBOARD on: the letters play notes, Z and X change the octave." },
         { "Basse 106",
           "106 bass" },
         { "Basse 808 · la basse glissée du trap et de la drill",
@@ -326,8 +347,10 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Batucada (samba)" },
         { "Bien démarrer",
           "Getting started" },
-        { "Bien démarrer : le mode d'emploi en 8 étapes",
-          "Getting started: the 8-step guide" },
+        { "Bien démarrer : le mode d'emploi",
+          "Getting started: the user guide" },
+        { "Bienvenue ! On fait un beat ensemble. Clique sur « + MACHINE » › Batteries et percussions, puis choisis une boîte à rythmes : la 909 par exemple.",
+          "Welcome! Let's make a beat together. Click “+ MACHINE” › Drums and percussion, then choose a drum machine: the 909 for example." },
         { "Blade Runner (cuivres)",
           "Blade Runner (brass)" },
         { "Bleep",
@@ -374,6 +397,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Digital drum machines · inspired by the TR-505, TR-626 and SR-16" },
         { "Boîtes à rythmes vintage · Wurlitzer Side Man, Rhythm Ace, Donca-Matic",
           "Vintage rhythm boxes · Wurlitzer Side Man, Rhythm Ace, Donca-Matic" },
+        { "Bravo, ton premier morceau tourne ! Tourne les boutons pendant que ça joue (FILTRE, ÉCHO, REVERB…), essaie FILL, puis enregistre ton projet avec Ctrl+S. Le petit « i » à côté de chaque élément explique à quoi il sert.",
+          "Well done, your first track is playing! Turn the knobs while it plays (FILTER, ECHO, REVERB…), try FILL, then save your project with Ctrl+S. The small “i” next to each element explains what it is for." },
         { "Breakbeat gras, hoover, lead du 101 et scratch.",
           "Fat breakbeat, hoover, 101 lead and scratch." },
         { "Breakbeat rapide, basse Reese qui gronde et nappes planantes.",
@@ -424,6 +449,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "CHARACTER" },
         { "CHANCE (probabilité de jouer)",
           "CHANCE (probability of playing)" },
+        { "CLAVIER PC",
+          "PC KEYBOARD" },
         { "CLIC",
           "CLICK" },
         { "COMPRESSION",
@@ -594,6 +621,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Claves: a small woody “tock”." },
         { "Claves en bois.",
           "Wooden claves." },
+        { "Clavier de l'ordinateur",
+          "Computer keyboard" },
         { "Clavier sampler · ton propre son joué en mélodie, comme l'Emulator ou le Fairlight",
           "Sampling keyboard · your own sound played as a melody, like the Emulator or the Fairlight" },
         { "Claviers et cloches",
@@ -620,6 +649,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Click in the grid to place a note, drag right to lengthen it." },
         { "Clique pour comprendre à quoi ça sert",
           "Click to find out what it does" },
+        { "Clique sur 4 pas de la ligne KICK : 1, 5, 9 et 13. Un kick sur chaque temps : c'est la base de la house et de la techno.",
+          "Click 4 steps on the KICK row: 1, 5, 9 and 13. A kick on every beat: the basis of house and techno." },
         { "Clique sur le nom pour couper ce son sans effacer ses notes. Clique à nouveau pour le remettre.\n"
           "\nPratique pour entendre ce que fait chaque élément, ou pour faire des breaks.",
           "Click the name to mute this sound without erasing its notes. Click again to bring it back.\n"
@@ -690,10 +721,12 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Off-beat (techno, trance)" },
         { "Copier / coller la partie, dupliquer la 1re mesure sur toute la séquence, décaler toute la partie d'un pas vers la gauche ou la droite, ou tout effacer.\n"
           "\nLONGUEUR DE CETTE PISTE : la piste repart au début après ce nombre de pas, pendant que les autres continuent. Une piste de 3 ou 5 pas contre un kick de 16 crée une polyrythmie qui se décale à chaque tour.\n"
-          "\nVITESSE DE CETTE PISTE : deux fois plus vite (×2), deux fois moins vite (×½) ou en triolets, pour un charleston en triolets ou une basse qui roule.",
+          "\nVITESSE DE CETTE PISTE : deux fois plus vite (×2), deux fois moins vite (×½) ou en triolets, pour un charleston en triolets ou une basse qui roule.\n"
+          "\nMONTER / DESCENDRE : change la place de la machine dans le rack. Tu peux aussi la faire glisser par sa bande du haut (là où est écrit son nom).",
           "Copy / paste the part, copy bar 1 over the whole sequence, shift the whole part one step left or right, or clear everything.\n"
           "\nLENGTH OF THIS TRACK: the track starts again after this number of steps while the others go on. A track of 3 or 5 steps against a kick of 16 makes a polyrhythm that shifts every round.\n"
-          "\nSPEED OF THIS TRACK: twice as fast (×2), half as fast (×½) or in triplets, for triplet hats or a rolling bass." },
+          "\nSPEED OF THIS TRACK: twice as fast (×2), half as fast (×½) or in triplets, for triplet hats or a rolling bass.\n"
+          "\nMOVE UP / DOWN: changes the place of the machine in the rack. You can also drag it by its top band (where its name is written)." },
         { "Copier dans",
           "Copy into" },
         { "Copier la partie",
@@ -866,6 +899,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Moves the selected notes (or all of them) down one octave" },
         { "Descendant",
           "Down" },
+        { "Descendre dans le rack ↓",
+          "Move down in the rack ↓" },
         { "Descente : un balayage qui retombe vers le grave, juste après un drop ou à la fin d'une partie.",
           "Downlifter: a sweep falling back down, right after a drop or at the end of a section." },
         { "Deux accords par mesure",
@@ -1883,6 +1918,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Up-down" },
         { "Monte les notes sélectionnées (ou toutes) d'une octave",
           "Moves the selected notes (or all of them) up one octave" },
+        { "Monter dans le rack ↑",
+          "Move up in the rack ↑" },
         { "Montre le niveau de sortie. Si la barre est souvent tout en haut, baisse un peu le volume des machines.",
           "Shows the output level. If the bar often hits the top, turn the machines down a little." },
         { "Montée de bruit et de son qui grimpe vers l'aigu : annonce l'arrivée du refrain ou du drop.",
@@ -1915,6 +1952,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Listen to this machine only (the others are muted). You can solo several machines." },
         { "NIVEAU",
           "LEVEL" },
+        { "NOTE",
+          "NOTE" },
         { "NOTE DU SON",
           "ROOT NOTE" },
         { "NOUVEAU PROJET VIDE",
@@ -1955,6 +1994,10 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "String and choir pads, crotales, mellotron flutes and rain." },
         { "Nappes supersaw sur 4 accords, arpège du 101, basse sur les contretemps.",
           "Supersaw pads over 4 chords, 101 arpeggio, off-beat bass." },
+        { "Navigation au clavier",
+          "Keyboard navigation" },
+        { "Navigation au clavier (Tab, Entrée)",
+          "Keyboard navigation (Tab, Enter)" },
         { "Ne pas enregistrer",
           "Don't save" },
         { "Netteté de la voix : plus = voyelles plus marquées.",
@@ -2156,6 +2199,12 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Parts" },
         { "Pas d'entrée audio. Dans l'application : AUDIO / MIDI › choisis ton micro. Dans un logiciel de musique : active l'entrée (sidechain) de Tech Machine.",
           "No audio input. In the app: AUDIO / MIDI › choose your microphone. In music software: turn on the input (sidechain) of Tech Machine." },
+        { "Pas de clavier MIDI ? Allume CLAVIER PC et joue avec les lettres, sur la machine qui a le badge MIDI (clique sur une machine pour la choisir).\n"
+          "\nRangée Q S D F G H J K L M = les touches blanches (do, ré, mi…), rangée Z E T Y U O P = les touches noires. W et X = une octave plus bas ou plus haut. En anglais (clavier QWERTY) : A S D F G H J K pour les blanches, W E T Y U O P pour les noires, Z et X pour l'octave.\n"
+          "\nAvec ENREG. MIDI allumé et la lecture lancée, ce que tu joues s'écrit dans les pas.",
+          "No MIDI keyboard? Turn on PC KEYBOARD and play with the letters, on the machine with the MIDI badge (click a machine to choose it).\n"
+          "\nRow A S D F G H J K L ; = the white keys (C, D, E…), row W E T Y U O P = the black keys. Z and X = one octave down or up. (In French, on an AZERTY keyboard: Q S D F G H J K L M for the white keys, Z E T Y U O P for the black keys, W and X for the octave.)\n"
+          "\nWith REC MIDI on and playback running, what you play is written into the steps." },
         { "Pas encore de son. Glisse un fichier audio sur la machine, ou passe par le menu ⋯ (charger un son, enregistrer au micro).",
           "No sound yet. Drop an audio file on the machine, or use the ⋯ menu (load a sound, record from the microphone)." },
         { "Patterns célèbres",
@@ -2350,6 +2399,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "REVERB" },
         { "RYTHMES CÉLÈBRES",
           "FAMOUS RHYTHMS" },
+        { "Raccourcis clavier",
+          "Keyboard shortcuts" },
         { "Racine en croches",
           "Root in 8th notes" },
         { "Rapport entre l'oscillateur modulateur et la note. 1:1 et 2:1 = sons musicaux, 3:2 = creux, 7:4 = métallique, Libre = inharmonique, comme une cloche ou un gong.",
@@ -2370,6 +2421,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Makes the sound lower (left) or higher (right)." },
         { "Replier",
           "Collapse" },
+        { "Repères sur les pas actifs (daltonisme)",
+          "Marks on the active steps (colour blindness)" },
         { "Resserre le son : les parties fortes sont baissées, l'ensemble paraît plus compact, plus fort et plus « collé ».\n"
           "\nUn peu = mix plus pro. Beaucoup = son écrasé et énergique.",
           "Tightens the sound: loud parts are turned down, so the whole mix feels more compact, louder and more “glued”.\n"
@@ -2458,6 +2511,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "BREATH" },
         { "STÉRÉO",
           "STEREO" },
+        { "SUIVANT",
+          "NEXT" },
         { "SUIVRE",
           "FOLLOW" },
         { "SURPRISE !",
@@ -2632,6 +2687,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "HOLD" },
         { "TENUE",
           "SUSTAIN" },
+        { "TERMINER",
+          "FINISH" },
         { "TIMBRE",
           "TONE" },
         { "TONALITÉ",
@@ -2652,14 +2709,22 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "TREMOLO" },
         { "TT-303 / Volca acide",
           "TT-303 / acid Volca" },
+        { "TUTORIEL  ",
+          "TUTORIAL  " },
         { "TYPE ÉCHO",
           "ECHO TYPE" },
+        { "Tab passe au réglage suivant, Maj+Tab au précédent. Entrée ou Espace appuie sur un bouton ou allume un pas, les flèches tournent un bouton ou changent la note d'un pas. Ctrl+Espace lance ou arrête la lecture.\n"
+          "\nUn lecteur d'écran (Narrateur, NVDA, VoiceOver) annonce le nom de chaque réglage et l'état de chaque pas.",
+          "Tab goes to the next control, Shift+Tab to the previous one. Enter or Space presses a button or turns a step on, the arrows turn a knob or change the note of a step. Ctrl+Space starts or stops playback.\n"
+          "\nA screen reader (Narrator, NVDA, VoiceOver) reads the name of each control and the state of each step." },
         { "Tabla, grand tambour (bayan) : le « ge » grave dont la note remonte.",
           "Tabla, big drum (bayan): the low “ge” whose note rises." },
         { "Tabla, petit tambour : le « na » qui sonne comme une cloche.",
           "Tabla, small drum: the bell-like “na”." },
         { "Tables d'ondes · inspiré des PPG Wave, Microwave, Prophet VS et Wavestation",
           "Wavetables · inspired by the PPG Wave, Microwave, Prophet VS and Wavestation" },
+        { "Taille de l'interface  (Ctrl + / Ctrl -)",
+          "Size of the interface  (Ctrl + / Ctrl -)" },
         { "Taille de la salle",
           "Room size" },
         { "Taille de la section : à gauche quelques musiciens, à droite tout un orchestre.",
@@ -2837,6 +2902,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "You can come back here at any time: PROJECT menu › Home." },
         { "Tumbao (salsa)",
           "Tumbao (salsa)" },
+        { "Tutoriel : ton premier beat en 2 minutes",
+          "Tutorial: your first beat in 2 minutes" },
         { "Type d'accord joué à chaque pas.\n\n« Auto (gamme) » construit automatiquement un accord qui sonne juste avec la gamme choisie : le plus simple. « Note seule » joue une seule note (pour un lead). Les autres forcent un type précis : Mineur = sombre, Majeur = joyeux, 7e et 9e = plus riche et jazzy, Sus = suspendu et ouvert, Quinte = puissant.",
           "Type of chord played on each step.\n\n“Auto (scale)” automatically builds a chord that sounds right with the chosen scale: the easiest option. “Single note” plays just one note (for a lead). The others force a specific type: Minor = dark, Major = happy, 7th and 9th = richer and jazzy, Sus = suspended and open, Fifth = powerful." },
         { "Type d'écho",
@@ -2881,6 +2948,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\nChoisis la voyelle de DÉPART et d'ARRIVÉE, puis la VITESSE de la bouche.",
           "A synth whose sound goes through a “mouth” shaping vowels: each note glides from one vowel to another (“wah”, “ee-oh”). The sound of Roger Troutman, West Coast G-funk, Daft Punk and electronic funk.\n"
           "\nChoose the START and END vowel, then the mouth SPEED." },
+        { "Une basse et des accords ? Clique sur SURPRISE ! : la machine ajoute tout un groupe qui va avec le genre choisi.",
+          "A bass and chords? Click SURPRISE!: the machine adds a whole band that fits the chosen genre." },
         { "Une batterie acoustique synthétisée avec le grain des samplers des années 90 (E-mu SP-1200, Akai MPC). C'est le son des breakbeats découpés de la jungle, de la drum & bass et du breakbeat.\n"
           "\nLe bouton CRUSH (dans les effets) est déjà monté pour donner ce côté « samplé » 12 bits. Pour un vrai son jungle, choisis le style Jungle ou Drum & Bass : les rythmes typiques sont générés automatiquement.",
           "An acoustic drum kit synthesized with the grain of 90s samplers (E-mu SP-1200, Akai MPC). It's the sound of the chopped breakbeats of jungle, drum & bass and breakbeat.\n"
@@ -3075,6 +3144,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Gap." },
         { "Écarte les graves à gauche et les aigus à droite, comme quand on est assis au piano.",
           "Spreads the lows to the left and the highs to the right, as if you were sitting at the piano." },
+        { "Écoute : clique sur LECTURE (ou appuie sur la barre Espace).",
+          "Listen: click PLAY (or press the Space bar)." },
         { "Écrit une nouvelle idée complète pour toutes les machines du rack, dans le genre choisi : la batterie d'abord, puis une basse qui évite le kick, des accords et des mélodies qui vont ensemble.\n"
           "\nLes sons et réglages ne changent pas. Pas convaincu ? Ctrl+Z revient en arrière.",
           "Writes a complete new idea for every machine in the rack, in the chosen genre: drums first, then a bass that avoids the kick, chords and melodies that fit together.\n"

@@ -98,6 +98,7 @@ TechMachineProcessor::TechMachineProcessor()
     name = utf8 ("Sans titre");
     apvts.state.addListener (this);
     for (auto& r : recordStart) r = -1;
+    resetOrder();
     for (int i = 0; i < numPads; ++i) machines[(size_t) Sampler]->setSampleSlot (i, samples.slot (i));
     machines[(size_t) SampleKeys]->setSampleSlot (0, samples.slot (keysSlot));
 }
@@ -340,8 +341,17 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         previewFifo.prepareToRead (previewFifo.getNumReady(), start1, size1, start2, size2);
         auto playPreview = [this] (const PreviewNote& n)
         {
-            if (n.on) machines[(size_t) n.type]->liveNoteOn (n.note, 0.8f);
-            else machines[(size_t) n.type]->liveNoteOff (n.note);
+            const int t = n.keyboard ? midiTargetMachine() : n.type;
+            if (t < 0) return;
+            if (n.on) machines[(size_t) t]->liveNoteOn (n.note, 0.8f);
+            else machines[(size_t) t]->liveNoteOff (n.note);
+            if (! n.keyboard) return;
+            ++midiActivity;
+            if (recordNotes && wasPlaying)
+            {
+                if (n.on) recordNoteOn (t, n.note, 0.8f);
+                else recordNoteOff (t, n.note);
+            }
         };
         for (int i = 0; i < size1; ++i) playPreview (previewQueue[(size_t) (start1 + i)]);
         for (int i = 0; i < size2; ++i) playPreview (previewQueue[(size_t) (start2 + i)]);

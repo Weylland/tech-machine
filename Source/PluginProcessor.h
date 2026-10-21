@@ -46,6 +46,12 @@ public:
     techno::Machine& machine (int type) { return *machines[(size_t) type]; }
     bool isShown (int type) const { return strips[(size_t) type].show->load() > 0.5f; }
     void setShown (int type, bool shown);
+
+    // Order of the machines in the rack (the user can move them), saved with the project. Message thread.
+    const std::array<int, techno::numMachines>& machineOrder() const { return order; }
+    void moveMachine (int machineType, int beforeType);   // beforeType -1 = at the end
+    void moveMachineBy (int machineType, int direction);  // -1 = up, +1 = down, among the machines in the rack
+    std::atomic<int> orderVersion { 0 };
     int numSteps() const { return ((int) bars->load() + 1) * techno::pageSteps; }
     bool isHosted() const { return wrapperType != wrapperType_Standalone && wrapperType != wrapperType_Undefined; }
     int currentScale() const { return (int) scaleParam->load(); }
@@ -69,6 +75,7 @@ public:
     int midiTargetMachine() const;
     void setRecordNotes (bool on);
     void previewNote (int machineType, int midiNote, bool on);   // plays a note right away (piano roll)
+    void playKey (int midiNote, bool on);                         // the computer keyboard: like a MIDI keyboard
     bool isRecordingNotes() const { return recordNotes.load(); }
     bool isFollowingMidiClock() const { return clockActive.load(); }   // tempo, start and stop from another machine
     std::atomic<int> midiActivity { 0 };
@@ -245,6 +252,8 @@ private:
     void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override { dirty = true; }
 
     std::vector<std::unique_ptr<techno::Machine>> machines;
+    std::array<int, techno::numMachines> order {};
+    void resetOrder();
     std::array<Strip, techno::numMachines> strips {};
 
     std::atomic<float>* bpm, *swing, *keyParam, *scaleParam, *bars;
@@ -311,7 +320,7 @@ private:
     std::map<juce::String, std::pair<int, int>> automationIndex;   // parameter id -> (machine, target)
     int recordStart[128] {};
 
-    struct PreviewNote { int type = 0, note = 0; bool on = false; };
+    struct PreviewNote { int type = 0, note = 0; bool on = false, keyboard = false; };
     std::array<PreviewNote, 64> previewQueue {};
     juce::AbstractFifo previewFifo { 64 };
 

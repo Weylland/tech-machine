@@ -43,6 +43,7 @@ void TechMachineProcessor::newProject()
     for (auto& stored : sceneStored) stored = false;
     cuedScene = currentScene = -1;
     fillArmed = false;
+    resetOrder();
     for (auto& m : machines) m->track.clear();
     genreIndex = 0;
     progression = { 0 };
@@ -181,6 +182,9 @@ std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
     for (int d : progression) prog.add (juce::String (d));
     patterns->setAttribute ("progression", prog.joinIntoString (","));
     patterns->setAttribute ("part", activePart.load());
+    juce::StringArray orderIds;
+    for (int t : order) orderIds.add (machineDef (t).id);
+    patterns->setAttribute ("order", orderIds.joinIntoString (","));
 
     for (int t = 0; t < numMachines; ++t)
     {
@@ -236,6 +240,18 @@ void TechMachineProcessor::restoreProjectXml (const juce::XmlElement& source)
     for (auto& d : juce::StringArray::fromTokens (patterns->getStringAttribute ("progression", "0"), ",", {}))
         progression.push_back (juce::jlimit (0, 13, d.getIntValue()));
     if (progression.empty()) progression = { 0 };
+
+    // The rack order: the machines the file names first, the others after in their usual place.
+    {
+        std::vector<int> list;
+        for (auto& id : juce::StringArray::fromTokens (patterns->getStringAttribute ("order"), ",", {}))
+            for (int t = 0; t < numMachines; ++t)
+                if (id == machineDef (t).id && std::find (list.begin(), list.end(), t) == list.end()) list.push_back (t);
+        for (int t : rackOrder)
+            if (std::find (list.begin(), list.end(), t) == list.end()) list.push_back (t);
+        std::copy (list.begin(), list.end(), order.begin());
+        ++orderVersion;
+    }
 
     // What the file does not mention starts empty (older files have fewer machines, no sampler and no parts).
     activePart = 0;

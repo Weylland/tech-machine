@@ -291,6 +291,37 @@ void TechMachineProcessor::recordKnob (const juce::String& paramId, float value)
     touchPattern();
 }
 
+void TechMachineProcessor::resetOrder()
+{
+    std::copy (std::begin (rackOrder), std::end (rackOrder), order.begin());
+    ++orderVersion;
+}
+
+void TechMachineProcessor::moveMachine (int type, int beforeType)
+{
+    if (type == beforeType) return;
+    std::vector<int> list (order.begin(), order.end());
+    list.erase (std::find (list.begin(), list.end(), type));
+    const auto at = beforeType < 0 ? list.end() : std::find (list.begin(), list.end(), beforeType);
+    list.insert (at, type);
+    std::copy (list.begin(), list.end(), order.begin());
+    ++orderVersion;
+    dirty = true;
+}
+
+void TechMachineProcessor::moveMachineBy (int type, int direction)
+{
+    std::vector<int> shown;
+    for (int t : order)
+        if (isShown (t)) shown.push_back (t);
+    const auto it = std::find (shown.begin(), shown.end(), type);
+    if (it == shown.end()) return;
+    const auto index = (int) (it - shown.begin());
+    if (direction < 0 && index > 0) moveMachine (type, shown[(size_t) index - 1]);
+    if (direction > 0 && index + 1 < (int) shown.size())
+        moveMachine (type, index + 2 < (int) shown.size() ? shown[(size_t) index + 2] : -1);
+}
+
 void TechMachineProcessor::setTrackTiming (int type, int length, int speed)
 {
     undoManager.beginNewTransaction();

@@ -48,7 +48,7 @@ bool TechMachineProcessor::exportMidi (const juce::File& target) const
     tempoTrack.addEvent (juce::MidiMessage::timeSignatureMetaEvent (4, 4), 0.0);
     midi.addTrack (tempoTrack);
 
-    for (int t : rackOrder)
+    for (int t : order)
     {
         if (! isShown (t)) continue;
         const auto& def = machineDef (t);

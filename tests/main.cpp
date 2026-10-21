@@ -2892,6 +2892,213 @@ static int test_samplekeys (int argc, char** argv)
     return failures;
 }
 
+// Interface: the order of the rack, the computer keyboard, the size of the interface, the tutorial, accessibility.
+static int test_interface (int argc, char** argv)
+{
+    juce::ignoreUnused (argc, argv);
+    int failures = 0;
+    auto expect = [&] (bool ok, const char* what)
+    {
+        if (! ok) ++failures;
+        printf ("  %-66s %s\n", what, ok ? "ok" : "FAIL");
+    };
+    auto position = [] (TechMachineProcessor& p, int type)
+    {
+        const auto& order = p.machineOrder();
+        return (int) (std::find (order.begin(), order.end(), type) - order.begin());
+    };
+
+    // Rack order: moved, saved with the project, back to normal in a new project.
+    {
+        TechMachineProcessor p;
+        p.newProject();
+        for (int t : { TR909, TB303, Juno106 }) p.setShown (t, true);
+        p.moveMachine (Juno106, TR909);
+        expect (position (p, Juno106) < position (p, TR909), "a machine moves before another");
+        p.moveMachineBy (TB303, -1);
+        p.moveMachineBy (TB303, -1);
+        expect (position (p, TB303) < position (p, Juno106), "up, up: the bass goes to the top of the rack");
+        p.moveMachineBy (TB303, 1);
+        expect (position (p, Juno106) < position (p, TB303) && position (p, TB303) < position (p, TR909), "down: one place lower");
+
+        const auto file = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_order.tmproj");
+        p.saveProject (file);
+        TechMachineProcessor q;
+        q.loadProject (file);
+        file.deleteFile();
+        expect (q.machineOrder() == p.machineOrder(), "the order is saved with the project");
+
+        const auto midiFile = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_order.mid");
+        p.machine (TR909).track.hits[0][0] = true;
+        p.exportMidi (midiFile);
+        juce::MidiFile midi;
+        juce::FileInputStream in (midiFile);
+        midi.readFrom (in);
+        juce::StringArray names;
+        for (int t = 1; t < midi.getNumTracks(); ++t)
+            for (auto* e : *midi.getTrack (t))
+                if (e->message.isTextMetaEvent()) { names.add (e->message.getTextFromTextMetaEvent()); break; }
+        midiFile.deleteFile();
+        printf ("  MIDI tracks: %s\n", names.joinIntoString (", ").toRawUTF8());
+        expect (names.size() == 3 && names[0] == utf8 (machineDef (Juno106).name), "the MIDI export follows the order of the rack");
+        p.newProject();
+        expect (std::equal (std::begin (rackOrder), std::end (rackOrder), p.machineOrder().begin()), "a new project has the usual order");
+    }
+
+    TechMachineProcessor p;
+    p.newProject();
+    for (int t : { TR909, TB303, Juno106 }) p.setShown (t, true);
+    p.setMidiTarget (Juno106);
+    std::unique_ptr<juce::AudioProcessorEditor> ed (p.createEditor());
+    ed->setSize (1440, 800);
+    hideStartScreen (*ed);
+    ed->resized();
+    auto* view = findMainView (*ed);
+    juce::Array<MachinePanel*> panels;
+    findPanels (*ed, panels);
+    auto panelOf = [&] (int type) -> MachinePanel* { for (auto* q : panels) if (q->type == type) return q; return nullptr; };
+
+    // Dragging a machine by its name band.
+    {
+        auto* bass = panelOf (TB303);
+        auto* drums = panelOf (TR909);
+        bass->onReorderDrag (TB303, drums->getY() + 5, false);
+        bass->onReorderDrag (TB303, drums->getY() + 5, true);
+        pumpTimers();
+        expect (position (p, TB303) < position (p, TR909) && bass->getY() < drums->getY(), "a machine dragged above another moves there in the rack");
+    }
+
+    // The computer keyboard plays the machine with the MIDI badge, and ENREG. MIDI writes it down.
+    {
+        techno::LedButton* keys = nullptr;
+        std::function<void (juce::Component&)> find = [&] (juce::Component& c)
+        {
+            if (auto* b = dynamic_cast<techno::LedButton*> (&c); b != nullptr && b->getButtonText() == utf8 ("CLAVIER PC")) keys = b;
+            for (auto* child : c.getChildren()) find (*child);
+        };
+        find (*view);
+        expect (keys != nullptr, "the CLAVIER PC button is there");
+        if (keys != nullptr) keys->setToggleState (true, juce::dontSendNotification);
+        p.setPlayConfigDetails (0, 2, 48000.0, 480);
+        p.prepareToPlay (48000.0, 480);
+        juce::AudioBuffer<float> block (2, 480);
+        juce::MidiBuffer none;
+        p.setRecordNotes (true);
+        p.playing = true;
+        p.processBlock (block, none);
+        view->keyPressed (juce::KeyPress ('H', 0, 'h'));   // A (la) on an AZERTY keyboard
+        float peak = 0.0f;
+        for (int b = 0; b < 30; ++b)
+        {
+            p.processBlock (block, none);
+            peak = std::max (peak, block.getMagnitude (0, 0, 480));
+        }
+        view->keyStateChanged (false);   // the key is up again
+        for (int b = 0; b < 30; ++b) p.processBlock (block, none);
+        p.playing = false;
+        p.setRecordNotes (false);
+        bool written = false;
+        for (int s = 0; s < 16; ++s) written = written || p.machine (Juno106).track.on[(size_t) s].load();
+        expect (peak > 0.01f, "a letter of the keyboard plays a note on the machine with the MIDI badge");
+        expect (written, "with ENREG. MIDI, the note is written into the steps");
+        if (keys != nullptr) keys->setToggleState (false, juce::dontSendNotification);
+    }
+
+    // The size of the interface.
+    if (auto* editor = dynamic_cast<TechMachineEditor*> (ed.get()))
+    {
+        editor->setZoom (0.8f);
+        const bool scaled = view->getWidth() == juce::roundToInt ((float) editor->getWidth() / 0.8f) && std::abs (settings().getDoubleValue ("zoom") - 0.8) < 0.001;
+        expect (scaled, "at 80 %, the interface is drawn smaller and the choice is kept");
+        juce::StringArray issues;
+        Theme theme;
+        auditLayout (*ed, theme, "zoom 80", issues);
+        for (auto& i : issues) printf ("%s\n", i.toRawUTF8());
+        expect (issues.isEmpty(), "nothing overlaps at 80 %");
+        editor->setZoom (1.0f);
+        expect (view->getWidth() == editor->getWidth(), "back to 100 %");
+    }
+
+    // Tutorial: each step moves on by itself once it is done.
+    {
+        p.newProject();
+        pumpTimers();
+        view->startTutorial();
+        auto* tour = view->getTutorial();
+        auto stepNow = [&]
+        {
+            pumpTimers();
+            auto* t = view->getTutorial();
+            return t != nullptr && t->isVisible() ? t->currentStep() : -1;
+        };
+        expect (tour != nullptr && tour->currentStep() == 0, "the tutorial starts");
+        p.setShown (TR909, true);
+        expect (stepNow() == 1, "step 1 done: a drum machine is in the rack");
+        savePng (ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f), "ui_tutorial");
+        for (int s : { 0, 4, 8, 12 }) p.machine (TR909).track.hits[0][(size_t) s] = true;
+        expect (stepNow() == 2, "step 2 done: kicks on the beats");
+        p.playing = true;
+        expect (stepNow() == 3, "step 3 done: it plays");
+        p.machine (TR909).track.hits[7][2] = true;
+        p.machine (TR909).track.hits[7][6] = true;
+        expect (stepNow() == 4, "step 4 done: hats");
+        p.setShown (TB303, true);
+        p.machine (TB303).track.on[0] = true;
+        expect (stepNow() == 5, "step 5 done: a bass");
+        p.playing = false;
+        const auto bubble = view->getTutorial() != nullptr ? view->getTutorial()->bubbleBounds() : juce::Rectangle<int>();
+        expect (view->getLocalBounds().contains (bubble) && ! bubble.isEmpty(), "the bubble stays inside the window");
+        view->getTutorial()->advance();
+        expect (stepNow() == -1, "the last step closes the tutorial");
+    }
+
+    // Accessibility: every control has a name, the steps are toggle buttons for screen readers.
+    {
+        pumpTimers();
+        juce::StringArray unnamed;
+        std::function<void (juce::Component&)> scan = [&] (juce::Component& c)
+        {
+            if (! c.isVisible()) return;
+            if (auto* b = dynamic_cast<juce::Button*> (&c); b != nullptr && b->getButtonText().isEmpty() && b->getTitle().isEmpty())
+                unnamed.add (juce::String (typeid (c).name()) + " at " + c.getScreenBounds().toString());
+            for (auto* child : c.getChildren()) scan (*child);
+        };
+        scan (*view);
+        for (auto& u : unnamed) printf ("    unnamed: %s\n", u.toRawUTF8());
+        expect (unnamed.isEmpty(), "every button has a name for screen readers");
+
+        StepCell* kick = nullptr;
+        std::function<void (juce::Component&)> findCell = [&] (juce::Component& c)
+        {
+            if (auto* cell = dynamic_cast<StepCell*> (&c); cell != nullptr && kick == nullptr && cell->accessibleName.contains ("KICK")) kick = cell;
+            for (auto* child : c.getChildren()) findCell (*child);
+        };
+        findCell (*view);
+        // The window is not on screen here: the handler a screen reader would get is made directly.
+        auto created = kick != nullptr ? kick->createAccessibilityHandler() : nullptr;
+        auto* handler = created.get();
+        if (handler != nullptr)
+        {
+            const bool wasOn = handler->getCurrentState().isChecked();
+            handler->getActions().invoke (juce::AccessibilityActionType::press);
+            printf ("  screen reader: \"%s\", checked %d -> %d\n", handler->getTitle().toRawUTF8(), (int) wasOn, (int) handler->getCurrentState().isChecked());
+            expect (handler->getRole() == juce::AccessibilityRole::toggleButton && handler->getCurrentState().isChecked() != wasOn,
+                    "a step is a toggle button that a screen reader can switch");
+        }
+        else expect (false, "a step is a toggle button that a screen reader can switch");
+
+        settings().setValue ("keyboardNavigation", true);
+        view->applyKeyboardNavigation();
+        expect (kick != nullptr && kick->getWantsKeyboardFocus(), "with keyboard navigation, the steps take the focus");
+        settings().setValue ("keyboardNavigation", false);
+        view->applyKeyboardNavigation();
+        expect (kick != nullptr && ! kick->getWantsKeyboardFocus(), "without it, they never steal the keyboard");
+    }
+
+    printf ("interface: %d failures\n", failures);
+    return failures;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
@@ -2903,6 +3110,7 @@ static const Mode modes[] {
     { "sequencer", test_sequencer },
     { "sound", test_sound },
     { "samplekeys", test_samplekeys },
+    { "interface", test_interface },
     { "host", test_host },
     { "levels", test_levels },
     { "examples", test_examples },
@@ -2951,7 +3159,7 @@ static int check (char** argv)
     chaosIterations = 8;
     char* none[] { argv[0], nullptr };
     int failures = 0;
-    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_expression, test_sequencer, test_sound, test_samplekeys, test_ui, test_chaos, test_french })
+    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_expression, test_sequencer, test_sound, test_samplekeys, test_interface, test_ui, test_chaos, test_french })
         failures += run (1, none);
     printf ("\ncheck: %d failures\n", failures);
     return failures;
@@ -2976,6 +3184,8 @@ int main (int argc, char** argv)
     setenv ("TECHMACHINE_TEST_SETTINGS", "1", 1);
 #endif
     juce::ScopedJuceInitialiser_GUI init;
+    settings().setValue ("zoom", 1.0);            // the interface at its normal size, whatever the screen of the test machine
+    settings().setValue ("tutorialSeen", true);
     const juce::String mode = argc > 1 ? juce::String (argv[1]) : "check";
     if (mode == "check") return check (argv) == 0 ? 0 : 1;
     if (mode == "french") return test_french (argc, argv) == 0 ? 0 : 1;

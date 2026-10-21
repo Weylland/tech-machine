@@ -22,6 +22,15 @@ void TechMachineProcessor::previewNote (int type, int midiNote, bool on)
     previewFifo.finishedWrite (size1 + size2);
 }
 
+void TechMachineProcessor::playKey (int midiNote, bool on)
+{
+    int start1, size1, start2, size2;
+    previewFifo.prepareToWrite (1, start1, size1, start2, size2);
+    if (size1 > 0) previewQueue[(size_t) start1] = { -1, midiNote, on, true };
+    else if (size2 > 0) previewQueue[(size_t) start2] = { -1, midiNote, on, true };
+    previewFifo.finishedWrite (size1 + size2);
+}
+
 void TechMachineProcessor::setRecordNotes (bool on)
 {
     if (on && ! recordNotes)

@@ -259,6 +259,9 @@ MachinePanel::~MachinePanel()
 StepCell& MachinePanel::addCell (int column, int row, StepCell::Mode mode, bool dimmed)
 {
     auto* cell = cells.add (new StepCell (column, row, mode, dimmed));
+    const juce::String rowName = isDrum() ? (row < numRows() ? utf8 (def.rows[(size_t) row].label) : juce::String ("ACCENT"))
+                                          : row == 0 ? utf8 ("NOTE") : row == 1 ? utf8 (isPoly() ? "TENIR" : "ACCENT") : juce::String ("SLIDE");
+    cell->accessibleName = utf8 (def.name) + ", " + rowName + utf8 (", pas ") + juce::String (column + 1);
     cell->isOutside = [this, column] { return stepFor (column) >= processor.machine (type).track.stepsIn (processor.numSteps()); };
     cell->onEditStart = [this]
     {
@@ -496,6 +499,9 @@ void MachinePanel::showMoreMenu()
     menu.addItem (5, utf8 ("Décaler d'un pas vers la droite →"));
     menu.addSeparator();
     menu.addItem (6, utf8 ("Tout effacer"));
+    menu.addSeparator();
+    menu.addItem (7, utf8 ("Monter dans le rack ↑"));
+    menu.addItem (8, utf8 ("Descendre dans le rack ↓"));
 
     // Length and speed of this track: polyrhythms, triplets.
     const auto& track = processor.machine (type).track;
@@ -575,6 +581,8 @@ void MachinePanel::showMoreMenu()
             case 4: processor.shiftMachine (type, -1); break;
             case 5: processor.shiftMachine (type, 1); break;
             case 6: processor.clearMachine (type); break;
+            case 7: processor.moveMachineBy (type, -1); break;
+            case 8: processor.moveMachineBy (type, 1); break;
             case 200: chooseSampleFile ([this] (const juce::File& f) { processor.chopLoop (f); }); break;
             case 800: chooseSampleFile ([this] (const juce::File& f) { processor.loadSamplePad (TechMachineProcessor::keysSlot, f); }); break;
             case 801: if (onOpenSampleEditor) onOpenSampleEditor (TechMachineProcessor::keysSlot); break;
@@ -627,6 +635,30 @@ void MachinePanel::nudgeNote (int step, int delta)
     processor.machine (type).track.chord[(size_t) step] = 0;   // back to the chord built from the note
     auto& note = processor.machine (type).track.note[(size_t) step];
     note = juce::jlimit (0, noteRange - 1, moveInScale (processor.currentScale(), note.load(), delta));
+}
+
+void MachinePanel::mouseMove (const juce::MouseEvent& e)
+{
+    setMouseCursor (e.y < headerH ? juce::MouseCursor::DraggingHandCursor : juce::MouseCursor::NormalCursor);
+}
+
+void MachinePanel::mouseDown (const juce::MouseEvent& e)
+{
+    pressedOnBand = e.y < headerH;
+    reordering = false;
+}
+
+void MachinePanel::mouseDrag (const juce::MouseEvent& e)
+{
+    if (! pressedOnBand || onReorderDrag == nullptr) return;
+    reordering = reordering || e.getDistanceFromDragStart() > 6;
+    if (reordering) onReorderDrag (type, e.getEventRelativeTo (getParentComponent()).y, false);
+}
+
+void MachinePanel::mouseUp (const juce::MouseEvent& e)
+{
+    if (reordering && onReorderDrag != nullptr) onReorderDrag (type, e.getEventRelativeTo (getParentComponent()).y, true);
+    pressedOnBand = reordering = false;
 }
 
 void MachinePanel::setPlayhead (int step)

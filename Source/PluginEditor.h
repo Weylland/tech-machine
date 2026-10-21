@@ -4,6 +4,7 @@
 #include "ui/MachinePanel.h"
 #include "ui/AutomationEditor.h"
 #include "ui/SongEditor.h"
+#include "ui/Tutorial.h"
 #include "ui/PianoRoll.h"
 #include "ui/Theme.h"
 #include "ui/Widgets.h"
@@ -50,6 +51,14 @@ class RackContent : public juce::Component
 {
 public:
     bool empty = true;
+    int dropLineY = -1;   // where a machine being moved will go
+
+    void paintOverChildren (juce::Graphics& g) override
+    {
+        if (dropLineY < 0) return;
+        g.setColour (techno::colours::accent);
+        g.fillRoundedRectangle (juce::Rectangle<float> (0.0f, (float) dropLineY - 2.0f, (float) getWidth(), 4.0f), 2.0f);
+    }
 
     void paint (juce::Graphics& g) override
     {
@@ -95,12 +104,22 @@ public:
     ~MainView() override;
 
     std::function<void()> onLanguageChange;
+    std::function<void (float)> onZoom;          // size of the interface: 1 = normal
+    std::function<float()> currentZoom;
     bool isStartScreenShown() const { return startScreen.isVisible(); }
+    void showHelpMenu();
+    void applyKeyboardNavigation();
+    bool keyboardNavigation = false;
+    juce::Component::SafePointer<juce::Component> lastFocused;
+    void paintOverChildren (juce::Graphics&) override;
+    void startTutorial();
+    techno::TutorialOverlay* getTutorial() const { return tutorial.get(); }
     void showStartScreen (bool show);
 
     void paint (juce::Graphics&) override;
     void resized() override;
     bool keyPressed (const juce::KeyPress&) override;
+    bool keyStateChanged (bool isKeyDown) override;
     void mouseDown (const juce::MouseEvent&) override;
 
 private:
@@ -126,6 +145,8 @@ private:
     std::unique_ptr<techno::PianoRollEditor> pianoRoll;
     std::unique_ptr<techno::AutomationEditor> automationEditor;
     std::unique_ptr<techno::SampleEditor> sampleEditor;
+    std::unique_ptr<techno::TutorialOverlay> tutorial;
+    int tutorialDrums() const;   // the drum machine the tutorial works on, -1 = none yet
     void openSampleEditor (int slot);
     void closeSampleEditor();
     void setPage (int newPage);
@@ -167,6 +188,11 @@ private:
     techno::LedButton fillButton { "FILL", juce::Colour (0xffff9a1f) };
     std::array<techno::MenuTextButton, TechMachineProcessor::numScenes> sceneButtons;
     techno::InfoButton* fillInfo = nullptr;
+    techno::LedButton pcKeysButton { techno::utf8 ("CLAVIER PC"), juce::Colour (0xff3dd6ff) };
+    techno::InfoButton* pcKeysInfo = nullptr;
+    int keysOctave = 0;                       // octave shift of the computer keyboard
+    std::map<int, int> keysDown;              // key code -> note playing
+    int noteForKey (juce::juce_wchar character) const;
     techno::InfoButton* scenesInfo = nullptr;
     void showSceneMenu (int scene);
     void refreshScenes();
@@ -190,6 +216,9 @@ private:
     juce::Viewport rack;
     RackContent content;
     juce::OwnedArray<techno::MachinePanel> panels;
+    techno::MachinePanel* panelFor (int machineType) const;
+    void reorderDrag (int machineType, int y, bool finished);
+    int lastOrderVersion = -1;
 
     juce::OwnedArray<juce::Component> masterControls, masterChoices;
     VuMeter vu;
@@ -215,8 +244,14 @@ public:
 
     void resized() override;
 
+    // Size of the interface (0.75 to 1.5), kept in the settings. Laptops with a small screen start smaller.
+    void setZoom (float);
+    float getZoom() const { return zoom; }
+    static constexpr float zoomSteps[] { 0.75f, 0.8f, 0.9f, 1.0f, 1.1f, 1.25f, 1.5f };
+
 private:
     void rebuild (bool showStart);
+    float zoom = 1.0f;
 
     TechMachineProcessor& techProcessor;   // AudioProcessorEditor::processor, with its real type
     std::unique_ptr<MainView> view;
