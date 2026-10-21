@@ -1,0 +1,52 @@
+# Builds the Linux version (app, VST3, CLAP and LV2, x86-64) and attaches it to the release.
+name: Linux build
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04   # the oldest supported Ubuntu: the files then run on most distributions
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libjack-jackd2-dev libcurl4-openssl-dev libfreetype-dev libfontconfig1-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev \
+            libglu1-mesa-dev mesa-common-dev
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DTECHMACHINE_TESTS=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Package
+        run: |
+          set -e
+          out="build/TechMachine_artefacts/Release"
+          mkdir -p dist
+          tar -C "$out/Standalone" -czf dist/TechMachine-Linux-Standalone.tar.gz "Tech Machine"
+          tar -C "$out/VST3" -czf dist/TechMachine-Linux-VST3.tar.gz "Tech Machine.vst3"
+          tar -C "$out/CLAP" -czf dist/TechMachine-Linux-CLAP.tar.gz "Tech Machine.clap"
+          tar -C "$out/LV2" -czf dist/TechMachine-Linux-LV2.tar.gz "Tech Machine.lv2"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TechMachine-Linux
+          path: dist/*.tar.gz
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/*.tar.gz --clobber

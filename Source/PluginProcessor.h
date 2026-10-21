@@ -11,11 +11,12 @@
 #include "machines/Machines.h"
 #include "machines/SampleBank.h"
 
+#include <clap-juce-extensions/clap-juce-extensions.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <map>
 #include <juce_audio_processors/juce_audio_processors.h>
 
-class TechMachineProcessor : public juce::AudioProcessor, private juce::ValueTree::Listener
+class TechMachineProcessor : public juce::AudioProcessor, public clap_juce_extensions::clap_properties, private juce::ValueTree::Listener
 {
 public:
     TechMachineProcessor();
@@ -53,7 +54,8 @@ public:
     void moveMachineBy (int machineType, int direction);  // -1 = up, +1 = down, among the machines in the rack
     std::atomic<int> orderVersion { 0 };
     int numSteps() const { return ((int) bars->load() + 1) * techno::pageSteps; }
-    bool isHosted() const { return wrapperType != wrapperType_Standalone && wrapperType != wrapperType_Undefined; }
+    // In a music software (VST3, AU, CLAP): the CLAP wrapper does not give JUCE a wrapper type of its own.
+    bool isHosted() const { return is_clap || (wrapperType != wrapperType_Standalone && wrapperType != wrapperType_Undefined); }
     int currentScale() const { return (int) scaleParam->load(); }
     int currentKey() const { return (int) keyParam->load(); }
 

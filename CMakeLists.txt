@@ -7,10 +7,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(libs/JUCE)
+add_subdirectory(libs/clap-juce-extensions EXCLUDE_FROM_ALL)
 
-# macOS also gets an Audio Unit (Logic Pro, GarageBand).
+# macOS also gets an Audio Unit (Logic Pro, GarageBand), Linux an LV2 (Ardour, Qtractor, Carla).
 if(APPLE)
     set(TECHMACHINE_FORMATS Standalone VST3 AU)
+elseif(UNIX)
+    set(TECHMACHINE_FORMATS Standalone VST3 LV2)
 else()
     set(TECHMACHINE_FORMATS Standalone VST3)
 endif()
@@ -28,7 +31,13 @@ juce_add_plugin(TechMachine
     BUNDLE_ID com.nicolassamier.techmachine
     MICROPHONE_PERMISSION_ENABLED TRUE
     MICROPHONE_PERMISSION_TEXT "Tech Machine uses the microphone for the vocoder."
+    LV2URI "https://github.com/Weylland/tech-machine"
     FORMATS ${TECHMACHINE_FORMATS})
+
+# CLAP (Bitwig, Reaper, FL Studio...), next to the other formats.
+clap_juce_extensions_plugin(TARGET TechMachine
+    CLAP_ID "com.nicolassamier.techmachine"
+    CLAP_FEATURES instrument synthesizer drum-machine sampler stereo)
 
 # Font used where Bahnschrift is not installed (macOS, Linux).
 juce_add_binary_data(TechMachineFonts SOURCES
@@ -75,8 +84,16 @@ target_compile_options(TechMachine PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
 target_compile_definitions(TechMachine PUBLIC
     JUCE_WEB_BROWSER=0
-    JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0)
+
+# Linux reads the web (the update check) through libcurl; Windows and macOS use the system.
+if(UNIX AND NOT APPLE)
+    find_package(CURL REQUIRED)
+    target_compile_definitions(TechMachine PUBLIC JUCE_USE_CURL=1)
+    target_link_libraries(TechMachine PRIVATE CURL::libcurl)
+else()
+    target_compile_definitions(TechMachine PUBLIC JUCE_USE_CURL=0)
+endif()
 
 # ASIO drivers (Windows): the Steinberg ASIO SDK, used under its GPLv3 option, is fetched by build.bat into tools/asiosdk.
 set(ASIO_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tools/asiosdk/common")
@@ -89,6 +106,7 @@ endif()
 target_link_libraries(TechMachine
     PRIVATE
         TechMachineFonts
+        clap_juce_extensions
         juce::juce_audio_utils
         juce::juce_audio_formats
     PUBLIC
@@ -110,6 +128,7 @@ if(TECHMACHINE_TESTS)
         JucePlugin_VersionString="${PROJECT_VERSION}")
     target_link_libraries(TechMachineTests PRIVATE
         TechMachineFonts
+        clap_juce_extensions
         juce::juce_audio_utils
         juce::juce_audio_formats
         juce::juce_recommended_config_flags)

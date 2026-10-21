@@ -12,6 +12,21 @@
 
 static int chaosIterations = 40;
 
+// Built with AddressSanitizer: everything runs 2 to 3 times slower, so the processor load is not judged.
+#if defined(__has_feature)
+ #if __has_feature(address_sanitizer)
+  #define TECHMACHINE_SANITIZED 1
+ #endif
+#endif
+#if defined(__SANITIZE_ADDRESS__)
+ #define TECHMACHINE_SANITIZED 1
+#endif
+#ifdef TECHMACHINE_SANITIZED
+static constexpr double cpuLimit = 1.0e9;
+#else
+static constexpr double cpuLimit = 20.0;
+#endif
+
 static int test_host (int argc, char** argv)
 {
     juce::ignoreUnused (argc, argv);
@@ -912,9 +927,9 @@ static int test_chaos (int argc, char** argv)
             tr.tile (pageSteps);
             auto st = run (p, 1.5);
             // A busy computer (a shared CI machine) can slow down one run: too slow only if it is twice in a row.
-            if (st.cpu > 20.0 && st.nans == 0) st.cpu = std::min (st.cpu, run (p, 1.5).cpu);
+            if (st.cpu > cpuLimit && st.nans == 0) st.cpu = std::min (st.cpu, run (p, 1.5).cpu);
             ++cases;
-            if (st.nans > 0 || st.rmsDb > -5.0 || st.cpu > 20.0)
+            if (st.nans > 0 || st.rmsDb > -5.0 || st.cpu > cpuLimit)
             {
                 ++problems;
                 printf ("  %-10s rms %6.1f nan %d cpu %.1f  %s\n", def.id, st.rmsDb, st.nans, st.cpu, settings.toRawUTF8());
