@@ -1958,6 +1958,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "ROOT NOTE" },
         { "NOUVEAU PROJET VIDE",
           "NEW EMPTY PROJECT" },
+        { "NOUVELLE VERSION ",
+          "NEW VERSION " },
         { "Nappe",
           "Pad" },
         { "Nappe FM",
@@ -2970,6 +2972,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\nIdeal for retro rhythms, soft pop, lo-fi or discreet Latin grooves." },
         { "Une ligne de 303 qui miaule avec accents et glissés, sur un groove 909.",
           "A squelching 303 line with accents and glides, over a 909 groove." },
+        { "Une nouvelle version de Tech Machine est sortie : clique pour ouvrir sa page de téléchargement",
+          "A new version of Tech Machine is out: click to open its download page" },
         { "Une vraie batterie : grosse caisse, caisse claire, ghost notes, cross-stick, charleston, trois toms, crash, ride et cloche de ride. Le son du rock, de la pop, de la soul, du jazz et de tous les groupes.\n"
           "\nLes rythmes « Incontournables » du bouton PATTERNS sonnent parfaitement dessus.",
           "A real drum kit: bass drum, snare, ghost notes, cross-stick, hi-hat, three toms, crash, ride and ride bell. The sound of rock, pop, soul, jazz and every band.\n"
@@ -3092,6 +3096,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Level meter" },
         { "VÉLOCITÉ (force des notes)",
           "VELOCITY (how hard the notes play)" },
+        { "Vérifier les mises à jour au démarrage",
+          "Check for updates at startup" },
         { "Wavestation — séquence",
           "Wavestation — sequence" },
         { "Wobble = scie + carré (dubstep). Reese = scies désaccordées qui grondent (drum & bass). Growl = son « qui parle », agressif.",

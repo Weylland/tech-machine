@@ -50,6 +50,7 @@ set(TECHMACHINE_SOURCES
     Source/core/Help.cpp
     Source/core/Language.cpp
     Source/core/Translations.cpp
+    Source/core/UpdateCheck.cpp
     Source/core/MachineDefs.cpp
     Source/core/MidiLearn.cpp
     Source/core/MidiMap.cpp

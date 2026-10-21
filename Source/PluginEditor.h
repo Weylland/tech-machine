@@ -5,6 +5,7 @@
 #include "ui/AutomationEditor.h"
 #include "ui/SongEditor.h"
 #include "ui/Tutorial.h"
+#include "core/UpdateCheck.h"
 #include "ui/PianoRoll.h"
 #include "ui/Theme.h"
 #include "ui/Widgets.h"
@@ -188,6 +189,9 @@ private:
     techno::LedButton fillButton { "FILL", juce::Colour (0xffff9a1f) };
     std::array<techno::MenuTextButton, TechMachineProcessor::numScenes> sceneButtons;
     techno::InfoButton* fillInfo = nullptr;
+    techno::UpdateCheck updates;
+    juce::TextButton updateButton;
+    juce::URL updatePage;
     techno::LedButton pcKeysButton { techno::utf8 ("CLAVIER PC"), juce::Colour (0xff3dd6ff) };
     techno::InfoButton* pcKeysInfo = nullptr;
     int keysOctave = 0;                       // octave shift of the computer keyboard
@@ -228,7 +232,8 @@ private:
     std::unique_ptr<juce::FileChooser> chooser;
     std::unique_ptr<ExportJob> exportJob;
 
-    int viewPage = 0, lastVersion = -1, lastBars = -1, lastLabelHash = -1, lastGenre = -1;
+    int viewPage = 0, lastVersion = -1, lastBars = -1, lastGenre = -1;
+    juce::uint32 lastLabelHash = 0xffffffffu;
     int scrollToMachine = -1;
     bool follow = true, focusGrabbed = false;
     juce::String lastTitle;

@@ -573,6 +573,23 @@ MainView::MainView (TechMachineProcessor& p)
     songInfo = &addInfo (help ("song"));
     refreshParts();
 
+    // A newer version on GitHub: a small button under the name, to its download page.
+    updateButton.setColour (juce::TextButton::buttonColourId, juce::Colour (0xff2f8f4a));
+    updateButton.setColour (juce::TextButton::textColourOffId, colours::text);
+    updateButton.setTooltip (utf8 ("Une nouvelle version de Tech Machine est sortie : clique pour ouvrir sa page de téléchargement"));
+    updateButton.onClick = [this] { updatePage.launchInDefaultBrowser(); };
+    addChildComponent (updateButton);
+    {
+        juce::Component::SafePointer<MainView> safe (this);
+        updates.start ([safe] (const juce::String& version, const juce::URL& page)
+        {
+            if (safe == nullptr) return;
+            safe->updatePage = page;
+            safe->updateButton.setButtonText (utf8 ("NOUVELLE VERSION ") + version.trimCharactersAtStart ("vV") + utf8 (" ›"));
+            safe->updateButton.setVisible (true);
+        });
+    }
+
     pcKeysButton.setTooltip (shortHelp (help ("pckeys").body));
     pcKeysButton.onClick = [this]
     {
@@ -1398,6 +1415,7 @@ void MainView::showHelpMenu()
     menu.addSubMenu (utf8 ("Taille de l'interface  (Ctrl + / Ctrl -)"), sizes);
     menu.addItem (4, utf8 ("Navigation au clavier (Tab, Entrée)"), true, settings().getBoolValue ("keyboardNavigation", false));
     menu.addItem (5, utf8 ("Repères sur les pas actifs (daltonisme)"), true, Accessibility::stepMarks);
+    menu.addItem (6, utf8 ("Vérifier les mises à jour au démarrage"), true, UpdateCheck::enabled());
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (guideButton), [this] (int result)
     {
         if (result == 1) showInfo (help ("guide"), guideButton);
@@ -1409,6 +1427,7 @@ void MainView::showHelpMenu()
             applyKeyboardNavigation();
             if (settings().getBoolValue ("keyboardNavigation", false)) showInfo (help ("keyboardNavigation"), guideButton);
         }
+        if (result == 6) UpdateCheck::setEnabled (! UpdateCheck::enabled());
         if (result == 5)
         {
             Accessibility::stepMarks = ! Accessibility::stepMarks;
@@ -1502,13 +1521,13 @@ void MainView::timerCallback()
         if (panel->isVisible()) panel->setPlayhead (processor.machine (panel->type).playStep.load());
 
     // Note and chord names depend on the key, the scale and each synth's octave and chord type.
-    int labelHash = processor.currentKey() + 12 * processor.currentScale();
+    auto labelHash = (juce::uint32) (processor.currentKey() + 12 * processor.currentScale());
     for (int t = 0; t < numMachines; ++t)
     {
         const auto& def = machineDef (t);
         if (def.kind == MachineKind::Drum) continue;
-        labelHash = labelHash * 31 + (int) processor.apvts.getRawParameterValue (pid::synth (t, 0))->load() * 16;
-        if (def.kind == MachineKind::Poly) labelHash += (int) processor.apvts.getRawParameterValue (pid::synth (t, 1))->load();
+        labelHash = labelHash * 31u + (juce::uint32) processor.apvts.getRawParameterValue (pid::synth (t, 0))->load() * 16;
+        if (def.kind == MachineKind::Poly) labelHash += (juce::uint32) processor.apvts.getRawParameterValue (pid::synth (t, 1))->load();
     }
 
     const int version = processor.patternVersion.load();
@@ -1685,6 +1704,7 @@ void MainView::resized()
     for (auto& scene : sceneButtons) { scene.setBounds (x, y3, narrow ? 30 : 34, 28); x += narrow ? 33 : 37; }
     scenesInfo->setBounds (x, y3 + 7, 15, 15);
     pcKeysInfo->setBounds (consoleArea.getRight() - 16 - 15, y3 + 7, 15, 15);
+    updateButton.setBounds (consoleArea.getX() + 22, cy + 59, 190, 18);
     pcKeysButton.setBounds (pcKeysInfo->getX() - 4 - (narrow ? 112 : 130), y3, narrow ? 112 : 130, 28);
     guideButton.setBounds (addButton.getX() - 12 - 44, y2, 44, 28);
 

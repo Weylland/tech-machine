@@ -2908,6 +2908,9 @@ static int test_interface (int argc, char** argv)
         return (int) (std::find (order.begin(), order.end(), type) - order.begin());
     };
 
+    expect (isNewerVersion ("v0.8.1", "0.8.0") && isNewerVersion ("v1.0", "0.9.9") && ! isNewerVersion ("v0.8.0", "0.8.0")
+                && ! isNewerVersion ("v0.7.9", "0.8.0") && ! isNewerVersion ("", "0.8.0"), "versions are compared number by number");
+
     // Rack order: moved, saved with the project, back to normal in a new project.
     {
         TechMachineProcessor p;
@@ -3186,6 +3189,7 @@ int main (int argc, char** argv)
     juce::ScopedJuceInitialiser_GUI init;
     settings().setValue ("zoom", 1.0);            // the interface at its normal size, whatever the screen of the test machine
     settings().setValue ("tutorialSeen", true);
+    settings().setValue ("checkUpdates", false);   // no network in the tests
     const juce::String mode = argc > 1 ? juce::String (argv[1]) : "check";
     if (mode == "check") return check (argv) == 0 ? 0 : 1;
     if (mode == "french") return test_french (argc, argv) == 0 ? 0 : 1;
