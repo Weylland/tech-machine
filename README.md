@@ -16,6 +16,8 @@ Va dans [Releases](../../releases/latest) et prends :
 - **TechMachine-Windows-Standalone.zip** : l'application seule. Dézippe et lance `Tech Machine.exe`.
 - **TechMachine-Windows-VST3.zip** : le plugin pour ton logiciel de musique (Ableton, FL Studio, Reaper, Bitwig…).
   Dézippe et copie le dossier `Tech Machine.vst3` dans `C:\Program Files\Common Files\VST3`, puis relance un scan des plugins.
+- **TechMachine-Windows-CLAP.zip** : le même plugin au format CLAP (Bitwig, Reaper, FL Studio…). Copie `Tech Machine.clap`
+  dans `C:\Program Files\Common Files\CLAP`.
 
 Windows 10/11 64 bits. L'exe n'est pas signé : au premier lancement, Windows SmartScreen peut afficher
 « Windows a protégé votre ordinateur » → « Informations complémentaires » → « Exécuter quand même ».
@@ -25,10 +27,17 @@ Windows 10/11 64 bits. L'exe n'est pas signé : au premier lancement, Windows Sm
 - **TechMachine-macOS-Standalone.zip** : dézippe et glisse `Tech Machine.app` dans Applications.
 - **TechMachine-macOS-VST3.zip** : copie `Tech Machine.vst3` dans `~/Library/Audio/Plug-Ins/VST3`.
 - **TechMachine-macOS-AU.zip** (Logic Pro, GarageBand) : copie `Tech Machine.component` dans `~/Library/Audio/Plug-Ins/Components`.
+- **TechMachine-macOS-CLAP.zip** : copie `Tech Machine.clap` dans `~/Library/Audio/Plug-Ins/CLAP`.
 
 L'app n'est pas notarisée par Apple : au premier lancement, fais clic droit sur l'app → « Ouvrir ».
 Si macOS dit qu'elle est « endommagée », tape une fois dans le Terminal :
 `xattr -dr com.apple.quarantine "/Applications/Tech Machine.app"` (même chose pour les plugins, avec leur chemin).
+
+**Sous Linux** (x86-64, testé sur Ubuntu 24.04) : `TechMachine-Linux-Standalone.tar.gz` (l'application),
+`-VST3`, `-CLAP` et `-LV2` (copie le plugin dans `~/.vst3`, `~/.clap` ou `~/.lv2`).
+
+Au démarrage, l'application regarde s'il existe une version plus récente et affiche un bouton pour la télécharger
+(se désactive dans le menu ?).
 
 ## Les machines
 
@@ -101,9 +110,10 @@ Ace Tone ou Commodore.
 ## Ce qu'on peut faire
 
 - **Projets** : nouveau projet vide, ouvrir, enregistrer (`.techmachine`), projets récents, écran d'accueil.
-- **30 projets exemples**, au moins un par style : techno, acid, Detroit, house, Berlin, minimale, hard techno,
+- **36 projets exemples**, au moins un par style : techno, acid, Detroit, house, Berlin, minimale, hard techno,
   trance, psytrance, drum & bass, jungle, breakbeat, UK garage, gabber, électro, hip-hop, trap, drill, lo-fi, R&B,
-  funk, disco, pop, reggaeton, afro house, reggae, synthwave, ambient…
+  funk, disco, pop, reggaeton, afro house, reggae, synthwave, ambient… et 6 démos des nouveautés (Sample Keys, polyrythmies,
+  arpégiateur, conditions et FILL, sidechain, vocoder).
 - **Sons prêts à jouer** (bouton SONS) : plus de 430 sons célèbres, dont 30 sons FM du DX7 (E.Piano, Bass 1, Tub Bells…)
   et des kits pour chaque boîte à rythmes.
 - **Piano roll** pour les synthés, avec accords libres sur les synthés polyphoniques.
@@ -139,7 +149,7 @@ Ace Tone ou Commodore.
 - **Annuler / rétablir** sur tout (notes, hasard, réglages).
 - **Export WAV** hors temps réel (1 à 8 boucles, ou tout le morceau), **export MIDI**, **une piste WAV par machine**
   (stems) et enregistrement en direct.
-- **En VST3 / AU**, la lecture, le tempo et la position suivent ton logiciel de musique, et chaque machine peut sortir
+- **En VST3 / AU / CLAP / LV2**, la lecture, le tempo et la position suivent ton logiciel de musique, et chaque machine peut sortir
   sur sa propre sortie (8 sorties stéréo en plus du master).
 - **MIDI complet** : vélocité, pitch bend, molette de modulation (vibrato), horloge MIDI d'une autre machine (tempo,
   départ, arrêt) dans l'application seule, et ta vraie voix dans le VOCODER par l'entrée micro.
@@ -168,6 +178,7 @@ Résultats :
 
 - `build\TechMachine_artefacts\Release\Standalone\Tech Machine.exe`
 - `build\TechMachine_artefacts\Release\VST3\Tech Machine.vst3`
+- `build\TechMachine_artefacts\Release\CLAP\Tech Machine.clap`
 
 Stack : C++17, [JUCE 8](https://juce.com) (sous-module dans `libs/JUCE`), CMake. `build.bat` télécharge aussi
 le SDK ASIO de Steinberg (utilisé sous sa licence GPLv3) pour activer les pilotes ASIO.
@@ -177,8 +188,8 @@ le SDK ASIO de Steinberg (utilisé sous sa licence GPLv3) pour activer les pilot
 `build.bat` compile aussi `build\TechMachineTests_artefacts\Release\TechMachineTests.exe` :
 
 - `TechMachineTests check` lance tous les tests automatiques (paramètres et sons d'usine, enregistrement et réouverture
-  des 30 démos, automation, parties, sons, exports, MIDI, séquenceur, effets, sampler, interface sans texte coupé en
-  français et en anglais, propagation des réglages, réglages aléatoires, traductions). Ils tournent aussi sur GitHub, sous Windows et macOS, à chaque modification.
+  des 36 démos, automation, parties, sons, exports, MIDI, séquenceur, effets, sampler, interface sans texte coupé dans
+  les 5 langues, propagation des réglages, réglages aléatoires, traductions). Ils tournent aussi sur GitHub, sous Windows, macOS et Linux (et avec AddressSanitizer / UBSan), à chaque modification.
 - `TechMachineTests golden ref.txt` écrit l'empreinte exacte du son de toutes les démos et de tous les sons d'usine :
   avant / après une modification qui ne doit rien changer au son, les deux fichiers doivent être identiques.
 - Outils de mise au point : `sweep` (chaque réglage aux extrêmes), `chaos`, `choices` (volume de chaque choix),

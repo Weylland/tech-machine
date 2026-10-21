@@ -1,4 +1,4 @@
-# Builds the macOS version (app, VST3 and Audio Unit, Intel + Apple Silicon) and attaches it to the release.
+# Builds the macOS version (app, VST3, Audio Unit and CLAP, Intel + Apple Silicon) and attaches it to the release.
 name: macOS build
 
 on:
@@ -32,13 +32,14 @@ jobs:
           set -e
           out="build/TechMachine_artefacts/Release"
           # Not notarized: an ad-hoc signature at least lets Apple Silicon Macs run it.
-          for bundle in "$out/Standalone/Tech Machine.app" "$out/VST3/Tech Machine.vst3" "$out/AU/Tech Machine.component"; do
+          for bundle in "$out/Standalone/Tech Machine.app" "$out/VST3/Tech Machine.vst3" "$out/AU/Tech Machine.component" "$out/CLAP/Tech Machine.clap"; do
             codesign --force --deep --sign - "$bundle"
           done
           mkdir -p dist
           ditto -c -k --keepParent "$out/Standalone/Tech Machine.app" dist/TechMachine-macOS-Standalone.zip
           ditto -c -k --keepParent "$out/VST3/Tech Machine.vst3" dist/TechMachine-macOS-VST3.zip
           ditto -c -k --keepParent "$out/AU/Tech Machine.component" dist/TechMachine-macOS-AU.zip
+          ditto -c -k --keepParent "$out/CLAP/Tech Machine.clap" dist/TechMachine-macOS-CLAP.zip
           lipo -info "$out/Standalone/Tech Machine.app/Contents/MacOS/Tech Machine"
 
       - uses: actions/upload-artifact@v4
