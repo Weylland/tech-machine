@@ -1,4 +1,5 @@
 #include "Examples.h"
+#include "Automation.h"
 
 namespace techno
 {
@@ -94,6 +95,22 @@ struct P
     ExampleWriter& w;
     void operator() (const juce::String& id, float value) const { w.setParam (id, value); }
 };
+
+// A setting of the steps themselves ("chance", "condition", "delay", "velocity"): one token per step, "." = none.
+void stepValues (ExampleWriter& w, int type, const char* setting, const juce::String& text)
+{
+    auto tokens = juce::StringArray::fromTokens (text, " ", "");
+    tokens.removeEmptyStrings();
+    if (tokens.isEmpty()) return;
+    auto& t = w.track (type);
+    const int lane = t.laneFor (automation::targetFor (type, setting), true);
+    if (lane < 0) return;
+    for (int st = 0; st < maxSteps; ++st)
+    {
+        const auto& token = tokens[st % tokens.size()];
+        t.lockValue[(size_t) lane][(size_t) st] = token == "." ? noLock : token.getFloatValue();
+    }
+}
 
 void techno (ExampleWriter& w)
 {
@@ -1042,6 +1059,147 @@ void ambient (ExampleWriter& w)
     p ("fx_rain_level", 0.4f); p ("fx_rain_decay", 0.95f);
     drums (w, SoundFx, "rain", "x...............................................................");
 }
+
+// Polyrhythms: bongos of the West Coast on 5 steps and FM blips on 3, against a kick of 16.
+void bongoLab (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 122); p ("swing", 0.1f); p ("key", 2); p ("scale", 1); p ("bars", 1);
+    p ("echoTime", 2); p ("echoFeedback", 0.5f); p ("echoLevel", 0.6f); p ("reverbSize", 0.5f); p ("reverbLevel", 0.4f);
+    p ("echoType", 1);
+
+    w.show (SynthDrums);
+    drums (w, SynthDrums, "bd", "x...x...x...x...");
+    drums (w, SynthDrums, "ch", "..x...x...x...x.");
+    drums (w, SynthDrums, "cl", "......x.......x.");
+    drums (w, SynthDrums, "bp", "x.x");
+    stepValues (w, SynthDrums, "chance", ". . 0.5 . . . 0.5 . . . 0.5 . . . 0.7 .");
+    p ("synthdrums_bp_echo", 0.4f); p ("synthdrums_cl_reverb", 0.3f);
+
+    w.show (WestCoast);
+    p ("westcoast_octave", 2); p ("westcoast_ratio", 2); p ("westcoast_gate", 0); p ("westcoast_fm", 0.45f);
+    p ("westcoast_fold", 0.35f); p ("westcoast_decay", 0.2f); p ("westcoast_echo", 0.35f);
+    line (w, WestCoast, "D3 . A3 F3 .  D3 . A3 F3 .  D3 . A3 F3 .  D3");
+    w.track (WestCoast).length = 5;
+
+    w.show (Sub808);
+    line (w, Sub808, bars ({ "D1 - - - . . . . . . D1 - . . . .", "D1 - - - . . . . F1 - - . C1 - . ." }));
+}
+
+// The chip: its arpeggio, a 606 and the screaming Odyssey.
+void pixelQuest (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 150); p ("swing", 0.0f); p ("key", 0); p ("scale", 1); p ("bars", 1);
+    p ("echoLevel", 0.3f); p ("reverbLevel", 0.25f);
+
+    w.show (TR606);
+    drums (w, TR606, "bd", "x.....x.x.......");
+    drums (w, TR606, "sd", "....x.......x...");
+    drums (w, TR606, "ch", "x.x.x.x.x.x.x.xx");
+
+    w.show (Chip);
+    p ("chip_octave", 3); p ("chip_chord", 2); p ("chip_arp", 1);
+    line (w, Chip, bars ({ "C4 - - - - - - - G#3 - - - - - - -", "A#3 - - - - - - - G3 - - - - - - -" }));
+
+    w.show (SemiMod);
+    p ("semimod_model", 1); p ("semimod_cutoff", 0.55f); p ("semimod_reso", 0.4f); p ("semimod_env", 0.35f); p ("semimod_osc2", 0.7f);
+    line (w, SemiMod, bars ({ "C2 . C3 . C2 . C3 . C2 . C3 . D#2 . F2 .", "G#1 . G#2 . A#1 . A#2 . G1 . G2 . G1 . B1 ." }));
+}
+
+// The vocoder sings the chords through a phaser, the bass plays octaves.
+void robotDisco (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 118); p ("swing", 0.05f); p ("key", 4); p ("scale", 1); p ("bars", 1);
+    p ("reverbSize", 0.5f); p ("reverbLevel", 0.4f); p ("reverbType", 2); p ("pump", 0.3f);
+
+    w.show (TR909);
+    drums (w, TR909, "bd", "x...x...x...x...");
+    drums (w, TR909, "cp", "....x.......x...");
+    drums (w, TR909, "oh", "..x...x...x...x.");
+    drums (w, TR909, "ch", "x.xxx.xxx.xxx.xx");
+
+    w.show (EBass);
+    line (w, EBass, bars ({ "E2 E3 . E2 E3 . E2 E3 . E2 E3 . G2 G3 A2 A3", "C2 C3 . C2 C3 . C2 C3 . D2 D3 . D2 D3 B1 B2" }));
+
+    w.show (Vocoder);
+    p ("vocoder_chord", 4); p ("vocoder_phaser", 0.5f); p ("vocoder_reverb", 0.3f);
+    line (w, Vocoder, bars ({ "E3 - - - - - - - - - - - G3 - - -", "C3 - - - - - - - D3 - - - - - - -" }));
+}
+
+// Blade Runner: the brass of the CS-80 in a hall, a vowel wavetable pad, slow and dark.
+void tearsInRain (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 72); p ("swing", 0.0f); p ("key", 7); p ("scale", 1); p ("bars", 3);
+    p ("reverbType", 1); p ("reverbSize", 0.8f); p ("reverbLevel", 0.7f); p ("echoTime", 3); p ("echoLevel", 0.4f);
+
+    w.show (CS80);
+    p ("cs80_chord", 2); p ("cs80_reverb", 0.5f); p ("cs80_brilliance", 0.45f);
+    line (w, CS80, bars ({ held ("G3", 16), held ("D#3", 16), held ("C3", 16), held ("D3", 12) + ". . . ." }));
+
+    w.show (Wavetable);
+    p ("wavetable_table", 2); p ("wavetable_chord", 4); p ("wavetable_attack", 0.7f); p ("wavetable_release", 0.7f); p ("wavetable_reverb", 0.6f);
+    line (w, Wavetable, bars ({ held ("G2", 32), held ("C3", 32) }));
+
+    w.show (Sub808);
+    line (w, Sub808, bars ({ held ("G1", 16), held ("D#1", 16), held ("C1", 16), held ("D1", 16) }));
+}
+
+// Techno with tracks of their own length and speed, steps that play by chance or on some rounds only.
+void euclidGarden (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 126); p ("swing", 0.05f); p ("key", 9); p ("scale", 1); p ("bars", 1);
+    p ("echoType", 1); p ("echoTime", 2); p ("echoFeedback", 0.55f); p ("echoLevel", 0.6f); p ("reverbLevel", 0.4f);
+
+    w.show (TR909);
+    drums (w, TR909, "bd", "x...x...x...x...");
+    drums (w, TR909, "cp", "....x.......x...");
+    stepValues (w, TR909, "condition", ". . . . 6 . . . . . . . . . . .");   // the first clap: every second round
+    w.show (TR808);
+    drums (w, TR808, "rs", "x.x.x");
+    w.track (TR808).length = 7;
+    p ("tr808_rs_echo", 0.4f);
+    w.show (TR606);
+    drums (w, TR606, "ch", "x.x.x.x.x.x.x.x.");
+    w.track (TR606).speed = 3;   // triplets
+    stepValues (w, TR606, "chance", "1 0.6 1 0.6 1 0.6 1 0.6");
+    stepValues (w, TR606, "velocity", "0.9 0.5 0.7 0.5");
+
+    w.show (Juno106);
+    p ("juno106_chord", 4); p ("juno106_echo", 0.4f); p ("juno106_cutoff", 0.45f);
+    line (w, Juno106, ". . . A3 . . . . . . A3 . . . . .");
+    stepValues (w, Juno106, "chance", ". . . 0.8 . . . . . . 0.5 . . . . .");
+    stepValues (w, Juno106, "delay", ". . . 0.3 . . . . . . 0.3 . . . . .");
+}
+
+// Trance: the arpeggiator of the Juno over two octaves, supersaw chords, the synths dipping under the real kick.
+void arpHorizon (ExampleWriter& w)
+{
+    P p { w };
+    p ("bpm", 138); p ("swing", 0.0f); p ("key", 5); p ("scale", 1); p ("bars", 3);
+    p ("pump", 0.6f); p ("pumpMode", 1); p ("reverbType", 1); p ("reverbLevel", 0.5f); p ("echoTime", 2); p ("echoLevel", 0.5f);
+
+    w.show (TR909);
+    drums (w, TR909, "bd", "x...x...x...x...");
+    drums (w, TR909, "oh", "..x...x...x...x.");
+    drums (w, TR909, "cp", "....x.......x...");
+
+    w.show (Juno106);
+    p ("juno106_chord", 2); p ("juno106_arp", 3); p ("juno106_arprate", 1); p ("juno106_arpoctaves", 1);
+    p ("juno106_echo", 0.35f); p ("juno106_release", 0.2f);
+    line (w, Juno106, bars ({ held ("F3", 16), held ("C#3", 16), held ("G#3", 16), held ("D#3", 16) }));
+
+    w.show (JP8000);
+    p ("jp8000_chord", 2); p ("jp8000_attack", 0.4f); p ("jp8000_release", 0.6f); p ("jp8000_reverb", 0.4f);
+    line (w, JP8000, bars ({ held ("F3", 16), held ("C#3", 16), held ("G#3", 16), held ("D#3", 16) }));
+
+    w.show (TB303);
+    line (w, TB303, bars ({ ". F2 F2 . . F2 F2 . . F2 F2 . . F2 F2 .", ". C#2 C#2 . . C#2 C#2 . . C#2 C#2 . . C#2 C#2 .",
+                            ". G#2 G#2 . . G#2 G#2 . . G#2 G#2 . . G#2 G#2 .", ". D#2 D#2 . . D#2 D#2 . . D#2 D#2 . . D#2 D#2 ." }));
+}
 } // namespace
 
 const std::vector<ExampleInfo>& examples()
@@ -1077,6 +1235,12 @@ const std::vector<ExampleInfo>& examples()
         { "One Drop", "Reggae", "One drop, basse ronde, skank de guitare, orgue bubble et sirène dub.", 76 },
         { "Northern Lights", "Ambient", "Nappes de cordes et de chœur, crotales, flûtes de mellotron et pluie.", 80 },
         { "Neon Drive", "Synthwave", "Années 80 : LinnDrum à grosse snare, basse qui pulse, nappes de cordes et lead nostalgique.", 100 },
+        { "Bongo Lab", "Minimal", "Polyrythmies : bongos West Coast sur 5 pas et bips FM sur 3 contre un kick de 16, écho à bande.", 122 },
+        { "Pixel Quest", "Électro", "Jeu vidéo : arpèges de la puce 8-bit, 606 et basse de l'Odyssey qui crie.", 150 },
+        { "Robot Disco", "Disco", "French touch : le vocodeur chante les accords dans un phaser, basse en octaves, reverb plate.", 118 },
+        { "Tears in Rain", "Ambient", "Cinéma des années 80 : cuivres du CS-80 dans un grand hall, nappe de voyelles en wavetable.", 72 },
+        { "Euclid Garden", "Techno", "Pistes de longueurs différentes, charleys en triolets, pas au hasard et clap un tour sur deux.", 126 },
+        { "Arp Horizon", "Trance", "Arpégiateur du Juno sur deux octaves, supersaw et vrai sidechain qui fait respirer les synthés.", 138 },
     };
     return list;
 }
@@ -1115,6 +1279,12 @@ void buildExample (int index, ExampleWriter& w)
         case 27: reggae (w); break;
         case 28: ambient (w); break;
         case 29: synthwave (w); break;
+        case 30: bongoLab (w); break;
+        case 31: pixelQuest (w); break;
+        case 32: robotDisco (w); break;
+        case 33: tearsInRain (w); break;
+        case 34: euclidGarden (w); break;
+        case 35: arpHorizon (w); break;
         default: break;
     }
 }
