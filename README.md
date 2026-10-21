@@ -5,7 +5,7 @@ mais aussi hip-hop, trap, lo-fi, funk, disco, reggaeton, afro, reggae, synthwave
 50 instruments recréés par synthèse (et un sampler et un clavier sampler pour tes propres sons), un séquenceur pas à pas
 avec automation, un piano roll, un mode morceau,
 plus de 430 sons célèbres prêts à jouer, une bibliothèque de rythmes, le clavier MIDI, et une explication derrière
-chaque bouton, en français ou en anglais.
+chaque bouton, en français, anglais, espagnol, allemand ou portugais.
 
 ![Tech Machine](docs/screenshot.png)
 
@@ -145,7 +145,7 @@ Ace Tone ou Commodore.
   départ, arrêt) dans l'application seule, et ta vraie voix dans le VOCODER par l'entrée micro.
 - **Clavier de l'ordinateur** (CLAVIER PC) : joue les notes avec les lettres quand tu n'as pas de clavier MIDI.
 - **Un « i » partout** : clique dessus (ou clic droit sur un bouton) pour savoir à quoi sert chaque élément.
-- **Français / anglais** et **plein écran** (F11), en bas à droite.
+- **5 langues** (français, anglais, espagnol, allemand, portugais) et **plein écran** (F11), en bas à droite.
 - **Interface** : réordonne le rack en glissant les machines, choisis sa taille (75 à 150 %), suis le tutoriel
   « ton premier beat en 2 minutes » (menu ?). Accessibilité : navigation au clavier, noms lus par les lecteurs d'écran,
   repères sur les pas actifs pour les daltoniens.

@@ -59,6 +59,9 @@ set(TECHMACHINE_SOURCES
     Source/core/Help.cpp
     Source/core/Language.cpp
     Source/core/Translations.cpp
+    Source/core/Translations_es.cpp
+    Source/core/Translations_de.cpp
+    Source/core/Translations_pt.cpp
     Source/core/UpdateCheck.cpp
     Source/core/MachineDefs.cpp
     Source/core/MidiLearn.cpp

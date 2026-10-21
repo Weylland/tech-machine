@@ -688,10 +688,11 @@ static int test_ui (int argc, char** argv)
     Theme theme;
     juce::LookAndFeel::setDefaultLookAndFeel (&theme);
     juce::StringArray issues;
-    for (auto lang : { Language::French, Language::English })
+    for (int l = 0; l < numLanguages; ++l)
     {
+        const auto lang = (Language) l;
         setLanguage (lang);
-        const juce::String code = lang == Language::French ? "fr" : "en";
+        const juce::String code = languageCode (lang);
         for (int width : { 1440, 1600 })
         {
             const juce::String tag = code + "_" + juce::String (width);
@@ -3169,7 +3170,20 @@ static int test_french (int argc, char** argv)
             ++french;
         }
     printf ("french: %d untranslated texts\n", french);
-    return french;
+
+    // Spanish, German and Portuguese: every text of the English table is there too.
+    int incomplete = 0;
+    const char* const names[] { "spanish", "german", "portuguese" };
+    int n = 0;
+    for (auto* table : { &spanishTable(), &germanTable(), &portugueseTable() })
+    {
+        int gaps = 0;
+        for (auto& entry : englishTable())
+            if (table->find (entry.first) == table->end()) ++gaps;
+        printf ("%s: %d texts missing\n", names[n++], gaps);
+        incomplete += gaps;
+    }
+    return french + incomplete;
 }
 
 static int check (char** argv)

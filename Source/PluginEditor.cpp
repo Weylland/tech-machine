@@ -538,9 +538,9 @@ MainView::MainView (TechMachineProcessor& p)
     fullScreenButton.setVisible (! processor.isHosted());
 
     styleButton (languageButton, juce::Colour (0xff3a3b40));
-    languageButton.setButtonText (language() == Language::French ? juce::String::fromUTF8 ("FRANÇAIS") : juce::String ("ENGLISH"));
+    languageButton.setButtonText (languageName (language()));
     languageButton.onClick = [this] { toggleLanguage(); };
-    languageButton.setTooltip (utf8 ("Langue de l'interface : français ou anglais"));
+    languageButton.setTooltip (utf8 ("Langue de l'interface : français, anglais, espagnol, allemand ou portugais"));
 
     midiRecordButton.setTooltip (utf8 ("Pendant la lecture, ce que tu joues au clavier ou aux pads MIDI s'écrit dans les pas de la machine "
                                        "qui reçoit le MIDI (celle marquée MIDI : clique sur une machine pour la choisir). Ctrl+Z annule la prise."));
@@ -814,8 +814,14 @@ void MainView::showAudioSettings()
 
 void MainView::toggleLanguage()
 {
-    setLanguage (language() == Language::French ? Language::English : Language::French);
-    if (onLanguageChange) onLanguageChange();
+    juce::PopupMenu menu;
+    for (int i = 0; i < numLanguages; ++i) menu.addItem (i + 1, languageName ((Language) i), true, language() == (Language) i);
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (languageButton), [this] (int result)
+    {
+        if (result < 1 || (Language) (result - 1) == language()) return;
+        setLanguage ((Language) (result - 1));
+        if (onLanguageChange) onLanguageChange();
+    });
 }
 
 MainView::~MainView()
@@ -1279,8 +1285,8 @@ bool MainView::keyPressed (const juce::KeyPress& key)
     if (pcKeysButton.getToggleState() && ! mods.isCommandDown() && ! mods.isAltDown())
     {
         const auto character = juce::CharacterFunctions::toLowerCase (key.getTextCharacter());
-        const bool azerty = language() == Language::French;
-        if (character == (juce::juce_wchar) (azerty ? 'w' : 'z')) { keysOctave = juce::jmax (-3, keysOctave - 1); return true; }
+        const bool azerty = language() == Language::French, qwertz = language() == Language::German;
+        if (character == (juce::juce_wchar) (azerty ? 'w' : qwertz ? 'y' : 'z')) { keysOctave = juce::jmax (-3, keysOctave - 1); return true; }
         if (character == 'x') { keysOctave = juce::jmin (3, keysOctave + 1); return true; }
         if (const int note = noteForKey (character); note >= 0)
         {
@@ -1329,8 +1335,13 @@ bool MainView::keyPressed (const juce::KeyPress& key)
 // AZERTY (French) or QWERTY (English): the row of letters is the white keys, the row above the black keys.
 int MainView::noteForKey (juce::juce_wchar character) const
 {
-    static const juce::String azerty ("qzsedftgyhujkolpm"), qwerty ("awsedftgyhujkolp;");
-    const int index = (language() == Language::French ? azerty : qwerty).indexOfChar (character);
+    static const juce::String azerty ("qzsedftgyhujkolpm"), qwerty ("awsedftgyhujkolp;"),
+        qwertz (juce::CharPointer_UTF8 ("awsedftgzhujkolp\xc3\xb6")), spanish (juce::CharPointer_UTF8 ("awsedftgyhujkolp\xc3\xb1")),
+        portuguese (juce::CharPointer_UTF8 ("awsedftgyhujkolp\xc3\xa7"));
+    const auto lang = language();
+    const auto& layout = lang == Language::French ? azerty : lang == Language::German ? qwertz : lang == Language::Spanish ? spanish
+                       : lang == Language::Portuguese ? portuguese : qwerty;
+    const int index = layout.indexOfChar (character);
     if (index < 0) return -1;
     const int target = processor.midiTargetMachine();
     const bool drum = target >= 0 && machineDef (target).kind == MachineKind::Drum;

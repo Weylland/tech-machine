@@ -51,7 +51,7 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\n5. En panne d'idée ? Choisis un GENRE puis clique sur SURPRISE ! (tout le rack) ou sur HASARD d'une machine (Nouvelle idée, Varier un peu, Plus de notes, Moins de notes).\n"
           "\n6. Appuie sur LECTURE (barre Espace) et tourne les boutons pendant que ça joue. Double-clic sur un bouton = valeur d'origine.\n"
           "\n7. Une erreur ? Ctrl+Z annule, Ctrl+Y rétablit.\n\n8. Enregistre ton projet (Ctrl+S) et exporte-le en WAV depuis le menu PROJET.\n"
-          "\nEn bas à droite : AUDIO / MIDI (carte son, ASIO, clavier MIDI), PLEIN ÉCRAN (F11) et la langue (FRANÇAIS / ENGLISH). Clique sur une machine pour qu'elle reçoive ton clavier MIDI : la force des touches, la molette de pitch (± 2 demi-tons) et la molette de modulation (vibrato) sont suivies.\n"
+          "\nEn bas à droite : AUDIO / MIDI (carte son, ASIO, clavier MIDI), PLEIN ÉCRAN (F11) et la langue (5 langues). Clique sur une machine pour qu'elle reçoive ton clavier MIDI : la force des touches, la molette de pitch (± 2 demi-tons) et la molette de modulation (vibrato) sont suivies.\n"
           "\nLe petit « i » à côté de chaque élément explique à quoi il sert. Survole un bouton pour un résumé rapide.",
           "1. Open an EXAMPLE PROJECT (PROJECT menu › Examples, or the home screen) to hear what the machine can do, or start from an EMPTY PROJECT.\n"
           "\n2. Add machines with “+ MACHINE”: a drum machine, a bass, chords… They arrive empty.\n"
@@ -60,7 +60,7 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "\n5. Out of ideas? Pick a GENRE then click SURPRISE! (the whole rack) or a machine's RANDOM button (New idea, Vary a little, More notes, Fewer notes).\n"
           "\n6. Press PLAY (space bar) and turn the knobs while it plays. Double-click a knob = default value.\n"
           "\n7. Made a mistake? Ctrl+Z undoes, Ctrl+Y redoes.\n\n8. Save your project (Ctrl+S) and export it to WAV from the PROJECT menu.\n"
-          "\nBottom right: AUDIO / MIDI (sound card, ASIO, MIDI keyboard), FULL SCREEN (F11) and the language (FRANÇAIS / ENGLISH). Click a machine so it receives your MIDI keyboard: how hard you play, the pitch wheel (± 2 semitones) and the modulation wheel (vibrato) are followed.\n"
+          "\nBottom right: AUDIO / MIDI (sound card, ASIO, MIDI keyboard), FULL SCREEN (F11) and the language (5 languages). Click a machine so it receives your MIDI keyboard: how hard you play, the pitch wheel (± 2 semitones) and the modulation wheel (vibrato) are followed.\n"
           "\nThe little “i” next to each element explains what it does. Hover over a button for a quick summary." },
         { "1/16 triolet",
           "1/16 triplet" },
@@ -1551,6 +1551,8 @@ const std::unordered_map<std::string, const char*>& englishTable()
           "Starts or stops the music. Shortcut: space bar.\n\nPlayback always restarts from the beginning of the sequence. As a plugin (VST3), playback follows your music software." },
         { "Langue de l'interface : français ou anglais",
           "Interface language: French or English" },
+        { "Langue de l'interface : français, anglais, espagnol, allemand ou portugais",
+          "Language of the interface: French, English, Spanish, German or Portuguese" },
         { "Le R&B moderne : groove lent et sensuel, claquements de doigts, charlestons en doubles croches avec roulements, accords riches (7e, 9e), basse 808 ou ronde. Tempo conseillé : 65-100.",
           "Modern R&B: slow, sensual groove, finger snaps, 16th-note hi-hats with rolls, rich chords (7ths, 9ths), 808 or round bass. Suggested tempo: 65-100." },
         { "Le UK garage (2-step) : rythme très chaloupé où le kick saute certains temps, rimshots syncopés, basse ronde et accords soul. Tempo conseillé : 128-135, swing très marqué.",

@@ -40,14 +40,29 @@ juce::PropertiesFile& settings()
     return props;
 }
 
+juce::String languageCode (Language l)
+{
+    static const char* const codes[numLanguages] { "fr", "en", "es", "de", "pt" };
+    return codes[(int) l];
+}
+
+juce::String languageName (Language l)
+{
+    static const char* const names[numLanguages] { "FRAN\xc3\x87" "AIS", "ENGLISH", "ESPA\xc3\x91OL", "DEUTSCH", "PORTUGU\xc3\x8aS" };
+    return juce::String::fromUTF8 (names[(int) l]);
+}
+
 Language language()
 {
     if (! loaded)
     {
         loaded = true;
-        const auto saved = settings().getValue ("language");
-        if (saved == "en") current = Language::English;
-        else if (saved.isEmpty() && juce::SystemStats::getUserLanguage() != "fr") current = Language::English;
+        // The language chosen before, otherwise the one of the computer (English when it is none of ours).
+        auto code = settings().getValue ("language");
+        if (code.isEmpty()) code = juce::SystemStats::getUserLanguage().substring (0, 2).toLowerCase();
+        current = Language::English;
+        for (int i = 0; i < numLanguages; ++i)
+            if (code == languageCode ((Language) i)) current = (Language) i;
     }
     return current;
 }
@@ -56,23 +71,32 @@ void setLanguage (Language l)
 {
     loaded = true;
     current = l;
-    settings().setValue ("language", l == Language::English ? "en" : "fr");
+    settings().setValue ("language", languageCode (l));
     settings().saveIfNeeded();
 }
 
 juce::String tr (const char* french)
 {
-    if (language() == Language::French || french == nullptr || *french == 0)
+    const auto lang = language();
+    if (lang == Language::French || french == nullptr || *french == 0)
         return juce::String::fromUTF8 (french);
 
-    const auto& table = englishTable();
-    if (auto it = table.find (french); it != table.end())
-        return juce::String::fromUTF8 (it->second);
+    auto find = [french] (const std::unordered_map<std::string, const char*>& table) -> const char*
+    {
+        const auto it = table.find (french);
+        return it != table.end() ? it->second : nullptr;
+    };
+    const auto& own = lang == Language::Spanish ? spanishTable() : lang == Language::German ? germanTable()
+                    : lang == Language::Portuguese ? portugueseTable() : englishTable();
+    if (const char* found = find (own)) return juce::String::fromUTF8 (found);
 
-    const auto text = juce::String::fromUTF8 (french);
-    const juce::ScopedLock sl (missingLock());
-    missing().addIfNotAlreadyThere (text);
-    return text;
+    // Missing from this language: noted for the tests, then the English text (or the French one) stands in.
+    {
+        const juce::ScopedLock sl (missingLock());
+        missing().addIfNotAlreadyThere (juce::String::fromUTF8 (french));
+    }
+    if (const char* english = find (englishTable())) return juce::String::fromUTF8 (english);
+    return juce::String::fromUTF8 (french);
 }
 
 juce::StringArray missingTranslations()

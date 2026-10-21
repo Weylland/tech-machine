@@ -7,6 +7,7 @@
 #include "dsp/Reverb.h"
 #include "dsp/DrumVoices.h"
 #include "core/Language.h"
+#include "core/Translations.h"
 #include "ui/MachinePanel.h"
 #include <iostream>
 

@@ -24,7 +24,7 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
             "6. Appuie sur LECTURE (barre Espace) et tourne les boutons pendant que ça joue. Double-clic sur un bouton = valeur d'origine.\n\n"
             "7. Une erreur ? Ctrl+Z annule, Ctrl+Y rétablit.\n\n"
             "8. Enregistre ton projet (Ctrl+S) et exporte-le en WAV depuis le menu PROJET.\n\n"
-            "En bas à droite : AUDIO / MIDI (carte son, ASIO, clavier MIDI), PLEIN ÉCRAN (F11) et la langue (FRANÇAIS / ENGLISH). "
+            "En bas à droite : AUDIO / MIDI (carte son, ASIO, clavier MIDI), PLEIN ÉCRAN (F11) et la langue (5 langues). "
             "Clique sur une machine pour qu'elle reçoive ton clavier MIDI : la force des touches, la molette de pitch "
             "(± 2 demi-tons) et la molette de modulation (vibrato) sont suivies.\n\n"
             "Le petit « i » à côté de chaque élément explique à quoi il sert. Survole un bouton pour un résumé rapide." } },
