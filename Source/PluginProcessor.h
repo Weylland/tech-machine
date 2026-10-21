@@ -113,9 +113,21 @@ public:
     // Separate outputs in a host: a machine can leave on its own stereo output instead of the master.
     static constexpr int numAuxOutputs = 8;
 
-    // Sampler pads.
+    // Sampler pads, and the sound of SAMPLE KEYS (slot keysSlot).
     static constexpr int numPads = techno::SampleBank::numPads;
-    bool loadSamplePad (int pad, const juce::File&);
+    static constexpr int keysSlot = techno::SampleBank::keysSlot;
+    bool loadSamplePad (int slot, const juce::File&);
+    const techno::SampleData* sampleData (int slot) const { return samples.data (slot); }
+    void setSampleRange (int slot, int start, int end, int loopStart, int loopEnd);   // message thread
+
+    // Recording from the audio input (microphone) into a slot.
+    bool startSampling (int slot);                 // false without an audio input
+    juce::File stopSampling();                     // writes the WAV, loads it into the slot; empty when nothing was heard
+    bool isSampling() const { return sampling.load(); }
+    float samplingLevel() const { return samplingPeak.load(); }
+    double samplingSeconds() const { return (double) samplingCount.load() / (double) sampleRate; }
+    bool hasAudioInput() const { return getTotalNumInputChannels() > 0; }
+    static juce::File recordingsFolder();
     bool chopLoop (const juce::File& loop);
     void clearSamplePads();
     juce::String samplePadName (int pad) const { return samples.name (pad); }
@@ -280,7 +292,11 @@ private:
     void handleMidiClock (const juce::MidiBuffer&, int numSamples);
     std::atomic<bool> clockActive { false };
     double clockInterval = 0, samplesSinceClock = 1.0e9, blockStart = 0, lastClock = -1;
-    std::vector<float> micInput;   // the audio input of this block (vocoder microphone)
+    std::vector<float> micInput;   // the audio input of this block (vocoder microphone, sampling)
+    std::vector<float> samplingBuffer;
+    std::atomic<bool> sampling { false }, samplingWrite { false };
+    std::atomic<int> samplingCount { 0 }, samplingSlot { 0 };
+    std::atomic<float> samplingPeak { 0.0f };
     int quantizedStep (int machineType) const;
     void recordNoteOn (int machineType, int note, float velocity);
     void recordNoteOff (int machineType, int note);

@@ -453,6 +453,7 @@ MainView::MainView (TechMachineProcessor& p)
         panel->onLayoutChange = [this] { layoutRack(); };
         panel->onOpenRoll = [this] (int machineType) { openPianoRoll (machineType); };
         panel->onOpenAutomation = [this] (int machineType) { openAutomation (machineType); };
+        panel->onOpenSampleEditor = [this] (int slot) { openSampleEditor (slot); };
         content.addChildComponent (panel);
     }
 
@@ -598,6 +599,7 @@ void MainView::openSong()
 {
     closePianoRoll();
     closeAutomation();
+    closeSampleEditor();
     songEditor = std::make_unique<SongEditor> (processor);
     juce::Component::SafePointer<MainView> safe (this);
     songEditor->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->closeSong(); }); };
@@ -683,10 +685,30 @@ void MainView::refreshParts()
         songPlayButton.setToggleState (processor.isSongMode(), juce::dontSendNotification);
 }
 
+void MainView::openSampleEditor (int slot)
+{
+    closePianoRoll();
+    closeSong();
+    closeAutomation();
+    sampleEditor = std::make_unique<SampleEditor> (processor, slot);
+    juce::Component::SafePointer<MainView> safe (this);
+    sampleEditor->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->closeSampleEditor(); }); };
+    addAndMakeVisible (*sampleEditor);
+    sampleEditor->setBounds (rack.getBounds().expanded (0, 4));
+    sampleEditor->grabKeyboardFocus();
+}
+
+void MainView::closeSampleEditor()
+{
+    sampleEditor.reset();
+    grabKeyboardFocus();
+}
+
 void MainView::openAutomation (int machineType)
 {
     closePianoRoll();
     closeSong();
+    closeSampleEditor();
     automationEditor = std::make_unique<AutomationEditor> (processor, machineType);
     juce::Component::SafePointer<MainView> safe (this);
     automationEditor->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->closeAutomation(); }); };
@@ -705,6 +727,7 @@ void MainView::openPianoRoll (int machineType)
 {
     closeAutomation();
     closeSong();
+    closeSampleEditor();
     pianoRoll = std::make_unique<PianoRollEditor> (processor, machineType);
     juce::Component::SafePointer<MainView> safe (this);
     pianoRoll->onClose = [safe] { juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->closePianoRoll(); }); };
@@ -809,7 +832,7 @@ void MainView::showAddMenu()
     };
     section ("Batteries et percussions", { TR909, TR808, TR606, LinnDrum, TR707, DigitalKit, CR78, RhythmBox, MPC, AcousticKit, Simmons,
                                             SynthDrums, BreakKit, Percussion, WorldPerc, SoundFx });
-    section ("Tes propres sons", { Sampler });
+    section ("Tes propres sons", { Sampler, SampleKeys });
     section ("Basses", { TB303, SH101, ModelD, Sub808, EBass, Wobble });
     section ("Synthés", { Hoover, Juno106, JP8000, Poly80, CS80, Edm, DX7, LaSynth, Wavetable, M1, SemiMod, Chip, Talkbox, Vocoder });
     section ("Sons à part", { Ether, WestCoast });
@@ -1445,6 +1468,7 @@ void MainView::resized()
     startScreen.setBounds (getLocalBounds());
     if (pianoRoll != nullptr) pianoRoll->setBounds (rack.getBounds().expanded (0, 4));
     if (automationEditor != nullptr) automationEditor->setBounds (rack.getBounds().expanded (0, 4));
+    if (sampleEditor != nullptr) sampleEditor->setBounds (rack.getBounds().expanded (0, 4));
     if (songEditor != nullptr) songEditor->setBounds (rack.getBounds().expanded (0, 4));
 }
 

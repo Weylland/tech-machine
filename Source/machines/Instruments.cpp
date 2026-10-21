@@ -495,6 +495,30 @@ private:
     TalkboxParams shared;
 };
 
+class SampleKeysMachine : public PolyMachine
+{
+public:
+    SampleKeysMachine() : PolyMachine (SampleKeys)
+    {
+        gateFraction = 0.85f;
+        for (int i = 0; i < 8; ++i) voices.push_back (std::make_unique<SampleKeyVoice> (shared));
+    }
+
+    void setSampleSlot (int, const std::atomic<const SampleData*>* slot) override { shared.slot = slot; }
+
+private:
+    void applyParams() override
+    {
+        shared.root = keysLowestRoot + (int) values[pKeys::Root];
+        shared.loop = values[pKeys::Loop] > 0.5f;
+        shared.attack = values[pKeys::Attack];
+        shared.release = values[pKeys::Release];
+        shared.tone = values[pKeys::Tone];
+    }
+
+    SampleKeysParams shared;
+};
+
 class MellotronMachine : public PolyMachine
 {
 public:
@@ -936,6 +960,7 @@ std::unique_ptr<Machine> createInstrumentMachine (int type)
         case Edm:       return std::make_unique<EdmMachine>();
         case Talkbox:   return std::make_unique<TalkboxMachine>();
         case Mellotron: return std::make_unique<MellotronMachine>();
+        case SampleKeys: return std::make_unique<SampleKeysMachine>();
         case EPiano:    return std::make_unique<EPianoMachine>();
         case Brass:     return std::make_unique<BrassMachine>();
         case Winds:     return std::make_unique<WindMachine>();

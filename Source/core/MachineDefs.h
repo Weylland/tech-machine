@@ -13,14 +13,14 @@ enum MachineType
     EBass, Wobble, Hoover, Poly80, M1, Edm, Talkbox, Mellotron, EPiano, Brass, Winds, Orchestra,
     AcousticKit, TR707, Simmons, WorldPerc, Sampler,
     Chip, SemiMod, Wavetable, LaSynth, CS80, Ether, WestCoast, Vocoder,
-    TR606, RhythmBox, DigitalKit, SynthDrums,
+    TR606, RhythmBox, DigitalKit, SynthDrums, SampleKeys,
     numMachines
 };
 
 // Order of the machines in the rack and in the "add" menu.
 inline constexpr int rackOrder[numMachines] {
     TR909, TR808, TR606, LinnDrum, TR707, DigitalKit, CR78, RhythmBox, MPC, AcousticKit, Simmons, SynthDrums,
-    BreakKit, Percussion, WorldPerc, Sampler, SoundFx,
+    BreakKit, Percussion, WorldPerc, Sampler, SampleKeys, SoundFx,
     TB303, SH101, SemiMod, ModelD, Sub808, EBass, Wobble,
     Hoover, Juno106, JP8000, Poly80, CS80, Edm, DX7, LaSynth, Wavetable, M1, Chip, Talkbox, Vocoder,
     Piano, EPiano, Organ, Mallets,
@@ -125,6 +125,8 @@ namespace pEther { enum { Octave, Type, Glide, Vibrato, Rate, Tone, Attack, Rele
 namespace pWest { enum { Octave, Chord, Ratio, Gate, Fm, Fold, Symmetry, Decay, count }; }
 namespace pVoc { enum { Octave, Chord, Words, Speed, Carrier, Sibilance, Shift, Release, Source, count }; }
 namespace pSampler { enum { Mode, Texture, count }; }
+namespace pKeys { enum { Octave, Chord, Root, Attack, Release, Loop, Tone, count }; }
+inline constexpr int keysLowestRoot = 36;   // the ROOT choices start on C2
 
 // Parameter IDs.
 namespace pid

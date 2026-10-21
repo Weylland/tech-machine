@@ -719,6 +719,18 @@ static int test_ui (int argc, char** argv)
                 pumpTimers();
                 savePng (ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f), "ui_song_" + tag);
                 auditLayout (*ed, theme, "song " + tag, issues);
+
+                // The editor of a sound, with its loop.
+                const auto sound = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_ui_sound.wav");
+                writeSine (sound, 220.0f, 1.5);
+                p.loadSamplePad (TechMachineProcessor::keysSlot, sound);
+                p.setSampleRange (TechMachineProcessor::keysSlot, 4000, 60000, 20000, 50000);
+                for (auto* panel : panels)
+                    if (panel->type == SampleKeys && panel->onOpenSampleEditor) panel->onOpenSampleEditor (TechMachineProcessor::keysSlot);
+                pumpTimers();
+                savePng (ed->createComponentSnapshot (ed->getLocalBounds(), true, 1.0f), "ui_sample_" + tag);
+                auditLayout (*ed, theme, "sample " + tag, issues);
+                sound.deleteFile();
             }
         }
     }
@@ -2700,6 +2712,186 @@ static int test_sound (int argc, char** argv)
     return failures;
 }
 
+// Sampler: SAMPLE KEYS plays a sound on every note, sounds can be trimmed and looped, and recorded from the microphone.
+static int test_samplekeys (int argc, char** argv)
+{
+    juce::ignoreUnused (argc, argv);
+    int failures = 0;
+    auto expect = [&] (bool ok, const char* what)
+    {
+        if (! ok) ++failures;
+        printf ("  %-66s %s\n", what, ok ? "ok" : "FAIL");
+    };
+    constexpr double rate = 48000.0;
+    constexpr int bs = 480;
+
+    bool ordered = true;
+    for (int t = 0; t < numMachines; ++t) ordered = ordered && (int) machineDef (t).type == t;
+    expect (ordered, "every machine definition sits at the place of its type");
+
+    // A sound to load: one second of a 440 Hz sine.
+    const auto folder = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("tm_sampler");
+    folder.deleteRecursively();
+    folder.createDirectory();
+    const auto sine = folder.getChildFile ("sine.wav");
+    writeSine (sine, 440.0f, 1.0);
+
+    auto setup = [&] (TechMachineProcessor& p, int inputs = 0)
+    {
+        p.newProject();
+        p.setBars (1);
+        p.setParam (pid::bpm, 120.0f);
+        p.setShown (SampleKeys, true);
+        p.setMidiTarget (SampleKeys);
+        p.setParam (pid::echoLevel, 0.0f);
+        p.setParam (pid::reverbLevel, 0.0f);
+        p.setPlayConfigDetails (inputs, 2, rate, bs);
+        p.prepareToPlay (rate, bs);
+    };
+    auto render = [&] (TechMachineProcessor& p, int blocks, juce::MidiBuffer midi = {}, const std::vector<float>* input = nullptr)
+    {
+        std::vector<float> out;
+        juce::AudioBuffer<float> block (2, bs);
+        for (int b = 0; b < blocks; ++b)
+        {
+            block.clear();
+            if (input != nullptr)
+                for (int ch = 0; ch < 2; ++ch)
+                    for (int i = 0; i < bs; ++i) block.setSample (ch, i, (*input)[(size_t) ((b * bs + i) % (int) input->size())]);
+            p.processBlock (block, midi);
+            midi.clear();
+            out.insert (out.end(), block.getReadPointer (0), block.getReadPointer (0) + bs);
+        }
+        return out;
+    };
+    auto note = [] (int number, bool on)
+    {
+        juce::MidiBuffer m;
+        m.addEvent (on ? juce::MidiMessage::noteOn (1, number, (juce::uint8) 100) : juce::MidiMessage::noteOff (1, number), 0);
+        return m;
+    };
+    auto peakIn = [] (const std::vector<float>& v, size_t from, size_t to)
+    {
+        float peak = 0.0f;
+        for (size_t i = from; i < to && i < v.size(); ++i) peak = std::max (peak, std::abs (v[i]));
+        return peak;
+    };
+    auto window = [] (const std::vector<float>& v, size_t from, size_t length) { return std::vector<float> (v.begin() + (long) from, v.begin() + (long) (from + length)); };
+
+    // Played in tune: the sound is an A, the root is set on A4.
+    {
+        TechMachineProcessor p;
+        setup (p);
+        expect (p.loadSamplePad (TechMachineProcessor::keysSlot, sine), "a sound loads into SAMPLE KEYS");
+        p.setParam (pid::synth (SampleKeys, pKeys::Root), (float) (69 - keysLowestRoot));
+        render (p, 1);
+        double pitches[2] {};
+        int k = 0;
+        for (int midiNote : { 69, 81 })
+        {
+            const auto out = render (p, 20, note (midiNote, true));
+            pitches[k++] = estimatePitch (window (out, 2400, 4800), rate);
+            render (p, 40, note (midiNote, false));
+        }
+        printf ("  sample keys: A4 plays %.1f Hz, A5 plays %.1f Hz\n", pitches[0], pitches[1]);
+        expect (std::abs (pitches[0] - 440.0) < 4.0 && std::abs (pitches[1] - 880.0) < 8.0, "the keyboard plays the sound in tune, an octave up on A5");
+    }
+
+    // Loop: a held note goes on after the end of the sound only with BOUCLE on.
+    {
+        float tails[2] {};
+        for (int loop = 0; loop < 2; ++loop)
+        {
+            TechMachineProcessor p;
+            setup (p);
+            p.loadSamplePad (TechMachineProcessor::keysSlot, sine);
+            p.setParam (pid::synth (SampleKeys, pKeys::Root), (float) (69 - keysLowestRoot));
+            p.setParam (pid::synth (SampleKeys, pKeys::Loop), (float) loop);
+            p.setSampleRange (TechMachineProcessor::keysSlot, 0, 47999, 12000, 36000);
+            render (p, 1);
+            const auto out = render (p, 300, note (69, true));
+            tails[loop] = peakIn (out, 96000, 144000);
+        }
+        printf ("  loop: level after 2 s without loop %.3f, with loop %.3f\n", tails[0], tails[1]);
+        expect (tails[0] < 0.001f && tails[1] > 0.1f, "with BOUCLE on, a held note goes on past the end of the sound");
+    }
+
+    // Start and end of a pad: only that part plays, and the project keeps it.
+    {
+        TechMachineProcessor p;
+        setup (p);
+        p.setShown (Sampler, true);
+        p.loadSamplePad (0, sine);
+        p.setSampleRange (0, 24000, 36000, 24000, 36000);
+        p.machine (Sampler).track.hits[0][0] = true;
+        p.playing = true;
+        const auto out = render (p, 100);
+        p.playing = false;
+        render (p, 1);
+        size_t last = 0;
+        for (size_t i = 0; i < out.size(); ++i)
+            if (std::abs (out[i]) > 0.01f) last = i;
+        printf ("  pad trimmed to 0.25 s: sound until %.3f s\n", (double) last / rate);
+        expect (std::abs ((double) last / rate - 0.25) < 0.01, "a pad plays only between its start and its end");
+
+        p.loadSamplePad (TechMachineProcessor::keysSlot, sine);
+        p.setSampleRange (TechMachineProcessor::keysSlot, 100, 40000, 2000, 30000);
+        const auto project = folder.getChildFile ("sampler.tmproj");
+        p.saveProject (project);
+        TechMachineProcessor q;
+        q.loadProject (project);
+        const auto* pad = q.sampleData (0);
+        const auto* keys = q.sampleData (TechMachineProcessor::keysSlot);
+        expect (pad != nullptr && pad->start == 24000 && pad->end == 36000, "the project keeps the start and end of a pad");
+        expect (keys != nullptr && keys->start == 100 && keys->end == 40000 && keys->loopStart == 2000 && keys->loopEnd == 30000,
+                "the project keeps the sound of SAMPLE KEYS and its loop");
+        q.clearSamplePads();
+        expect (q.sampleData (0) == nullptr && q.sampleData (TechMachineProcessor::keysSlot) != nullptr, "emptying the pads keeps SAMPLE KEYS");
+    }
+
+    // The sequencer plays SAMPLE KEYS like any synth.
+    {
+        TechMachineProcessor p;
+        setup (p);
+        p.loadSamplePad (TechMachineProcessor::keysSlot, sine);
+        auto& track = p.machine (SampleKeys).track;
+        track.on[0] = true;
+        track.note[0] = 0;
+        p.playing = true;
+        expect (peakIn (render (p, 20), 0, 9600) > 0.1f, "a step of SAMPLE KEYS plays its sound");
+    }
+
+    // Recording from the microphone: a sound comes in, gets trimmed and loaded.
+    {
+        TechMachineProcessor p;
+        setup (p, 2);
+        std::vector<float> input ((size_t) bs * 100, 0.0f);
+        for (size_t i = 24000; i < input.size(); ++i) input[i] = 0.2f * std::sin (2.0f * juce::MathConstants<float>::pi * 330.0f * (float) i / 48000.0f);
+        expect (p.startSampling (3), "recording starts on pad 4");
+        render (p, 100, {}, &input);
+        const auto file = p.stopSampling();
+        const auto* pad = p.sampleData (3);
+        float peak = 0.0f;
+        if (pad != nullptr)
+            for (int i = pad->start; i <= pad->end; ++i) peak = std::max (peak, std::abs (pad->audio->getSample (0, i)));
+        printf ("  microphone: %s, %.2f s, peak %.2f\n", file.getFileName().toRawUTF8(), pad != nullptr ? (pad->end - pad->start) / rate : 0.0, peak);
+        expect (file.existsAsFile() && pad != nullptr, "the recording is saved as a WAV and loaded on the pad");
+        expect (pad != nullptr && std::abs ((pad->end - pad->start) / rate - 0.51) < 0.03, "the silence before the sound is cut");
+        expect (std::abs (peak - 0.9f) < 0.02f, "the level is brought up");
+        expect (! p.startSampling (TechMachineProcessor::keysSlot) || p.hasAudioInput(), "recording needs an audio input");
+        p.stopSampling();
+        TechMachineProcessor::recordingsFolder().deleteRecursively();
+
+        TechMachineProcessor deaf;
+        setup (deaf, 0);
+        expect (! deaf.startSampling (0), "without an audio input, recording does not start");
+    }
+
+    folder.deleteRecursively();
+    printf ("samplekeys: %d failures\n", failures);
+    return failures;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
@@ -2710,6 +2902,7 @@ static const Mode modes[] {
     { "expression", test_expression },
     { "sequencer", test_sequencer },
     { "sound", test_sound },
+    { "samplekeys", test_samplekeys },
     { "host", test_host },
     { "levels", test_levels },
     { "examples", test_examples },
@@ -2758,7 +2951,7 @@ static int check (char** argv)
     chaosIterations = 8;
     char* none[] { argv[0], nullptr };
     int failures = 0;
-    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_expression, test_sequencer, test_sound, test_ui, test_chaos, test_french })
+    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_expression, test_sequencer, test_sound, test_samplekeys, test_ui, test_chaos, test_french })
         failures += run (1, none);
     printf ("\ncheck: %d failures\n", failures);
     return failures;

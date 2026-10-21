@@ -252,6 +252,10 @@ inline const Skin& skinFor (int machineType)
         { C (0xff232036), C (0xff161424), C (0xff0c0b16), C (0xffffd8f6), C (0xfff0e8f8), C (0xffb8a8c8), C (0xff625474),
           C (0xffff4fd8), C (0xffff4fd8), { C (0xff34304a), C (0xff2e2a42), C (0xff34304a), C (0xff2e2a42) },
           C (0xffff7ae4), C (0xff20061a), KnobStyle::Modern, C (0xff2a2640), false, false, true, false, "RHYTHM SYNTHESIZER", "SYNTH DRUMS" },
+        // Sample keys: the light grey of the sampler, blue keys.
+        { C (0xffd6d6d2), C (0xffbcbcb6), C (0xff1e3a5a), C (0xfff0f6ff), C (0xff202022), C (0xff4a4a4e), C (0xff7a7a7e),
+          C (0xff2a8cff), C (0xff2a8cff), { C (0xfff0f0ee), C (0xffe2e2df), C (0xfff0f0ee), C (0xffe2e2df) },
+          C (0xff5aa8ff), C (0xff06121e), KnobStyle::Classic, C (0xff3a3a3e), false, false, false, true, "SAMPLING KEYBOARD", "SAMPLE KEYS" },
     }};
     return skins[(size_t) machineType];
 }

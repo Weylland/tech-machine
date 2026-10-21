@@ -189,6 +189,8 @@ std::unique_ptr<juce::XmlElement> TechMachineProcessor::createProjectXml()
         if (t == Sampler)
             for (int i = 0; i < numPads; ++i)
                 if (const auto pad = samples.describe (i); pad.isNotEmpty()) e->setAttribute ("pad" + juce::String (i), pad);
+        if (t == SampleKeys)
+            if (const auto sound = samples.describe (keysSlot); sound.isNotEmpty()) e->setAttribute ("sample", sound);
     }
     for (int part = 1; part < numParts; ++part)
     {
@@ -249,18 +251,18 @@ void TechMachineProcessor::restoreProjectXml (const juce::XmlElement& source)
             if (e.getStringAttribute ("id") == machineDef (t).id) return t;
         return -1;
     };
+    juce::StringArray sounds;
+    for (int i = 0; i < techno::SampleBank::numSlots; ++i) sounds.add ({});
     for (auto* e : patterns->getChildWithTagNameIterator ("Machine"))
     {
         const int t = machineOf (*e);
         if (t < 0) continue;
         readTrackXml (*e, t, machines[(size_t) t]->track);
         if (t == Sampler)
-        {
-            juce::StringArray pads;
-            for (int i = 0; i < numPads; ++i) pads.add (e->getStringAttribute ("pad" + juce::String (i)));
-            samples.restore (pads);
-        }
+            for (int i = 0; i < numPads; ++i) sounds.set (i, e->getStringAttribute ("pad" + juce::String (i)));
+        if (t == SampleKeys) sounds.set (keysSlot, e->getStringAttribute ("sample"));
     }
+    samples.restore (sounds);
     for (auto* p : patterns->getChildWithTagNameIterator ("Part"))
     {
         const int part = p->getIntAttribute ("index", -1);
@@ -444,6 +446,65 @@ bool TechMachineProcessor::loadSamplePad (int pad, const juce::File& source)
     return true;
 }
 
+void TechMachineProcessor::setSampleRange (int slot, int start, int end, int loopStart, int loopEnd)
+{
+    samples.setRange (slot, start, end, loopStart, loopEnd);
+    dirty = true;
+}
+
+juce::File TechMachineProcessor::recordingsFolder()
+{
+    // The tests keep their recordings apart from the user's.
+    const auto base = juce::SystemStats::getEnvironmentVariable ("TECHMACHINE_TEST_SETTINGS", {}).isNotEmpty()
+                          ? juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("Tech Machine Tests")
+                          : juce::File::getSpecialLocation (juce::File::userMusicDirectory).getChildFile ("Tech Machine");
+    return base.getChildFile ("Micro");
+}
+
+bool TechMachineProcessor::startSampling (int slot)
+{
+    if (! hasAudioInput() || slot < 0 || slot >= techno::SampleBank::numSlots) return false;
+    sampling = false;
+    samplingBuffer.assign ((size_t) (sampleRate * 30.0f), 0.0f);
+    samplingCount = 0;
+    samplingPeak = 0.0f;
+    samplingSlot = slot;
+    sampling = true;
+    return true;
+}
+
+juce::File TechMachineProcessor::stopSampling()
+{
+    if (! sampling.exchange (false)) return {};
+    while (samplingWrite.load()) juce::Thread::yield();   // the audio thread finishes its block
+
+    // From the first sound heard to the end, brought up to a good level.
+    const int count = samplingCount.load();
+    float peak = 0.0f;
+    for (int i = 0; i < count; ++i) peak = std::max (peak, std::abs (samplingBuffer[(size_t) i]));
+    if (peak < 0.003f) return {};
+    int first = 0;
+    while (first < count && std::abs (samplingBuffer[(size_t) first]) < peak * 0.05f) ++first;
+    first = juce::jmax (0, first - (int) (sampleRate * 0.01f));
+    juce::AudioBuffer<float> audio (1, count - first);
+    for (int i = first; i < count; ++i) audio.setSample (0, i - first, samplingBuffer[(size_t) i] * 0.9f / peak);
+
+    const auto folder = recordingsFolder();
+    folder.createDirectory();
+    const auto recording = folder.getNonexistentChildFile ("Micro " + juce::Time::getCurrentTime().formatted ("%Y-%m-%d %H-%M-%S"), ".wav", false);
+    {
+        std::unique_ptr<juce::OutputStream> stream = recording.createOutputStream();
+        if (stream == nullptr) return {};
+        juce::WavAudioFormat wav;
+        auto writer = wav.createWriterFor (stream, juce::AudioFormatWriterOptions {}.withSampleRate (sampleRate).withNumChannels (1).withBitsPerSample (24));
+        if (writer == nullptr) return {};
+        writer->writeFromAudioSampleBuffer (audio, 0, audio.getNumSamples());
+    }
+    samplingBuffer.clear();
+    samplingBuffer.shrink_to_fit();
+    return loadSamplePad (samplingSlot.load(), recording) ? recording : juce::File();
+}
+
 // Cuts a loop into 8 equal slices, one per pad, and writes the steps that play it back as it was (one bar, slices on eighth notes).
 bool TechMachineProcessor::chopLoop (const juce::File& loop)
 {
@@ -462,6 +523,6 @@ bool TechMachineProcessor::chopLoop (const juce::File& loop)
 
 void TechMachineProcessor::clearSamplePads()
 {
-    samples.clear();
+    samples.clearPads();
     dirty = true;
 }

@@ -62,6 +62,19 @@ static Stats run (TechMachineProcessor& p, double seconds, const juce::String& w
     return st;
 }
 
+// A WAV file holding a sine (mono, 48 kHz), to load into the sampler.
+static void writeSine (const juce::File& file, float hz, double seconds)
+{
+    const int length = (int) (seconds * 48000.0);
+    juce::AudioBuffer<float> audio (1, length);
+    for (int i = 0; i < length; ++i) audio.setSample (0, i, 0.5f * std::sin (2.0f * juce::MathConstants<float>::pi * hz * (float) i / 48000.0f));
+    file.deleteFile();
+    std::unique_ptr<juce::OutputStream> stream = file.createOutputStream();
+    juce::WavAudioFormat wav;
+    auto writer = wav.createWriterFor (stream, juce::AudioFormatWriterOptions {}.withSampleRate (48000.0).withNumChannels (1).withBitsPerSample (24));
+    writer->writeFromAudioSampleBuffer (audio, 0, length);
+}
+
 // The pitch of a held note: the first strong repetition (autocorrelation) between 50 and 1000 Hz.
 static double estimatePitch (const std::vector<float>& v, double rate)
 {

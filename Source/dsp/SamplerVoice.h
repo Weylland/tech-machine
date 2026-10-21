@@ -2,6 +2,7 @@
 
 #include "../core/MachineDefs.h"
 #include "DrumVoices.h"
+#include "SynthVoices.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <array>
 #include <atomic>
@@ -15,7 +16,110 @@ struct SampleData
     std::shared_ptr<const juce::AudioBuffer<float>> audio;
     double sampleRate = 44100.0;
     int start = 0, end = 0;
+    int loopStart = 0, loopEnd = 0;   // the part repeated while a note is held (SAMPLE KEYS)
     juce::String name, path;
+};
+
+// SAMPLE KEYS: one sound played on every note. Its pitch follows the note against the ROOT note; with LOOP, the
+// looped part repeats (with a short crossfade, so it never clicks) while the note is held.
+struct SampleKeysParams
+{
+    const std::atomic<const SampleData*>* slot = nullptr;
+    int root = 60;
+    bool loop = false;
+    float attack = 0.0f, release = 0.25f, tone = 1.0f;
+};
+
+class SampleKeyVoice : public PolyVoice
+{
+public:
+    explicit SampleKeyVoice (const SampleKeysParams& shared) : p (shared) {}
+
+    void prepare (float sampleRate) override
+    {
+        fs = sampleRate;
+        adsr.reset();
+        filter.reset();
+        data = nullptr;
+    }
+
+    void start (int midiNote, float velocity) override
+    {
+        data = p.slot != nullptr ? p.slot->load() : nullptr;
+        if (data == nullptr || data->audio == nullptr || data->end <= data->start + 2) { data = nullptr; return; }
+        note = midiNote;
+        gain = velocity;
+        position = (double) data->start;
+        freq = noteFreq = (float) (std::exp2 ((double) (midiNote - p.root) / 12.0) * data->sampleRate / fs);   // read speed
+        adsr.set (knobTime (p.attack, 0.002f, 2.0f), 0.1f, 1.0f, knobTime (p.release, 0.01f, 3.0f), fs);
+        adsr.gateOn();
+        open = p.tone > 0.97f;
+        if (! open) filter.set (60.0f * std::exp2 (p.tone * 8.5f), 0.7f, fs);
+    }
+
+    void release() override { adsr.gateOff(); }
+    bool isActive() const override { return data != nullptr && adsr.isActive(); }
+
+    void process (float& left, float& right) override
+    {
+        if (data == nullptr) return;
+        const double loopLength = (double) (data->loopEnd - data->loopStart);
+        const bool looping = p.loop && loopLength > 64.0;
+        if (looping)
+        {
+            while (position >= (double) data->loopEnd) position -= loopLength;
+        }
+        else if (position >= (double) data->end - 2.0)
+        {
+            data = nullptr;
+            return;
+        }
+
+        float y = read (position);
+        if (looping)
+        {
+            // The end of the loop fades into what comes just before its start.
+            const double fadeLength = std::min ({ 512.0, loopLength * 0.5, (double) data->loopStart });
+            const double into = position - ((double) data->loopEnd - fadeLength);
+            if (fadeLength > 1.0 && into > 0.0)
+            {
+                const float a = (float) (into / fadeLength);
+                y = y * (1.0f - a) + read (position - loopLength) * a;
+            }
+        }
+        position += (double) freq;
+        if (! open)
+        {
+            filter.process (y);
+            y = filter.lp;
+        }
+        y *= adsr.next() * gain;
+        left += y;
+        right += y;
+    }
+
+private:
+    // 4-point Hermite interpolation: clean even when the sound is played much higher than it was recorded.
+    float read (double pos) const
+    {
+        const auto& audio = *data->audio;
+        const int last = audio.getNumSamples() - 1;
+        const int i = (int) pos;
+        const float t = (float) (pos - (double) i);
+        const float* x = audio.getReadPointer (0);
+        auto at = [x, last] (int k) { return x[juce::jlimit (0, last, k)]; };
+        const float xm1 = at (i - 1), x0 = at (i), x1 = at (i + 1), x2 = at (i + 2);
+        const float c1 = 0.5f * (x1 - xm1), c2 = xm1 - 2.5f * x0 + 2.0f * x1 - 0.5f * x2, c3 = 0.5f * (x2 - xm1) + 1.5f * (x0 - x1);
+        return ((c3 * t + c2) * t + c1) * t + x0;
+    }
+
+    const SampleKeysParams& p;
+    const SampleData* data = nullptr;
+    double position = 0.0;
+    float fs = 44100.0f, gain = 1.0f;
+    bool open = true;
+    Adsr adsr;
+    Svf filter;
 };
 
 // Plays the sample of its pad. TUNE = pitch (+/- 12 semitones), DECAY = how much of the sound plays, TONE = low-pass filter.

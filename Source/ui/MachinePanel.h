@@ -2,6 +2,7 @@
 
 #include "../PluginProcessor.h"
 #include "PianoRoll.h"
+#include "SampleEditor.h"
 #include "Widgets.h"
 
 namespace techno
@@ -46,6 +47,7 @@ public:
     // Opens the piano roll screen for this machine (set by the main view).
     std::function<void (int machineType)> onOpenRoll;
     std::function<void (int machineType)> onOpenAutomation;
+    std::function<void (int slot)> onOpenSampleEditor;
 
     // Shows the MIDI badge on the machine that receives the keyboard.
     void setMidiTarget (bool isTarget)
@@ -62,6 +64,7 @@ private:
     bool showBrand = true;
     std::unique_ptr<juce::FileChooser> chooser;
     void chooseSampleFile (std::function<void (const juce::File&)> then);
+    void showMicRecorder (int slot);
     IconButton rollButton { "keys", "PIANO ROLL" };
     IconButton automationButton { "curve", "AUTOMATION" };
     void showMoreMenu();

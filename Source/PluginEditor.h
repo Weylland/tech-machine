@@ -125,6 +125,9 @@ private:
     std::unique_ptr<techno::SongEditor> songEditor;
     std::unique_ptr<techno::PianoRollEditor> pianoRoll;
     std::unique_ptr<techno::AutomationEditor> automationEditor;
+    std::unique_ptr<techno::SampleEditor> sampleEditor;
+    void openSampleEditor (int slot);
+    void closeSampleEditor();
     void setPage (int newPage);
     void layoutRack();
     techno::InfoButton& addInfo (const techno::HelpText&);

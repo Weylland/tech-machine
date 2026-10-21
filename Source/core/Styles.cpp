@@ -1494,7 +1494,8 @@ void generate (Track& track, const MachineDef& def, const GenerateContext& ctx, 
         case Edm:
         case EPiano:  chordLine (line, ctx, pickOne (style.chordModes, r), r); break;
         case Brass:   chordLine (line, ctx, style.chordRhythms.empty() ? ChordMode::Pad : ChordMode::Stabs, r); break;
-        case Mallets: singableMelody (line, ctx, r); break;
+        case Mallets:
+        case SampleKeys: singableMelody (line, ctx, r); break;
         case Chip:
         case Wavetable: chordLine (line, ctx, pickOne (style.chordModes, r), r); break;
         case LaSynth:

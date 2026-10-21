@@ -914,7 +914,8 @@ std::vector<MachineDef> buildDefs()
             "Charge tes propres sons : une voix, un sample de batterie, une boucle, un bruit enregistré au téléphone… "
             "Glisse un fichier audio (WAV, AIFF, FLAC ou OGG) sur une rangée, ou utilise le menu ⋯.\n\n"
             "« Découper une boucle » coupe un fichier en 8 morceaux égaux, un par pad, et les place pour rejouer la boucle : "
-            "il ne reste plus qu'à les mélanger pour créer un nouveau rythme, comme sur une MPC.",
+            "il ne reste plus qu'à les mélanger pour créer un nouveau rythme, comme sur une MPC. "
+            "Le menu ⋯ permet aussi de régler le début et la fin du son d'un pad, ou d'enregistrer au micro directement sur un pad.",
             pads,
             {
                 { "mode", "CARACTÈRE", 0.0f,
@@ -1203,6 +1204,38 @@ std::vector<MachineDef> buildDefs()
             row ("zp", "ZAP", Role::Rim, 0.5f, 0.25f, 0.5f, "Le « piou » laser des boîtes électro.", "Hauteur de départ."),
         },
         {} });
+
+    {
+        static const std::vector<const char*> roots = []
+        {
+            std::vector<const char*> names;
+            static std::vector<std::string> storage;
+            for (int n = keysLowestRoot; n <= keysLowestRoot + 48; ++n)
+                storage.push_back (std::string (keyNames[n % 12]) + std::to_string (n / 12 - 1));
+            for (auto& s : storage) names.push_back (s.c_str());
+            return names;
+        }();
+        defs.push_back ({ SampleKeys, "samplekeys", "SAMPLE KEYS", "Clavier sampler · ton propre son joué en mélodie, comme l'Emulator ou le Fairlight", MachineKind::Poly,
+            0xff2a8cff, 24,
+            "Un son à toi (une voix, une note de guitare, un bruit, un mot enregistré au micro) joué sur toutes les notes du "
+            "clavier, comme les premiers samplers (Fairlight, Emulator) : plus la note est haute, plus le son est aigu et court.\n\n"
+            "Glisse un fichier audio sur la machine, ou passe par le menu ⋯ (charger, enregistrer au micro, régler le début, la "
+            "fin et la boucle). NOTE DU SON : la note que joue ton son tel quel. BOUCLE : le son tient tant que la note dure.",
+            {},
+            {
+                { "octave", "OCTAVE", 2.0f, octaveHelp, octaves },
+                { "chord", "ACCORD", 0.0f, chordHelp, chordChoices() },
+                { "root", "NOTE DU SON", 24.0f,
+                  "La note que joue ton son à sa hauteur d'origine. Si ton son est un La, choisis A : le clavier jouera juste. "
+                  "Pour un bruit ou une voix parlée, laisse C4.", roots },
+                { "attack", "ATTACK", 0.0f, "Temps de montée du son : à gauche il démarre net, à droite il arrive doucement.", {} },
+                { "release", "RELEASE", 0.25f, releaseHelp, {} },
+                { "loop", "BOUCLE", 0.0f,
+                  "Oui = la partie bouclée du son se répète tant que la note est tenue (une nappe, une note d'orgue). "
+                  "Non = le son se joue une fois. Règle la boucle dans ⋯ › Éditer le son.", { "Non", "Oui" } },
+                { "tone", "TIMBRE", 1.0f, "Filtre : sombre à gauche, son d'origine à fond.", {} },
+            } });
+    }
 
     return defs;
 }

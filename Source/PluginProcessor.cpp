@@ -99,6 +99,7 @@ TechMachineProcessor::TechMachineProcessor()
     apvts.state.addListener (this);
     for (auto& r : recordStart) r = -1;
     for (int i = 0; i < numPads; ++i) machines[(size_t) Sampler]->setSampleSlot (i, samples.slot (i));
+    machines[(size_t) SampleKeys]->setSampleSlot (0, samples.slot (keysSlot));
 }
 
 TechMachineProcessor::~TechMachineProcessor()
@@ -262,6 +263,23 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         micInput[(size_t) i] = inputChannels > 0 ? sum / (float) inputChannels : 0.0f;
     }
     machines[(size_t) Vocoder]->setExternalInput (inputChannels > 0 ? micInput.data() : nullptr, micSamples);
+
+    // Recording into a sampler slot: the input goes on at the end of the buffer (up to 30 seconds).
+    if (sampling.load())
+    {
+        samplingWrite = true;
+        const int at = samplingCount.load();
+        const int count = juce::jmin (micSamples, (int) samplingBuffer.size() - at);
+        float peak = 0.0f;
+        for (int i = 0; i < juce::jmax (0, count); ++i)
+        {
+            samplingBuffer[(size_t) (at + i)] = micInput[(size_t) i];
+            peak = std::max (peak, std::abs (micInput[(size_t) i]));
+        }
+        samplingCount = at + juce::jmax (0, count);
+        samplingPeak = peak;
+        samplingWrite = false;
+    }
 
     // As a plugin, tempo, start/stop and position come from the host.
     bool play = playing.load();

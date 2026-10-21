@@ -399,7 +399,7 @@ void MachinePanel::askSoundName()
 
 bool MachinePanel::isInterestedInFileDrag (const juce::StringArray& files)
 {
-    if (type != Sampler) return false;
+    if (type != Sampler && type != SampleKeys) return false;
     for (auto& f : files)
         if (juce::File (f).hasFileExtension ("wav;aif;aiff;flac;ogg")) return true;
     return false;
@@ -408,6 +408,11 @@ bool MachinePanel::isInterestedInFileDrag (const juce::StringArray& files)
 // A file dropped on a pad goes on that pad; dropped elsewhere, it goes on the first empty pad (several files fill several pads).
 void MachinePanel::filesDropped (const juce::StringArray& files, int, int y)
 {
+    if (type == SampleKeys)
+    {
+        if (! files.isEmpty()) processor.loadSamplePad (TechMachineProcessor::keysSlot, juce::File (files[0]));
+        return;
+    }
     int pad = (y - drumTop) / drumRowH;
     const bool onPad = y >= drumTop && pad >= 0 && pad < TechMachineProcessor::numPads;
     if (! onPad)
@@ -432,8 +437,14 @@ void MachinePanel::chooseSampleFile (std::function<void (const juce::File&)> the
                           });
 }
 
+void MachinePanel::showMicRecorder (int slot)
+{
+    juce::CallOutBox::launchAsynchronously (std::make_unique<MicRecorder> (processor, slot), moreButton.getScreenBounds(), nullptr);
+}
+
 void MachinePanel::refreshSampleNames()
 {
+    if (type == SampleKeys) repaint();   // the name of the sound, in the SON box
     if (type != Sampler) return;
     for (int r = 0; r < rowMutes.size() && r < TechMachineProcessor::numPads; ++r)
     {
@@ -518,8 +529,25 @@ void MachinePanel::showMoreMenu()
             pads.addItem (100 + i, utf8 ("Pad ") + juce::String (i + 1) + (name.isNotEmpty() ? "   (" + name + ")" : juce::String()));
         }
         menu.addSubMenu (utf8 ("Charger un son sur un pad…"), pads);
+        juce::PopupMenu edit, mic;
+        for (int i = 0; i < TechMachineProcessor::numPads; ++i)
+        {
+            const auto name = processor.samplePadName (i);
+            const auto label = utf8 ("Pad ") + juce::String (i + 1) + (name.isNotEmpty() ? "   (" + name + ")" : juce::String());
+            edit.addItem (600 + i, label, name.isNotEmpty());
+            mic.addItem (700 + i, label);
+        }
+        menu.addSubMenu (utf8 ("Éditer le son d'un pad (début, fin)…"), edit);
+        menu.addSubMenu (utf8 ("Enregistrer au micro sur un pad…"), mic);
         menu.addItem (200, utf8 ("Découper une boucle sur les 8 pads…"));
         menu.addItem (201, utf8 ("Vider les pads"));
+    }
+    if (type == SampleKeys)
+    {
+        menu.addSeparator();
+        menu.addItem (800, utf8 ("Charger un son…"));
+        menu.addItem (801, utf8 ("Éditer le son (début, fin, boucle)…"), processor.sampleData (TechMachineProcessor::keysSlot) != nullptr);
+        menu.addItem (802, utf8 ("Enregistrer au micro…"));
     }
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (moreButton), [this] (int result)
     {
@@ -548,11 +576,17 @@ void MachinePanel::showMoreMenu()
             case 5: processor.shiftMachine (type, 1); break;
             case 6: processor.clearMachine (type); break;
             case 200: chooseSampleFile ([this] (const juce::File& f) { processor.chopLoop (f); }); break;
+            case 800: chooseSampleFile ([this] (const juce::File& f) { processor.loadSamplePad (TechMachineProcessor::keysSlot, f); }); break;
+            case 801: if (onOpenSampleEditor) onOpenSampleEditor (TechMachineProcessor::keysSlot); break;
+            case 802: showMicRecorder (TechMachineProcessor::keysSlot); break;
             case 201: processor.clearSamplePads(); break;
             case 100: case 101: case 102: case 103: case 104: case 105: case 106: case 107:
                 chooseSampleFile ([this, pad = result - 100] (const juce::File& f) { processor.loadSamplePad (pad, f); });
                 break;
-            default: break;
+            default:
+                if (result >= 600 && result < 600 + TechMachineProcessor::numPads && onOpenSampleEditor) onOpenSampleEditor (result - 600);
+                if (result >= 700 && result < 700 + TechMachineProcessor::numPads) showMicRecorder (result - 700);
+                break;
         }
     });
 }
@@ -852,7 +886,13 @@ void MachinePanel::paint (juce::Graphics& g)
         }
     }
 
-    if (! soundBox.isEmpty()) paint::printedBox (g, soundBox.toFloat(), utf8 ("SON"), skin);
+    juce::String soundTitle = utf8 ("SON");
+    if (type == SampleKeys)
+    {
+        const auto* sound = processor.sampleData (TechMachineProcessor::keysSlot);
+        soundTitle << utf8 (" · ") << (sound != nullptr ? sound->name.toUpperCase().substring (0, 28) : utf8 ("GLISSE UN FICHIER AUDIO ICI"));
+    }
+    if (! soundBox.isEmpty()) paint::printedBox (g, soundBox.toFloat(), soundTitle, skin);
     if (! stripBox.isEmpty()) paint::printedBox (g, stripBox.toFloat(), utf8 ("EFFETS & MIX"), skin);
 }
 } // namespace techno
