@@ -188,7 +188,7 @@ private:
     RackContent content;
     juce::OwnedArray<techno::MachinePanel> panels;
 
-    juce::OwnedArray<juce::Component> masterControls;
+    juce::OwnedArray<juce::Component> masterControls, masterChoices;
     VuMeter vu;
     juce::Rectangle<int> consoleArea, masterArea;
 

@@ -59,6 +59,9 @@ TechMachineProcessor::TechMachineProcessor()
     reverbSize = raw (pid::reverbSize);
     reverbLevel = raw (pid::reverbLevel);
     pumpParam = raw (pid::pump);
+    echoType = raw (pid::echoType);
+    reverbType = raw (pid::reverbType);
+    pumpMode = raw (pid::pumpMode);
     djFilterParam = raw (pid::djFilter);
     comp = raw (pid::comp);
     disto = raw (pid::disto);
@@ -82,6 +85,8 @@ TechMachineProcessor::TechMachineProcessor()
         s.reverb = raw (pid::machine (t, "reverb"));
         s.volume = raw (pid::machine (t, "volume"));
         s.pan = raw (pid::machine (t, "pan"));
+        s.phaser = raw (pid::machine (t, "phaser"));
+        s.flanger = raw (pid::machine (t, "flanger"));
         s.output = raw (pid::machine (t, "output"));
     }
 
@@ -127,6 +132,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout TechMachineProcessor::create
     layout.add (knob (pid::comp, "Compressor", 0.0f));
     layout.add (knob (pid::disto, "Distortion", 0.0f));
     layout.add (knob (pid::volume, "Volume", 0.8f));
+    layout.add (choice (pid::echoType, "Echo type", { std::begin (echoTypeNames), std::end (echoTypeNames) }, 0));
+    layout.add (choice (pid::reverbType, "Reverb type", { std::begin (reverbTypeNames), std::end (reverbTypeNames) }, 0));
+    layout.add (choice (pid::pumpMode, "Pump mode", { std::begin (pumpModeNames), std::end (pumpModeNames) }, 0));
 
     for (int t = 0; t < numMachines; ++t)
     {
@@ -144,6 +152,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout TechMachineProcessor::create
         layout.add (knob (pid::machine (t, "reverb"), name + " reverb", 0.0f));
         layout.add (knob (pid::machine (t, "volume"), name + " volume", 0.75f));
         layout.add (knob (pid::machine (t, "pan"), name + " pan", 0.5f, panText));
+        layout.add (knob (pid::machine (t, "phaser"), name + " phaser", 0.0f));
+        layout.add (knob (pid::machine (t, "flanger"), name + " flanger", 0.0f));
         layout.add (choice (pid::machine (t, "output"), name + " output",
                             { "Master", "Sortie 2", "Sortie 3", "Sortie 4", "Sortie 5", "Sortie 6", "Sortie 7", "Sortie 8", "Sortie 9" }, 0));
 
@@ -222,6 +232,12 @@ void TechMachineProcessor::prepareToPlay (double newSampleRate, int samplesPerBl
 
     reverb.prepare (sampleRate);
     lastReverbSize = -1.0f;
+    kickFollower.prepare (sampleRate);
+    for (auto& s : strips)
+    {
+        s.phaserFx.prepare (sampleRate);
+        s.flangerFx.prepare (sampleRate);
+    }
     micInput.assign ((size_t) juce::jmax (samplesPerBlock, 8192), 0.0f);
 
     muteCoef = 1.0f - decayCoef (0.006f, sampleRate);
@@ -359,13 +375,18 @@ void TechMachineProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     distoValue = disto->load();
     volumeValue = volume->load() * volume->load() * 1.2f;
     delay.setTime (stepSeconds() * echoTimeSteps[juce::jlimit (0, 4, (int) echoTime->load())]);
+    delay.setTape (echoType->load() > 0.5f);
+    sidechain = pumpMode->load() > 0.5f;
+    barHz = bpmValue / 60.0f / 4.0f;
     masterFilter.set (djFilterParam->load(), sampleRate);
     compressor.setAmount (comp->load());
 
-    if (const float size = reverbSize->load(); std::abs (size - lastReverbSize) > 0.001f)
+    const int roomType = juce::jlimit (0, 2, (int) reverbType->load());
+    if (const float size = reverbSize->load(); std::abs (size - lastReverbSize) > 0.001f || roomType != lastReverbType)
     {
-        reverb.setSize (size);
+        reverb.setSize (size, roomType);
         lastReverbSize = size;
+        lastReverbType = roomType;
     }
 
     const int numSamples = buffer.getNumSamples();
@@ -451,6 +472,8 @@ void TechMachineProcessor::readStrip (int t)
     s.crushAmount = m.setting (Crush, s.crush->load());
     s.echoSend = m.setting (Echo, s.echo->load());
     s.reverbSend = m.setting (Reverb, s.reverb->load());
+    s.phaserAmount = m.setting (PhaserAmount, s.phaser->load());
+    s.flangerAmount = m.setting (FlangerAmount, s.flanger->load());
     s.djFilter.set (m.setting (Filter, s.filter->load()), sampleRate);
 }
 
@@ -471,8 +494,9 @@ void TechMachineProcessor::render (float* left, float* right, int numSamples)
             }
         }
 
-        const float duck = pump.process (pumpDepth);
-        float sumL = 0, sumR = 0, echoIn = 0, reverbIn = 0;
+        const float pumped = pump.process (pumpDepth);
+        const float duck = sidechain ? kickFollower.gain (pumpDepth) : pumped;
+        float sumL = 0, sumR = 0, echoIn = 0, reverbIn = 0, kicks = 0;
 
         for (int t = 0; t < numMachines; ++t)
         {
@@ -492,6 +516,9 @@ void TechMachineProcessor::render (float* left, float* right, int numSamples)
             }
             s.crusher.process (s.crushAmount, sampleRate, l, r);
             s.djFilter.process (l, r);
+            if (s.phaserAmount > 0.001f) s.phaserFx.process (s.phaserAmount, barHz, l, r);
+            if (s.flangerAmount > 0.001f) s.flangerFx.process (s.flangerAmount, barHz, l, r);
+            kicks += frame.kick * s.gain;
 
             s.gain += (s.target - s.gain) * muteCoef;
             l *= s.gain * s.panLeft;
@@ -516,6 +543,8 @@ void TechMachineProcessor::render (float* left, float* right, int numSamples)
             echoIn += mono * s.echoSend + frame.echo * s.gain;
             reverbIn += mono * s.reverbSend + frame.reverb * s.gain;
         }
+
+        kickFollower.push (kicks);
 
         float dl, dr;
         delay.process (echoIn, feedbackValue, dl, dr);

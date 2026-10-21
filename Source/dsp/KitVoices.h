@@ -185,6 +185,7 @@ private:
 };
 
 // Synthesized percussion: a sine modulated in frequency (and optionally in ring) with a pitch sweep and noise.
+// It runs at twice the sample rate, and the FM never pushes its partials past what that rate can hold: no folded-back noise.
 struct FmPercConfig
 {
     float baseHz, sweepOctaves, sweepSeconds, ratio, index, indexSeconds, ringRatio, noise, highpassHz, minDecay, maxDecay, gain;
@@ -194,6 +195,8 @@ class FmPerc : public DrumVoice
 {
 public:
     explicit FmPerc (FmPercConfig c) : cfg (c) {}
+
+    void prepare (float sampleRate) override { DrumVoice::prepare (sampleRate * 2.0f); }
 
     void trigger (float velocity, const DrumSettings& s) override
     {
@@ -211,10 +214,24 @@ public:
 
     float process() override
     {
+        if (! active && ! ringing) return 0.0f;
+        const float a = step();
+        const float b = step();
+        const float out = decimator.process (a, b);
+        ringing = active || std::abs (out) > 1.0e-6f;
+        return out;
+    }
+
+private:
+    float step()
+    {
         if (! active) return 0.0f;
         const float f = freq * std::exp2 (cfg.sweepOctaves * pitchEnv);
-        advance (modPhase, std::min (f * cfg.ratio, fs * 0.45f) / fs);
-        const float mod = std::sin (2.0f * pi * modPhase) * index * indexEnv;
+        const float modHz = std::min (f * cfg.ratio, fs * 0.45f);
+        advance (modPhase, modHz / fs);
+        // Carson: the partials reach about (index + 1) x the modulator above the carrier; they stay below 0.45 x the rate.
+        const float maxIndex = std::max (0.0f, (fs * 0.45f - f) / std::max (1.0f, modHz) - 1.0f);
+        const float mod = std::sin (2.0f * pi * modPhase) * std::min (index * indexEnv, maxIndex);
         advance (phase, std::min (f, fs * 0.45f) / fs);
         float x = std::sin (2.0f * pi * phase + mod);
         if (cfg.ringRatio > 0.0f)
@@ -236,8 +253,9 @@ public:
         return out;
     }
 
-private:
     FmPercConfig cfg;
+    Decimator2x decimator;
+    bool ringing = false;
     float phase = 0, modPhase = 0, ringPhase = 0, freq = 100, gain = 1, amp = 0, pitchEnv = 0, indexEnv = 0, index = 1;
     float ampCoef = 0, pitchCoef = 0, indexCoef = 0;
     bool active = false;

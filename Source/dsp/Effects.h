@@ -17,8 +17,8 @@ public:
         bufferL.assign ((size_t) size, 0.0f);
         bufferR.assign ((size_t) size, 0.0f);
         writePos = 0;
-        lowpassL.set (3200.0f, fs);
-        lowpassR.set (3200.0f, fs);
+        lowpassL.set (tape ? 2300.0f : 3200.0f, fs);
+        lowpassR.set (tape ? 2300.0f : 3200.0f, fs);
         highpassL.set (180.0f, fs);
         highpassR.set (180.0f, fs);
         smoothCoef = 1.0f - decayCoef (0.08f, fs);
@@ -26,8 +26,22 @@ public:
 
     void setTime (float seconds) { targetDelay = std::clamp (seconds * fs, 1.0f, (float) size - 2.0f); }
 
+    // Tape echo: the same repeat on both sides, darker and more saturated at each pass, with the wow and flutter of the tape.
+    void setTape (bool on)
+    {
+        if (on == tape) return;
+        tape = on;
+        lowpassL.set (on ? 2300.0f : 3200.0f, fs);
+        lowpassR.set (on ? 2300.0f : 3200.0f, fs);
+    }
+
     void process (float input, float feedback, float& outL, float& outR)
     {
+        if (tape)
+        {
+            processTape (input, feedback, outL, outR);
+            return;
+        }
         currentDelay += (targetDelay - currentDelay) * smoothCoef;
         advance (wow, 0.55f / fs);
         const float wobble = 1.0f + 0.0012f * std::sin (2.0f * pi * wow);
@@ -44,6 +58,20 @@ public:
     }
 
 private:
+    void processTape (float input, float feedback, float& outL, float& outR)
+    {
+        currentDelay += (targetDelay - currentDelay) * smoothCoef;
+        advance (wow, 0.55f / fs);
+        advance (flutter, 6.3f / fs);
+        const float speed = 1.0f + 0.004f * std::sin (2.0f * pi * wow) + 0.0007f * std::sin (2.0f * pi * flutter);
+        const float echo = read (bufferL, currentDelay * speed);
+        outL = outR = echo;
+        const float fb = highpassL.highpass (lowpassL.lowpass (echo)) * feedback;
+        bufferL[(size_t) writePos] = fastTanh ((input + fb) * 1.6f) * 0.68f;
+        bufferR[(size_t) writePos] = 0.0f;
+        if (++writePos >= size) writePos = 0;
+    }
+
     float read (const std::vector<float>& buffer, float delay) const
     {
         float pos = (float) writePos - delay;
@@ -56,7 +84,8 @@ private:
 
     std::vector<float> bufferL, bufferR;
     int size = 0, writePos = 0;
-    float fs = 44100.0f, currentDelay = 1000.0f, targetDelay = 1000.0f, smoothCoef = 0.0f, wow = 0.0f;
+    float fs = 44100.0f, currentDelay = 1000.0f, targetDelay = 1000.0f, smoothCoef = 0.0f, wow = 0.0f, flutter = 0.0f;
+    bool tape = false;
     OnePole lowpassL, lowpassR, highpassL, highpassR;
 };
 
@@ -230,6 +259,29 @@ public:
 private:
     bool active = false;
     float power = 0, gainDb = 0, rmsCoef = 0, attack = 0, release = 0, thresholdDb = -6.0f, makeupDb = 0;
+};
+
+// Real sidechain: follows the level of the kicks themselves (their length, their force), fast attack, slow release.
+class KickFollower
+{
+public:
+    void prepare (float sampleRate)
+    {
+        attack = 1.0f - decayCoef (0.0008f, sampleRate);
+        release = 1.0f - decayCoef (0.05f, sampleRate);
+        env = 0.0f;
+    }
+
+    void push (float kick)
+    {
+        const float level = std::abs (kick);
+        env += (level - env) * (level > env ? attack : release);
+    }
+
+    float gain (float depth) const { return 1.0f - depth * 0.85f * std::min (1.0f, env * 1.6f); }
+
+private:
+    float env = 0.0f, attack = 0.5f, release = 0.001f;
 };
 
 // Sidechain-style ducking triggered by the kick.

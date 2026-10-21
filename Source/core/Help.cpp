@@ -217,11 +217,29 @@ const std::map<juce::String, std::pair<const char*, const char*>>& entries()
         { "strip.reverb", { "Envoi Reverb",
             "Quantité de son envoyée dans la réverbération : le son semble joué dans une grande salle.\n\n"
             "Un peu = de la profondeur. Beaucoup = son lointain et planant. La taille de la salle se règle dans le MASTER." } },
+        { "strip.phaser", { "Phaser",
+            "Un effet qui tourne : des creux balaient le son de haut en bas, une fois par mesure. Le son des guitares funk, "
+            "des nappes planantes et des claviers des années 70.\n\nÀ zéro, pas de phaser. Monte doucement : un peu suffit souvent." } },
+        { "strip.flanger", { "Flanger",
+            "Le son « d'avion à réaction » : une copie du son très légèrement décalée qui balaie lentement, sur deux mesures. "
+            "Superbe sur les charleys, les accords et les nappes.\n\nÀ zéro, pas de flanger." } },
         { "strip.volume", { "Volume", "Volume général de cette machine dans le mix." } },
         { "strip.pan", { "Panoramique", "Place le son à gauche ou à droite dans la stéréo. Au centre par défaut." } },
         { "strip.accent", { "Force de l'accent",
             "Différence de volume entre les pas accentués et les autres. À zéro, les accents ne changent rien." } },
 
+        { "master.echoType", { "Type d'écho",
+            "PING-PONG : l'écho rebondit de gauche à droite, net et moderne.\n\n"
+            "BANDE : l'écho des vieilles machines à bande (Space Echo, dub) : au centre, chaque répétition plus sombre, "
+            "plus saturée et légèrement ondulante. Idéal en dub, dub techno et reggae." } },
+        { "master.reverbType", { "Salle (type de reverb)",
+            "PIÈCE : une salle naturelle, polyvalente.\n\nHALL : une grande salle de concert, plus longue et plus douce, avec un "
+            "petit temps avant la queue. Pour les nappes, l'ambient et la trance.\n\nPLATE : la réverb à plaque des studios des "
+            "années 70-80, dense et brillante, sans délai : parfaite sur la caisse claire et les voix. La taille se règle avec ESPACE." } },
+        { "master.pumpMode", { "Mode de la pompe",
+            "POMPE : les synthés baissent un instant à chaque kick, toujours de la même façon.\n\n"
+            "SIDECHAIN : les synthés baissent en suivant le vrai son des kicks, comme un compresseur sidechain en studio : un kick "
+            "long creuse plus longtemps, un kick doux creuse moins. La quantité se règle avec le bouton POMPE." } },
         { "master.echoTime", { "Temps de l'écho",
             "Écart entre les répétitions de l'écho, calé sur le tempo. 1/8 pointée = le classique de la dub techno et de la trance." } },
         { "master.echoFeedback", { "Répétitions",

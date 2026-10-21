@@ -50,7 +50,7 @@ int targetFor (int machineType, const juce::String& id)
 
 juce::String label (int machineType, int target)
 {
-    static const char* const stripLabels[] { "DISTO", "CRUSH", "FILTRE", "ÉCHO", "REVERB", "VOLUME", "PAN" };
+    static const char* const stripLabels[] { "DISTO", "CRUSH", "FILTRE", "ÉCHO", "REVERB", "VOLUME", "PAN", "PHASER", "FLANGER" };
     static const char* const rowLabels[] { "NIVEAU", "HAUTEUR", "DURÉE", "TIMBRE", "DISTO", "FILTRE", "PAN", "ÉCHO", "REVERB" };
     const auto& def = machineDef (machineType);
     const auto d = decode (def, target);

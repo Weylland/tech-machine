@@ -447,12 +447,20 @@ public:
             formants[(size_t) i].process (source);
             y += formants[(size_t) i].bp * (a.amps[i] + (b.amps[i] - a.amps[i]) * morph) * (i == 0 ? 1.0f : 0.6f + p.brightness);
         }
-        y = (y + source * 0.04f) * adsr.next() * gain * 0.45f;
+        const float level = vowelGain (p.from) + (vowelGain (p.to) - vowelGain (p.from)) * morph;
+        y = (y + source * 0.04f) * adsr.next() * gain * 0.45f * level;
         left += y;
         right += y;
     }
 
 private:
+    // Measured: some vowels came out up to 3.6 dB softer than "Aah". Each one is brought to the level of "Aah".
+    static float vowelGain (int index)
+    {
+        static constexpr float gains[6] { 1.0f, 1.514f, 1.514f, 1.496f, 1.259f, 1.189f };   // Aah Ooh Eeh Mmh Oh Ih
+        return gains[(size_t) std::clamp (index, 0, 5)];
+    }
+
     const TalkboxParams& p;
     float fs = 44100.0f, gain = 1, phase = 0, morph = 0, morphCoef = 0;
     unsigned int counter = 0;

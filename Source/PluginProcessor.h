@@ -6,6 +6,7 @@
 #include "core/Presets.h"
 #include "core/Styles.h"
 #include "dsp/Effects.h"
+#include "dsp/Modulation.h"
 #include "dsp/Reverb.h"
 #include "machines/Machines.h"
 #include "machines/SampleBank.h"
@@ -181,7 +182,10 @@ public:
 private:
     struct Strip
     {
-        std::atomic<float>* show, *mute, *solo, *drive, *crush, *filter, *echo, *reverb, *volume, *pan, *output;
+        std::atomic<float>* show, *mute, *solo, *drive, *crush, *filter, *echo, *reverb, *volume, *pan, *output, *phaser, *flanger;
+        techno::Phaser phaserFx;
+        techno::Flanger flangerFx;
+        float phaserAmount = 0, flangerAmount = 0;
         juce::RangedAudioParameter* muteParameter = nullptr, *soloParameter = nullptr;   // scenes change them on the audio thread
         int bus = 0;   // 0 = master, 1..numAuxOutputs = a separate output of the host
         techno::Crusher crusher;
@@ -233,6 +237,11 @@ private:
 
     std::atomic<float>* bpm, *swing, *keyParam, *scaleParam, *bars;
     std::atomic<float>* echoTime, *echoFeedback, *echoLevel, *reverbSize, *reverbLevel, *pumpParam, *djFilterParam, *comp, *disto, *volume;
+    std::atomic<float>* echoType, *reverbType, *pumpMode;
+    techno::KickFollower kickFollower;
+    bool sidechain = false;
+    int lastReverbType = 0;
+    float barHz = 0.5f;   // one cycle per bar, for the phaser and the flanger
 
     float sampleRate = 44100.0f, bpmValue = 128.0f, muteCoef = 0.0f;
     double samplesToNextStep = 0.0, stepLength = 1.0;

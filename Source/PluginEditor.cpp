@@ -458,10 +458,20 @@ MainView::MainView (TechMachineProcessor& p)
 
     masterInfo = &addInfo ({ "Master", utf8 ("Les effets et réglages qui s'appliquent à tout le morceau, après le mélange de toutes les machines.") });
     {
-        auto* echoTime = new ChoiceControl (state, pid::echoTime, utf8 ("TEMPS ÉCHO"),
-                                            { std::begin (echoTimeNames), std::end (echoTimeNames) }, help ("master.echoTime"));
-        masterControls.add (echoTime);
-        addAndMakeVisible (echoTime);
+        // Four selectors in a square, then the knobs.
+        struct MasterChoice { const char* id; const char* label; std::vector<const char*> choices; const char* helpKey; };
+        const MasterChoice choices[] {
+            { pid::echoTime, "TEMPS ÉCHO", { std::begin (echoTimeNames), std::end (echoTimeNames) }, "master.echoTime" },
+            { pid::echoType, "TYPE ÉCHO", { std::begin (echoTypeNames), std::end (echoTypeNames) }, "master.echoType" },
+            { pid::reverbType, "SALLE", { std::begin (reverbTypeNames), std::end (reverbTypeNames) }, "master.reverbType" },
+            { pid::pumpMode, "MODE POMPE", { std::begin (pumpModeNames), std::end (pumpModeNames) }, "master.pumpMode" },
+        };
+        for (auto& c : choices)
+        {
+            auto* control = new ChoiceControl (state, c.id, utf8 (c.label), c.choices, help (c.helpKey));
+            masterChoices.add (control);
+            addAndMakeVisible (control);
+        }
 
         struct MasterKnob { const char* id; const char* label; const char* helpKey; bool bipolar; };
         const MasterKnob knobs[] {
@@ -1399,29 +1409,33 @@ void MainView::resized()
     // Master strip.
     masterArea = { 10, getHeight() - masterH - 6, w - 20, masterH };
     masterInfo->setBounds (masterArea.getX() + 142, masterArea.getY() + 20, 15, 15);
-    vu.setBounds (masterArea.getX() + 168, masterArea.getY() + 12, narrow ? 124 : 170, masterArea.getHeight() - 24);
+    vu.setBounds (masterArea.getX() + 168, masterArea.getY() + 12, narrow ? 76 : 170, masterArea.getHeight() - 24);
     meterInfo->setBounds (vu.getRight() + 3, masterArea.getY() + 12, 15, 15);
 
     // Settings column at the right of the master strip.
-    auto column = juce::Rectangle<int> (masterArea.getRight() - 16 - 248, masterArea.getY() + 14, 248, masterArea.getHeight() - 28);
+    const int columnW = 248;
+    auto column = juce::Rectangle<int> (masterArea.getRight() - 16 - columnW, masterArea.getY() + 14, columnW, masterArea.getHeight() - 28);
     const int columnX = column.getX();
     {
         auto top = column.removeFromTop ((column.getHeight() - 6) / 2);
         column.removeFromTop (6);
-        audioButton.setBounds (top.removeFromLeft (122));
+        audioButton.setBounds (top.removeFromLeft (columnW / 2 - 2));
         midiRecordButton.setBounds (top.withTrimmedLeft (4));
-        fullScreenButton.setBounds (column.removeFromLeft (122));
+        fullScreenButton.setBounds (column.removeFromLeft (columnW / 2 - 2));
         languageButton.setBounds (column.withTrimmedLeft (4));
     }
 
-    // Master controls share the space left between the meter and the settings.
-    int mx = vu.getRight() + (narrow ? 18 : 30);
-    const int knobStep = juce::jlimit (76, 96, (columnX - 12 - mx - 130) / juce::jmax (1, masterControls.size() - 1));
+    // Master controls share the space left between the meter and the settings: the selectors two by two, then the knobs.
+    int mx = meterInfo->getRight() + 6;
+    const int choiceW = narrow ? 106 : 128;
+    for (int i = 0; i < masterChoices.size(); ++i)
+        masterChoices[i]->setBounds (mx + (i % 2) * choiceW, masterArea.getY() + 10 + (i / 2) * 50, choiceW - 6, 48);
+    mx += 2 * choiceW + (narrow ? 2 : 12);
+    const int knobStep = juce::jlimit (70, 96, (columnX - 12 - mx) / juce::jmax (1, masterControls.size()));
     for (int i = 0; i < masterControls.size(); ++i)
     {
-        const int width = i == 0 ? 130 : knobStep;
-        masterControls[i]->setBounds (mx, masterArea.getY() + (i == 0 ? 30 : 14), width - 6, i == 0 ? 52 : 86);
-        mx += width;
+        masterControls[i]->setBounds (mx, masterArea.getY() + 14, knobStep - 1, 86);
+        mx += knobStep;
     }
 
     const int rackTop = consoleArea.getBottom() + 16;

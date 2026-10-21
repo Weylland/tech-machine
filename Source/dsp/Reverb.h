@@ -56,26 +56,36 @@ public:
         setSize (lastSize < 0.0f ? 0.5f : lastSize);
     }
 
-    void setSize (float size)
+    // Room (the original), hall (bigger, darker, a gap before the tail) or plate (dense and bright, no gap).
+    enum Type { Room, Hall, Plate };
+
+    void setSize (float size, int newType = -1)
     {
         lastSize = size;
+        if (newType >= 0) type = newType;
         static constexpr float baseMs[8] { 29.7f, 37.1f, 41.1f, 43.7f, 53.0f, 59.3f, 67.9f, 73.1f };
-        const float scale = 0.55f + size * 0.9f;
-        const float rt60 = 0.45f * std::pow (16.0f, size);
+        static constexpr float lengthScale[3] { 1.0f, 1.3f, 0.8f }, decayScale[3] { 1.0f, 1.7f, 1.25f };
+        static constexpr float brightness[3] { 9500.0f, 7000.0f, 13000.0f }, darkening[3] { 5000.0f, 4000.0f, 4500.0f };
+        static constexpr float preDelayBase[3] { 0.008f, 0.03f, 0.001f }, preDelaySpread[3] { 0.025f, 0.03f, 0.004f };
+        static constexpr float diffusions[3] { 0.65f, 0.7f, 0.75f };
+        const auto k = (size_t) std::clamp (type, 0, 2);
+        const float scale = (0.55f + size * 0.9f) * lengthScale[k];
+        const float rt60 = 0.45f * std::pow (16.0f, size) * decayScale[k];
         for (size_t i = 0; i < 8; ++i)
         {
             lengths[i] = fs * baseMs[i] * scale / 1000.0f;
             gains[i] = std::pow (10.0f, -3.0f * lengths[i] / (rt60 * fs));
-            damping[i].set (9500.0f - size * 5000.0f, fs);
+            damping[i].set (std::min (brightness[k] - size * darkening[k], fs * 0.45f), fs);
         }
-        preDelaySamples = fs * (0.008f + size * 0.025f);
+        preDelaySamples = fs * (preDelayBase[k] + size * preDelaySpread[k]);
+        diffusion = diffusions[k];
     }
 
     void process (float input, float& outL, float& outR)
     {
         preDelay.write (input);
         float x = preDelay.read (preDelaySamples);
-        for (auto& d : diffusers) x = d.process (x, 0.65f);
+        for (auto& d : diffusers) x = d.process (x, diffusion);
 
         advance (lfo1, 0.31f / fs);
         advance (lfo2, 0.47f / fs);
@@ -118,7 +128,8 @@ private:
         }
     };
 
-    float fs = 44100.0f, lastSize = -1.0f, preDelaySamples = 400.0f, lfo1 = 0.0f, lfo2 = 0.37f;
+    float fs = 44100.0f, lastSize = -1.0f, preDelaySamples = 400.0f, lfo1 = 0.0f, lfo2 = 0.37f, diffusion = 0.65f;
+    int type = Room;
     std::array<DelayLine, 8> lines;
     std::array<float, 8> lengths {}, gains {};
     std::array<OnePole, 8> damping;

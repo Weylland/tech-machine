@@ -19,6 +19,7 @@ namespace techno
 struct Frame
 {
     float left = 0, right = 0, echo = 0, reverb = 0;
+    float kick = 0;   // the kicks alone, for the sidechain
 };
 
 struct StepInfo

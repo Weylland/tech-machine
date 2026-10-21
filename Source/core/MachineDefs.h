@@ -155,6 +155,9 @@ inline constexpr const char* echoLevel = "echoLevel";
 inline constexpr const char* reverbSize = "reverbSize";
 inline constexpr const char* reverbLevel = "reverbLevel";
 inline constexpr const char* pump = "pump";
+inline constexpr const char* echoType = "echoType";
+inline constexpr const char* reverbType = "reverbType";
+inline constexpr const char* pumpMode = "pumpMode";
 inline constexpr const char* djFilter = "djFilter";
 inline constexpr const char* comp = "comp";
 inline constexpr const char* disto = "disto";
@@ -163,4 +166,7 @@ inline constexpr const char* volume = "volume";
 
 inline constexpr const char* echoTimeNames[] { "1/16", "1/8", "1/8 pointée", "1/4", "1/4 pointée" };
 inline constexpr float echoTimeSteps[] { 1.0f, 2.0f, 3.0f, 4.0f, 6.0f };
+inline constexpr const char* echoTypeNames[] { "Ping-pong", "Bande" };
+inline constexpr const char* reverbTypeNames[] { "Pièce", "Hall", "Plate" };
+inline constexpr const char* pumpModeNames[] { "Pompe", "Sidechain" };
 } // namespace techno

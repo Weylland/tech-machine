@@ -274,6 +274,7 @@ float drumVoiceTrim (const juce::String& machine, const juce::String& row)
         { "rhythmbox", "bd", 0.9f }, { "rhythmbox", "sd", 2.0f }, { "rhythmbox", "rs", 1.25f }, { "rhythmbox", "ch", 1.7f },
         { "rhythmbox", "cy", 1.6f }, { "rhythmbox", "gu", 0.6f },
         { "synthdrums", "bd", 1.45f }, { "synthdrums", "sd", 1.65f }, { "synthdrums", "bp", 1.45f },
+        { "synthdrums", "ch", 1.5f }, { "synthdrums", "oh", 1.43f },   // the hats lost their folded-back noise (2x rate)
     };
     for (auto& t : trims)
         if (machine == t.machine && row == t.row) return t.gain;

@@ -10,7 +10,7 @@ std::vector<juce::String> TechMachineProcessor::soundParameters (int type)
 {
     const auto& def = machineDef (type);
     std::vector<juce::String> ids;
-    for (const char* fx : { "drive", "crush", "filter", "echo", "reverb" }) ids.push_back (pid::machine (type, fx));
+    for (const char* fx : { "drive", "crush", "filter", "echo", "reverb", "phaser", "flanger" }) ids.push_back (pid::machine (type, fx));
     if (def.kind == MachineKind::Drum)
         for (int r = 0; r < (int) def.rows.size(); ++r)
             for (const char* p : { "level", "tune", "decay", "tone", "drive", "filter", "pan", "echo", "reverb" })

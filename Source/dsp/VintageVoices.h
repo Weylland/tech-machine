@@ -198,13 +198,19 @@ public:
         if (model == 1) ratio = 1.0f + 2.5f * envAmount * e + cutoff * 0.5f;   // Odyssey: synced oscillator swept by the envelope
         else if (model == 3) ratio = 1.006f;
         const float dt2 = f1 * ratio / fs;
-        if (model == 1 && wrapped) phase2 = phase1 * ratio;
-        else advance (phase2, dt2);
-        if (phase2 >= 1.0f) phase2 -= std::floor (phase2);
+        float o2;
+        if (model == 1)
+        {
+            o2 = synced.process (wrapped ? phase1 / dt1 : -1.0f, dt2, wave);
+        }
+        else
+        {
+            advance (phase2, dt2);
+            if (phase2 >= 1.0f) phase2 -= std::floor (phase2);
+            o2 = (1.0f - wave) * blepSaw (phase2, dt2) + wave * blepPulse (phase2, dt2, 0.5f);
+        }
 
         const float o1 = (1.0f - wave) * blepSaw (phase1, dt1) + wave * blepPulse (phase1, dt1, 0.5f);
-        const float o2 = model == 1 ? (1.0f - wave) * (2.0f * phase2 - 1.0f) + wave * (phase2 < 0.5f ? 1.0f : -1.0f)
-                                    : (1.0f - wave) * blepSaw (phase2, dt2) + wave * blepPulse (phase2, dt2, 0.5f);
         float x = (o1 * 0.6f + o2 * osc2 * 0.6f) * (1.0f - ring * 0.7f) + ring * o1 * o2 * 0.9f;
         if (model == 4) x += drive * 0.7f * fastTanh (feedback * 2.5f);   // MiniBrute: the Brute Factor feeds the output back in
         if (model == 2) x += fastTanh (svf.bp * reso * 1.2f) * 0.3f;      // MS-20: the screaming filter
@@ -247,7 +253,50 @@ private:
     void onTrigger() override { adsr.gateOn(); }
     void onRelease() override { adsr.gateOff(); }
 
+    // Oscillator restarted by the first one (hard sync). Every jump of its wave, its own or the restart, is smoothed by a
+    // band-limited step spread over two samples: one sample of delay.
+    struct SyncedOscillator
+    {
+        float phase = 0.3f, pending = 0.0f;
+
+        // sinceRestart: how long ago (in samples, 0..1) the first oscillator restarted this one, -1 if it did not.
+        float process (float sinceRestart, float dt, float wave)
+        {
+            auto valueAt = [wave] (float p) { return (1.0f - wave) * (2.0f * p - 1.0f) + wave * (p < 0.5f ? 1.0f : -1.0f); };
+            float corrections = 0.0f;
+            auto step = [&] (float height, float since)   // a jump of the wave, "since" samples ago (0..1)
+            {
+                pending += 0.5f * height * since * since;
+                corrections -= 0.5f * height * (1.0f - since) * (1.0f - since);
+            };
+
+            const float before = phase;
+            if (sinceRestart >= 0.0f)
+            {
+                const float atRestart = std::min (before + dt * (1.0f - sinceRestart), 0.999999f);
+                const float from = before, to = atRestart;
+                if (wave > 0.0f && from < 0.5f && to >= 0.5f) step (-2.0f * wave, (sinceRestart * dt + (to - 0.5f)) / dt);
+                step (valueAt (0.0f) - valueAt (to), sinceRestart);
+                phase = sinceRestart * dt;
+            }
+            else
+            {
+                phase += dt;
+                if (wave > 0.0f && before < 0.5f && phase >= 0.5f) step (-2.0f * wave, (phase - 0.5f) / dt);
+                if (phase >= 1.0f)
+                {
+                    phase -= 1.0f;
+                    step (4.0f * wave - 2.0f, phase / dt);   // the saw falls by 2, the square rises by 2
+                }
+            }
+            const float out = pending;
+            pending = valueAt (phase) + corrections;
+            return out;
+        }
+    };
+
     int model = 0;
+    SyncedOscillator synced;
     float phase1 = 0, phase2 = 0.3f, wave = 0, osc2 = 0.5f, cutoff = 0.5f, reso = 0.35f, envAmount = 0.5f, ring = 0, drive = 0.2f;
     float glideCoef = 0.1f, drift = 0, feedback = 0;
     Adsr adsr;
@@ -695,10 +744,12 @@ public:
         carrierPhase += dt;
         carrierPhase -= std::floor (carrierPhase);
 
-        // Wavefolder: the further the sine is pushed, the more it folds back on itself.
+        // Wavefolder: the further the sine is pushed, the more it folds back on itself. The fold is computed from its
+        // anti-derivative between two samples (ADAA): the folds keep their sharpness without folding back into the audio.
         const float x = sine (carrierPhase) * (1.0f + p.fold * 5.0f * (0.5f + 0.5f * strike)) + (p.symmetry - 0.5f) * 1.5f;
-        const float t = 0.25f * x + 0.25f;
-        const float folded = 4.0f * std::abs (t - std::floor (t + 0.5f)) - 1.0f;
+        const float dx = x - previousX;
+        const float folded = std::abs (dx) > 1.0e-4f ? (foldIntegral (x) - foldIntegral (previousX)) / dx : fold (0.5f * (x + previousX));
+        previousX = x;
 
         float amp = strike, cutoff = 150.0f + 14000.0f * strike * strike;
         if (p.gate == 1) cutoff = 16000.0f;
@@ -711,8 +762,23 @@ public:
     }
 
 private:
+    // A triangle of the input: the shape of the fold, between -1 and 1.
+    static float fold (float x)
+    {
+        const float t = 0.25f * x + 0.25f;
+        return 4.0f * std::abs (t - std::floor (t + 0.5f)) - 1.0f;
+    }
+
+    // Its integral over x (periodic: the triangle averages zero over a fold).
+    static float foldIntegral (float x)
+    {
+        const float t = 0.25f * x + 0.25f;
+        const float u = t - std::floor (t + 0.5f);
+        return 4.0f * (2.0f * u * std::abs (u) - u);
+    }
+
     const WestParams& p;
-    float fs = 44100.0f, gain = 1, strike = 0, fastDecay = 0.99f, slowDecay = 0.999f, modPhase = 0, carrierPhase = 0;
+    float fs = 44100.0f, gain = 1, strike = 0, fastDecay = 0.99f, slowDecay = 0.999f, modPhase = 0, carrierPhase = 0, previousX = 0;
     Svf filter;
     Adsr sustainEnv;
 };

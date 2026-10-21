@@ -186,6 +186,7 @@ public:
                 v += fx.driveAmount * (fastTanh (v * g) * 0.85f - v);
             }
             v = fx.dsp.process (v);
+            if (def.rows[(size_t) i].role == Role::Kick) f.kick += v;
             f.left += v * fx.panLeft;
             f.right += v * fx.panRight;
             f.echo += v * fx.echoSend;

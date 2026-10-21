@@ -7,12 +7,12 @@
 //   machine the settings of each sound. A Track lane stores one of these numbers ("target").
 namespace techno::automation
 {
-inline constexpr const char* stripSuffixes[] { "drive", "crush", "filter", "echo", "reverb", "volume", "pan" };
-inline constexpr int stripCount = 7;
+inline constexpr const char* stripSuffixes[] { "drive", "crush", "filter", "echo", "reverb", "volume", "pan", "phaser", "flanger" };
+inline constexpr int stripCount = 9;
 inline constexpr const char* rowSuffixes[] { "level", "tune", "decay", "tone", "drive", "filter", "pan", "echo", "reverb" };
 inline constexpr int rowCount = 9;
 
-enum Strip { Drive, Crush, Filter, Echo, Reverb, Volume, Pan };
+enum Strip { Drive, Crush, Filter, Echo, Reverb, Volume, Pan, PhaserAmount, FlangerAmount };
 enum RowSetting { Level, Tune, Decay, Tone, RowDrive, RowFilter, RowPan, RowEcho, RowReverb };
 
 inline constexpr float normalVelocity = 0.75f;   // the velocity of a step without a value

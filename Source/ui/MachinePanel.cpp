@@ -237,6 +237,7 @@ MachinePanel::MachinePanel (TechMachineProcessor& p, int machineType, const int&
         { "accent", "ACCENT", "strip.accent", false }, { "drive", "DISTO", "strip.drive", false },
         { "crush", "CRUSH", "strip.crush", false }, { "filter", "FILTRE", "strip.filter", true },
         { "echo", "ÉCHO", "strip.echo", false }, { "reverb", "REVERB", "strip.reverb", false },
+        { "phaser", "PHASER", "strip.phaser", false }, { "flanger", "FLANGER", "strip.flanger", false },
         { "volume", "VOLUME", "strip.volume", false }, { "pan", "PAN", "strip.pan", true },
     };
     for (auto& s : stripDefs)

@@ -2446,6 +2446,260 @@ static int test_sequencer (int argc, char** argv)
     return failures;
 }
 
+// Sound: talkbox vowels at the same level, the new effects, less aliasing.
+static int test_sound (int argc, char** argv)
+{
+    juce::ignoreUnused (argc, argv);
+    int failures = 0;
+    auto expect = [&] (bool ok, const char* what)
+    {
+        if (! ok) ++failures;
+        printf ("  %-66s %s\n", what, ok ? "ok" : "FAIL");
+    };
+    constexpr double rate = 48000.0;
+    constexpr int bs = 480;
+
+    auto setup = [&] (TechMachineProcessor& p, std::initializer_list<int> types)
+    {
+        p.newProject();
+        p.setBars (1);
+        p.setParam (pid::bpm, 120.0f);
+        p.setParam (pid::swing, 0.0f);
+        for (int t : types) p.setShown (t, true);
+        p.setPlayConfigDetails (0, 2, rate, bs);
+        p.prepareToPlay (rate, bs);
+    };
+    struct Stereo { std::vector<float> left, right; };
+    auto render = [&] (TechMachineProcessor& p, int blocks, juce::MidiBuffer midi = {})
+    {
+        Stereo out;
+        juce::AudioBuffer<float> block (2, bs);
+        for (int b = 0; b < blocks; ++b)
+        {
+            block.clear();
+            p.processBlock (block, midi);
+            midi.clear();
+            out.left.insert (out.left.end(), block.getReadPointer (0), block.getReadPointer (0) + bs);
+            out.right.insert (out.right.end(), block.getReadPointer (1), block.getReadPointer (1) + bs);
+        }
+        return out;
+    };
+    auto rmsDb = [] (const std::vector<float>& v, size_t from, size_t to)
+    {
+        double sum = 0.0;
+        to = std::min (to, v.size());
+        for (size_t i = from; i < to; ++i) sum += (double) v[i] * v[i];
+        return 10.0 * std::log10 (sum / (double) juce::jmax ((size_t) 1, to - from) + 1.0e-12);
+    };
+    auto noteOn = [] (int note)
+    {
+        juce::MidiBuffer m;
+        m.addEvent (juce::MidiMessage::noteOn (1, note, (juce::uint8) 100), 0);
+        return m;
+    };
+
+    // Talkbox: every vowel held at the same level (within 2 dB).
+    {
+        double lo = 1e9, hi = -1e9;
+        printf ("  talkbox vowels:");
+        for (int v = 0; v < 6; ++v)
+        {
+            double level = 0.0;
+            for (int note : { 48, 60, 67 })
+            {
+                TechMachineProcessor p;
+                setup (p, { Talkbox });
+                p.setMidiTarget (Talkbox);
+                p.setParam (pid::synth (Talkbox, pTalk::From), (float) v);
+                p.setParam (pid::synth (Talkbox, pTalk::To), (float) v);
+                render (p, 1);
+                const auto out = render (p, 60, noteOn (note));
+                level += rmsDb (out.left, 9600, out.left.size()) / 3.0;
+            }
+            printf (" %s %.1f", machineDef (Talkbox).params[pTalk::From].choices[(size_t) v], level);
+            lo = std::min (lo, level);
+            hi = std::max (hi, level);
+        }
+        printf (" dB\n");
+        expect (hi - lo < 2.0, "the six talkbox vowels play at the same level");
+    }
+
+    // Aliasing: on a held note, the energy that is not on a harmonic of the note (folded back from above the
+    // highest frequency the sample rate can hold), relative to the whole sound.
+    auto inharmonicDb = [&] (const std::vector<float>& v, double f0)
+    {
+        constexpr int n = 8192;
+        const size_t from = v.size() - (size_t) n;
+        std::vector<double> x ((size_t) n);
+        for (int i = 0; i < n; ++i)
+        {
+            const double w = 0.35875 - 0.48829 * std::cos (2.0 * juce::MathConstants<double>::pi * i / (n - 1))
+                           + 0.14128 * std::cos (4.0 * juce::MathConstants<double>::pi * i / (n - 1))
+                           - 0.01168 * std::cos (6.0 * juce::MathConstants<double>::pi * i / (n - 1));
+            x[(size_t) i] = v[from + (size_t) i] * w;
+        }
+        double harmonic = 0.0, other = 0.0;
+        for (int k = 4; k < n / 2; ++k)
+        {
+            const double step = 2.0 * juce::MathConstants<double>::pi * k / n;
+            double re = 0.0, im = 0.0;
+            for (int i = 0; i < n; ++i)
+            {
+                re += x[(size_t) i] * std::cos (step * i);
+                im -= x[(size_t) i] * std::sin (step * i);
+            }
+            const double hz = (double) k * rate / n;
+            const double nearest = std::round (hz / f0) * f0;
+            ((nearest > 0.0 && std::abs (hz - nearest) < 5.0 * rate / n) ? harmonic : other) += re * re + im * im;
+        }
+        return 10.0 * std::log10 (other / (harmonic + other) + 1.0e-12);
+    };
+    auto heldNote = [&] (int type, int note, std::initializer_list<std::pair<int, float>> settings)
+    {
+        TechMachineProcessor p;
+        setup (p, { type });
+        p.setMidiTarget (type);
+        for (auto& [param, value] : settings) p.setParam (pid::synth (type, param), value);
+        p.setParam (pid::machine (type, "reverb"), 0.0f);
+        p.setParam (pid::echoLevel, 0.0f);
+        p.setParam (pid::reverbLevel, 0.0f);
+        render (p, 1);
+        return render (p, 150, noteOn (note)).left;
+    };
+    {
+        const auto west = heldNote (WestCoast, 84, { { pWest::Gate, 1.0f }, { pWest::Fold, 1.0f }, { pWest::Fm, 0.0f }, { pWest::Decay, 1.0f } });
+        const double westDb = inharmonicDb (west, juce::MidiMessage::getMidiNoteInHertz (84));
+        const auto odyssey = heldNote (SemiMod, 79, { { pSemi::Model, 1.0f }, { pSemi::Wave, 0.0f }, { pSemi::Osc2, 1.0f }, { pSemi::Cutoff, 1.0f },
+                                                     { pSemi::Env, 0.3f }, { pSemi::Sustain, 1.0f }, { pSemi::Drive, 0.0f } });
+        const double odysseyDb = inharmonicDb (odyssey, juce::MidiMessage::getMidiNoteInHertz (79));
+        printf ("  aliasing: west coast wavefolder %.1f dB, odyssey sync %.1f dB\n", westDb, odysseyDb);
+        expect (westDb < -50.0, "the WEST COAST wavefolder keeps its aliasing low");
+        expect (odysseyDb < -36.0, "the synced oscillator of the Odyssey keeps its aliasing low");
+    }
+
+    // Effects: one 909 hit, sent to the echo or the reverb of the master.
+    auto hit = [&] (int row, std::initializer_list<std::pair<const char*, float>> params, int blocks)
+    {
+        TechMachineProcessor p;
+        setup (p, { TR909 });
+        p.machine (TR909).track.hits[(size_t) row][0] = true;
+        p.setParam (pid::echoLevel, 0.0f);
+        p.setParam (pid::reverbLevel, 0.0f);
+        for (auto& [id, value] : params) p.setParam (id, value);
+        p.playing = true;
+        const auto out = render (p, blocks);
+        p.playing = false;
+        return out;
+    };
+    {
+        auto sideDifference = [] (const Stereo& o, size_t from, size_t to)
+        {
+            double diff = 0.0;
+            for (size_t i = from; i < to; ++i) diff = std::max (diff, (double) std::abs (o.left[i] - o.right[i]));
+            return diff;
+        };
+        const auto send = juce::String (pid::machine (TR909, "echo"));
+        const auto pingPong = hit (0, { { send.toRawUTF8(), 1.0f }, { pid::echoLevel, 1.0f } }, 400);
+        const auto tape = hit (0, { { send.toRawUTF8(), 1.0f }, { pid::echoLevel, 1.0f }, { pid::echoType, 1.0f } }, 400);
+        printf ("  echo: left-right difference ping-pong %.3f, tape %.6f; tape tail %.1f dB\n", sideDifference (pingPong, 48000, 192000),
+                sideDifference (tape, 48000, 192000), rmsDb (tape.left, 48000, 192000));
+        expect (sideDifference (pingPong, 48000, 192000) > 0.01 && sideDifference (tape, 48000, 192000) < 1.0e-6
+                    && rmsDb (tape.left, 48000, 192000) > -50.0, "the tape echo repeats in the middle, the ping-pong on both sides");
+    }
+    {
+        const auto send = juce::String (pid::machine (TR909, "reverb"));
+        auto reverbOf = [&] (float type)
+        {
+            return hit (3, { { send.toRawUTF8(), 1.0f }, { pid::reverbLevel, 1.0f }, { pid::reverbType, type } }, 300).left;
+        };
+        // The reverb alone: the same hit without reverb taken away. The next hit comes at 2 s.
+        const auto dry = hit (3, {}, 300).left;
+        auto wet = [&] (const std::vector<float>& v)
+        {
+            std::vector<float> w (v.size());
+            for (size_t i = 0; i < v.size(); ++i) w[i] = v[i] - dry[i];
+            return w;
+        };
+        const auto room = wet (reverbOf (0.0f)), hall = wet (reverbOf (1.0f)), plate = wet (reverbOf (2.0f));
+        const double roomTail = rmsDb (room, 60000, 90000), hallTail = rmsDb (hall, 60000, 90000);
+        auto onset = [] (const std::vector<float>& w)
+        {
+            for (size_t i = 0; i < w.size(); ++i)
+                if (std::abs (w[i]) > 1.0e-4f) return (double) i / 48.0;
+            return 1.0e9;
+        };
+        const double roomStart = onset (room), plateStart = onset (plate);
+        printf ("  reverb: tail after 1.3 s room %.1f / hall %.1f dB, starts after room %.1f / plate %.1f ms\n", roomTail, hallTail, roomStart, plateStart);
+        expect (hallTail > roomTail + 3.0, "the hall rings longer than the room");
+        expect (plateStart < roomStart - 10.0, "the plate starts sooner than the room (no gap)");
+    }
+
+    // Sidechain: the synths make room for the kicks, following their length.
+    {
+        auto synthUnderKicks = [&] (float mode, float kickDecay)
+        {
+            Stereo outs[2];
+            for (int withSynth = 0; withSynth < 2; ++withSynth)
+            {
+                TechMachineProcessor p;
+                setup (p, withSynth == 1 ? std::initializer_list<int> { TR909, Juno106 } : std::initializer_list<int> { TR909 });
+                for (int st = 0; st < 16; st += 4) p.machine (TR909).track.hits[0][(size_t) st] = true;
+                p.setParam (pid::row (TR909, 0, "decay"), kickDecay);
+                p.setParam (pid::pump, 1.0f);
+                p.setParam (pid::pumpMode, mode);
+                p.setParam (pid::echoLevel, 0.0f);
+                p.setParam (pid::reverbLevel, 0.0f);
+                p.setMidiTarget (Juno106);
+                render (p, 1);
+                if (withSynth == 1) render (p, 1, noteOn (57));
+                p.playing = true;
+                outs[withSynth] = render (p, 300);
+            }
+            std::vector<float> synth (outs[1].left.size());
+            for (size_t i = 0; i < synth.size(); ++i) synth[i] = outs[1].left[i] - outs[0].left[i];
+            return synth;
+        };
+        const size_t beat = 24000, kick = beat * 4;   // the second bar: everything is settled
+        const auto shortKick = synthUnderKicks (1.0f, 0.1f), longKick = synthUnderKicks (1.0f, 1.0f);
+        const double during = rmsDb (shortKick, kick + 480, kick + 2400), after = rmsDb (shortKick, kick + 19000, kick + 23500);
+        const double longLater = rmsDb (longKick, kick + 7200, kick + 9600), shortLater = rmsDb (shortKick, kick + 7200, kick + 9600);
+        printf ("  sidechain: synth %.1f dB under the kick, %.1f dB before the next; 150-200 ms after a short kick %.1f, a long kick %.1f dB\n",
+                during, after, shortLater, longLater);
+        expect (during < after - 6.0, "the sidechain lowers the synths under each kick");
+        expect (longLater < shortLater - 2.0, "a longer kick keeps the synths down longer");
+    }
+
+    // Phaser and flanger: the sound moves, its level stays.
+    {
+        auto juno = [&] (const char* effect, float amount)
+        {
+            TechMachineProcessor p;
+            setup (p, { Juno106 });
+            p.setMidiTarget (Juno106);
+            p.setParam (pid::machine (Juno106, effect), amount);
+            p.setParam (pid::echoLevel, 0.0f);
+            p.setParam (pid::reverbLevel, 0.0f);
+            render (p, 1);
+            return render (p, 300, noteOn (57)).left;
+        };
+        const auto dry = juno ("phaser", 0.0f), phased = juno ("phaser", 1.0f), flanged = juno ("flanger", 1.0f);
+        auto difference = [&] (const std::vector<float>& wet)
+        {
+            double d = 0.0;
+            for (size_t i = 48000; i < wet.size(); ++i) d = std::max (d, (double) std::abs (wet[i] - dry[i]));
+            return d;
+        };
+        const double dryDb = rmsDb (dry, 48000, dry.size());
+        printf ("  modulation: dry %.1f dB, phaser %.1f dB (changes %.2f), flanger %.1f dB (changes %.2f)\n", dryDb,
+                rmsDb (phased, 48000, phased.size()), difference (phased), rmsDb (flanged, 48000, flanged.size()), difference (flanged));
+        expect (difference (phased) > 0.02 && std::abs (rmsDb (phased, 48000, phased.size()) - dryDb) < 3.0, "the phaser changes the sound, not its level");
+        expect (difference (flanged) > 0.02 && std::abs (rmsDb (flanged, 48000, flanged.size()) - dryDb) < 3.0, "the flanger changes the sound, not its level");
+    }
+
+    printf ("sound: %d failures\n", failures);
+    return failures;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
@@ -2455,6 +2709,7 @@ static const Mode modes[] {
     { "exports", test_exports },
     { "expression", test_expression },
     { "sequencer", test_sequencer },
+    { "sound", test_sound },
     { "host", test_host },
     { "levels", test_levels },
     { "examples", test_examples },
@@ -2503,7 +2758,7 @@ static int check (char** argv)
     chaosIterations = 8;
     char* none[] { argv[0], nullptr };
     int failures = 0;
-    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_expression, test_sequencer, test_ui, test_chaos, test_french })
+    for (auto run : { test_params, test_project, test_propagate, test_automation, test_parts, test_sounds, test_exports, test_expression, test_sequencer, test_sound, test_ui, test_chaos, test_french })
         failures += run (1, none);
     printf ("\ncheck: %d failures\n", failures);
     return failures;
