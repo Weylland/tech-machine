@@ -41,3 +41,32 @@ jobs:
           path: |
             build/**/TechMachineTests_artefacts/**/*.png
             build/**/TechMachineTests_artefacts/**/*.txt
+
+  # The same checks built with AddressSanitizer and UndefinedBehaviorSanitizer: reads outside a buffer or of memory
+  # never written stop the run with the line that did it.
+  sanitizers:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: >
+          cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
+          -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+
+      - name: Build the test program
+        run: cmake --build build --config RelWithDebInfo --target TechMachineTests --parallel 4
+
+      - name: Run the checks
+        shell: bash
+        env:
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: |
+          exe=$(find build -type f -name TechMachineTests -perm -u+x | head -1)
+          echo "Running $exe"
+          "$exe" check
