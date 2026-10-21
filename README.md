@@ -2,7 +2,8 @@
 
 Une groovebox pour faire de la musique électronique sans rien y connaître : techno, house, trance, drum & bass,
 mais aussi hip-hop, trap, lo-fi, funk, disco, reggaeton, afro, reggae, synthwave, pop, ambient…
-50 instruments recréés par synthèse (et un sampler pour tes propres sons), un séquenceur pas à pas et un piano roll,
+50 instruments recréés par synthèse (et un sampler et un clavier sampler pour tes propres sons), un séquenceur pas à pas
+avec automation, un piano roll, un mode morceau,
 plus de 430 sons célèbres prêts à jouer, une bibliothèque de rythmes, le clavier MIDI, et une explication derrière
 chaque bouton, en français ou en anglais.
 
@@ -87,7 +88,8 @@ Chaque machine est entièrement synthétisée (aucun sample) en imitant les circ
 | **Vocoder** | Korg VC-10, Roland VP-330, microKORG | La voix robot : la machine prononce elle-même ses mots |
 
 Le **Sampler** a aussi 6 caractères : original, 8 bits (Fairlight, Emulator), 12 bits (SP-1200), 16 bits vintage
-(S900, MPC60), lo-fi (SP-404) et granulaire (P-6). Et les sons d'usine ajoutent de nombreux autres synthés dans l'esprit
+(S900, MPC60), lo-fi (SP-404) et granulaire (P-6). **Sample Keys** joue ton propre son sur toutes les notes du clavier,
+comme un Emulator : note d'origine, attaque, release, boucle. Et les sons d'usine ajoutent de nombreux autres synthés dans l'esprit
 de leur famille : Juno-60, Moog Taurus, Voyager, Sub 37, MC-202, Pro-One, Bass Station, Nord Lead, Virus, TB-3,
 Chamberlin, TR-8, DrumBrute, Volca Beats…
 
@@ -120,17 +122,36 @@ Ace Tone ou Commodore.
   les percussions sont réparties en rythmes euclidiens. Par machine : nouvelle idée, varier un peu, plus ou moins de notes.
 - **21 gammes + mode chromatique** : impossible de faire une fausse note tant qu'une gamme est choisie.
 - **Séquences de 1 à 4 mesures**, avec copier / coller, dupliquer la mesure 1, décaler d'un pas.
+- **Automation** : chaque réglage peut changer de pas en pas (dessiné à la souris, ou enregistré en tournant les boutons
+  avec ENREG. BOUTONS). Chaque pas a aussi sa vélocité, sa chance de jouer, sa condition (un tour sur deux, seulement au
+  4e tour, pendant un FILL…) et son retard pour le groove.
+- **Polyrythmies et triolets** : chaque piste peut avoir sa propre longueur (3, 5, 7 pas…) et sa vitesse (×2, ×½, triolets).
+- **Arpégiateur** sur les synthés polyphoniques (montant, descendant, au hasard, dans l'ordre joué ; 1/8 à 1/32 ; 1 à 3 octaves).
+- **Morceau** : 8 parties (A à H : intro, couplet, refrain…) et la liste qui les enchaîne.
+- **Jeu en live** : FILL en un clic (roulement de caisse claire et toms en fin de boucle, puis crash), 8 scènes de machines
+  coupées qui arrivent à la mesure suivante.
+- **Tes propres sons** : enregistre tes réglages préférés (SONS › MES SONS), charge des fichiers audio sur le Sampler ou
+  Sample Keys, règle le début, la fin et la boucle de chaque son, ou enregistre directement au micro.
 - **Effets par son de batterie** (disto, filtre, pan, écho, reverb : de la disto rien que sur le kick, par exemple),
-  **par machine** (disto, crush, filtre DJ, écho, reverb, volume, pan) et **sur le master**
-  (écho façon bande, reverb FDN, pompe sidechain, filtre DJ, compresseur, disto, limiteur).
+  **par machine** (disto, crush, filtre DJ, écho, reverb, phaser, flanger, volume, pan) et **sur le master**
+  (écho ping-pong ou à bande, reverb pièce, hall ou plate, pompe ou vrai sidechain qui suit le kick, filtre DJ,
+  compresseur, disto, limiteur).
 - **Annuler / rétablir** sur tout (notes, hasard, réglages).
-- **Export WAV** hors temps réel (1 à 8 boucles) et enregistrement en direct.
-- **En VST3**, la lecture, le tempo et la position suivent ton logiciel de musique.
+- **Export WAV** hors temps réel (1 à 8 boucles, ou tout le morceau), **export MIDI**, **une piste WAV par machine**
+  (stems) et enregistrement en direct.
+- **En VST3 / AU**, la lecture, le tempo et la position suivent ton logiciel de musique, et chaque machine peut sortir
+  sur sa propre sortie (8 sorties stéréo en plus du master).
+- **MIDI complet** : vélocité, pitch bend, molette de modulation (vibrato), horloge MIDI d'une autre machine (tempo,
+  départ, arrêt) dans l'application seule, et ta vraie voix dans le VOCODER par l'entrée micro.
+- **Clavier de l'ordinateur** (CLAVIER PC) : joue les notes avec les lettres quand tu n'as pas de clavier MIDI.
 - **Un « i » partout** : clique dessus (ou clic droit sur un bouton) pour savoir à quoi sert chaque élément.
 - **Français / anglais** et **plein écran** (F11), en bas à droite.
+- **Interface** : réordonne le rack en glissant les machines, choisis sa taille (75 à 150 %), suis le tutoriel
+  « ton premier beat en 2 minutes » (menu ?). Accessibilité : navigation au clavier, noms lus par les lecteurs d'écran,
+  repères sur les pas actifs pour les daltoniens.
 
 Raccourcis : **Espace** lecture / stop · **Ctrl+Z / Ctrl+Y** annuler / rétablir · **Ctrl+S** enregistrer ·
-**Ctrl+O** ouvrir · **Ctrl+N** nouveau projet · **F11** plein écran.
+**Ctrl+O** ouvrir · **Ctrl+N** nouveau projet · **F** fill · **F11** plein écran · **Ctrl + / Ctrl -** taille de l'interface.
 
 ## Compiler soi-même
 
@@ -156,8 +177,8 @@ le SDK ASIO de Steinberg (utilisé sous sa licence GPLv3) pour activer les pilot
 `build.bat` compile aussi `build\TechMachineTests_artefacts\Release\TechMachineTests.exe` :
 
 - `TechMachineTests check` lance tous les tests automatiques (paramètres et sons d'usine, enregistrement et réouverture
-  des 30 démos, interface sans texte coupé en français et en anglais, propagation des réglages, réglages aléatoires,
-  traductions). Ils tournent aussi sur GitHub, sous Windows et macOS, à chaque modification.
+  des 30 démos, automation, parties, sons, exports, MIDI, séquenceur, effets, sampler, interface sans texte coupé en
+  français et en anglais, propagation des réglages, réglages aléatoires, traductions). Ils tournent aussi sur GitHub, sous Windows et macOS, à chaque modification.
 - `TechMachineTests golden ref.txt` écrit l'empreinte exacte du son de toutes les démos et de tous les sons d'usine :
   avant / après une modification qui ne doit rien changer au son, les deux fichiers doivent être identiques.
 - Outils de mise au point : `sweep` (chaque réglage aux extrêmes), `chaos`, `choices` (volume de chaque choix),
