@@ -1182,6 +1182,8 @@ static int test_params (int argc, char** argv)
         void show (int type) override { p.setShown (type, true); }
         Track& track (int type) override { return p.machine (type).track; }
         int baseNote (int) override { return 36; }
+        void part (int) override {}
+        void song (const std::vector<std::pair<int, int>>&) override {}
     };
     TechMachineProcessor p;
     Checker c (p);
@@ -3118,6 +3120,72 @@ static int test_interface (int argc, char** argv)
     return failures;
 }
 
+// Every machine with its settings (choices listed) and its sounds: the reference for writing demos.
+static int test_machines (int argc, char** argv)
+{
+    juce::ignoreUnused (argc, argv);
+    for (int t = 0; t < numMachines; ++t)
+    {
+        const auto& def = machineDef (t);
+        printf ("%s [%s]\n", def.id, def.kind == MachineKind::Drum ? "drum" : def.kind == MachineKind::Mono ? "mono" : "poly");
+        for (const auto& param : def.params)
+        {
+            juce::String choices;
+            for (auto* c : param.choices) choices << c << "|";
+            printf ("  %s_%s = %.2f%s%s\n", def.id, param.id, param.def, choices.isEmpty() ? "" : "  ", choices.toRawUTF8());
+        }
+        juce::String rows;
+        for (const auto& row : def.rows) rows << row.id << " ";
+        if (rows.isNotEmpty()) printf ("  rows: %s\n", rows.toRawUTF8());
+    }
+    return 0;
+}
+
+// A demo as a WAV of the whole song (demo_<index>.wav), with the level of each machine in each part.
+//   TechMachineTests demo <first> [last] [wav]   ("wav": the files only, no levels)
+static int test_demo (int argc, char** argv)
+{
+    const int first = argc > 2 ? juce::String (argv[2]).getIntValue() : 0;
+    const int last = argc > 3 ? juce::String (argv[3]).getIntValue() : first;
+    for (int e = first; e <= last; ++e)
+    {
+        TechMachineProcessor p;
+        p.loadExample (e);
+        const auto wav = outDir.getChildFile ("demo_" + juce::String (e) + ".wav");
+        TechMachineProcessor::exportWav (*p.createProjectXml(), wav, 1, {});
+        printf ("demo %d %s: %.0f s, song of %d entries\n", e, examples()[(size_t) e].name, p.songSeconds(), (int) p.song().size());
+        if (argc > 4) continue;
+
+        // Each part alone, each machine alone: the balance of the mix.
+        juce::StringArray used;
+        for (int part = 0; part < TechMachineProcessor::numParts; ++part)
+        {
+            if (p.isPartEmpty (part)) continue;
+            juce::String line;
+            for (int t : rackOrder)
+            {
+                if (! p.isShown (t)) continue;
+                TechMachineProcessor q;
+                q.loadExample (e);
+                q.setSongMode (false);
+                q.selectPart (part);
+                if (q.machine (t).track.isEmpty()) continue;
+                for (int o = 0; o < numMachines; ++o)
+                    if (o != t) q.setShown (o, false);
+                const auto st = run (q, (double) q.numSteps() * 15.0 / (double) q.apvts.getRawParameterValue (pid::bpm)->load());
+                line << machineDef (t).id << " " << juce::String (st.rmsDb, 1) << "  ";
+            }
+            TechMachineProcessor all;
+            all.loadExample (e);
+            all.setSongMode (false);
+            all.selectPart (part);
+            const auto st = run (all, (double) all.numSteps() * 15.0 / (double) all.apvts.getRawParameterValue (pid::bpm)->load());
+            printf ("  part %c  mix %.1f dB peak %.2f | %s\n", 'A' + part, st.rmsDb, st.peak, line.toRawUTF8());
+        }
+    }
+    return 0;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
@@ -3147,6 +3215,8 @@ static const Mode modes[] {
     { "ui", test_ui },
     { "propagate", test_propagate },
     { "chaos", test_chaos },
+    { "machines", test_machines },
+    { "demo", test_demo },
     { "choices", test_choices },
     { "song", test_song },
     { "blow", test_blow },

@@ -110,7 +110,8 @@ Ace Tone ou Commodore.
 ## Ce qu'on peut faire
 
 - **Projets** : nouveau projet vide, ouvrir, enregistrer (`.techmachine`), projets récents, écran d'accueil.
-- **36 projets exemples**, au moins un par style : techno, acid, Detroit, house, Berlin, minimale, hard techno,
+- **36 morceaux de démo complets** (intro, couplets, montée, break, drop, outro : le mode morceau, l'automation et les accords
+  note par note du piano roll), au moins un par style : techno, acid, Detroit, house, Berlin, minimale, hard techno,
   trance, psytrance, drum & bass, jungle, breakbeat, UK garage, gabber, électro, hip-hop, trap, drill, lo-fi, R&B,
   funk, disco, pop, reggaeton, afro house, reggae, synthwave, ambient… et 6 démos des nouveautés (Sample Keys, polyrythmies,
   arpégiateur, conditions et FILL, sidechain, vocoder).

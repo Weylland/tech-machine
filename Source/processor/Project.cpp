@@ -61,10 +61,19 @@ void TechMachineProcessor::loadExample (int index)
     struct Writer : ExampleWriter
     {
         TechMachineProcessor& p;
+        int current = 0;
         explicit Writer (TechMachineProcessor& owner) : p (owner) {}
         void setParam (const juce::String& id, float value) override { p.setParam (id, value); }
         void show (int type) override { p.setShown (type, true); }
-        Track& track (int type) override { return p.machine (type).track; }
+        Track& track (int type) override { return p.partTrack (current, type); }
+        void part (int index) override { current = juce::jlimit (0, numParts - 1, index); }
+        void song (const std::vector<std::pair<int, int>>& entries) override
+        {
+            std::vector<SongEntry> list;
+            for (const auto& [partIndex, repeats] : entries) list.push_back ({ partIndex, repeats });
+            p.setSong (list);
+            p.setSongMode (true);
+        }
         int baseNote (int type) override
         {
             const auto& def = machineDef (type);

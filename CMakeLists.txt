@@ -56,6 +56,11 @@ set(TECHMACHINE_SOURCES
     Source/processor/Export.cpp
     Source/core/Automation.cpp
     Source/core/Examples.cpp
+    Source/core/Examples_Club.cpp
+    Source/core/Examples_Breaks.cpp
+    Source/core/Examples_Urban.cpp
+    Source/core/Examples_Band.cpp
+    Source/core/Examples_Features.cpp
     Source/core/Help.cpp
     Source/core/Language.cpp
     Source/core/Translations.cpp
