@@ -3186,6 +3186,55 @@ static int test_demo (int argc, char** argv)
     return 0;
 }
 
+// The application icon (Source/resources/icon.png): a step grid lit like a beat, in the colours of the interface.
+//   TechMachineTests icon <file.png>
+static int test_icon (int argc, char** argv)
+{
+    constexpr int size = 1024;
+    juce::Image img (juce::Image::ARGB, size, size, true, juce::SoftwareImageType());
+    {
+    juce::Graphics g (img);
+    const juce::Rectangle<float> body (56.0f, 56.0f, 912.0f, 912.0f);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff2a2b33), body.getX(), body.getY(),
+                                             juce::Colour (0xff121215), body.getX(), body.getBottom(), false));
+    g.fillRoundedRectangle (body, 200.0f);
+    g.setColour (juce::Colour (0xff3a3b44));
+    g.drawRoundedRectangle (body.reduced (6.0f), 194.0f, 12.0f);
+
+    // Four tracks of four steps: kick, snare, hats, and the playhead on the third column.
+    static constexpr bool lit[4][4] { { true, false, true, false }, { false, true, false, true },
+                                      { true, true, true, true }, { true, false, false, true } };
+    constexpr float pad = 136.0f, gap = 32.0f, origin = 192.0f;
+    for (int row = 0; row < 4; ++row)
+        for (int col = 0; col < 4; ++col)
+        {
+            const juce::Rectangle<float> r (origin + (float) col * (pad + gap), origin + (float) row * (pad + gap), pad, pad);
+            const bool head = col == 2;
+            if (lit[row][col])
+            {
+                const auto colour = head ? colours::lcd : colours::accent;
+                g.setColour (colour.withAlpha (0.35f));
+                g.fillRoundedRectangle (r.expanded (14.0f), 40.0f);
+                g.setGradientFill (juce::ColourGradient (colour.brighter (0.35f), r.getX(), r.getY(), colour.darker (0.15f), r.getX(), r.getBottom(), false));
+                g.fillRoundedRectangle (r, 30.0f);
+            }
+            else
+            {
+                g.setColour (head ? juce::Colour (0xff3d3a35) : juce::Colour (0xff2e2f37));
+                g.fillRoundedRectangle (r, 30.0f);
+            }
+        }
+    }
+
+    const juce::File target = argc > 2 ? juce::File (juce::String (argv[2])) : outDir.getChildFile ("icon.png");
+    target.deleteFile();
+    juce::FileOutputStream out (target);
+    juce::PNGImageFormat png;
+    const bool ok = out.openedOk() && png.writeImageToStream (img, out);
+    printf ("icon: %s %s\n", target.getFullPathName().toRawUTF8(), ok ? "ok" : "FAILED");
+    return ok ? 0 : 1;
+}
+
 struct Mode { const char* name; int (*run) (int, char**); };
 
 static const Mode modes[] {
@@ -3216,6 +3265,7 @@ static const Mode modes[] {
     { "propagate", test_propagate },
     { "chaos", test_chaos },
     { "machines", test_machines },
+    { "icon", test_icon },
     { "demo", test_demo },
     { "choices", test_choices },
     { "song", test_song },

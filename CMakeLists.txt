@@ -21,6 +21,7 @@ endif()
 juce_add_plugin(TechMachine
     COMPANY_NAME "Nicolas Samier"
     PRODUCT_NAME "Tech Machine"
+    ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/Source/resources/icon.png"
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE
